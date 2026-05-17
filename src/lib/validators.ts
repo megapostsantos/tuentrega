@@ -23,6 +23,52 @@ export function maskCEP(v: string) {
   return onlyDigits(v).slice(0, 8).replace(/^(\d{5})(\d)/, "$1-$2");
 }
 
+export function maskDate(v: string) {
+  const d = onlyDigits(v).slice(0, 8);
+  return d
+    .replace(/^(\d{2})(\d)/, "$1/$2")
+    .replace(/^(\d{2})\/(\d{2})(\d)/, "$1/$2/$3");
+}
+
+export function parseBRDate(v: string): Date | null {
+  const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  const [, dd, mm, yyyy] = m;
+  const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  if (d.getFullYear() !== Number(yyyy) || d.getMonth() !== Number(mm) - 1 || d.getDate() !== Number(dd)) return null;
+  return d;
+}
+
+export function toISODate(v: string): string | null {
+  const d = parseBRDate(v);
+  if (!d) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function ageFromBRDate(v: string): number | null {
+  const d = parseBRDate(v);
+  if (!d) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+}
+
+export function maskPlaca(v: string) {
+  const s = (v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
+  if (s.length <= 3) return s;
+  // Mercosul: AAA0A00 → no dash; Old: AAA-0000
+  const isMercosul = s.length >= 5 && /[A-Z]/.test(s[4]);
+  if (isMercosul) return s;
+  return s.slice(0, 3) + "-" + s.slice(3);
+}
+
+export function isValidPlaca(v: string): boolean {
+  const s = (v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return /^[A-Z]{3}\d{4}$/.test(s) || /^[A-Z]{3}\d[A-Z]\d{2}$/.test(s);
+}
+
 export function maskPhone(v: string) {
   const d = onlyDigits(v).slice(0, 11);
   if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3").trim();
