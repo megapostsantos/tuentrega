@@ -108,7 +108,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(translateAuthError(error.message));
     toast.success("Bem-vindo!");
     onSuccess();
   }
@@ -196,7 +196,7 @@ function EmpresaForm({ onSuccess }: { onSuccess: () => void }) {
       },
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(translateAuthError(error.message));
     toast.success("Conta criada! Trial de 14 dias ativo.");
     onSuccess();
   }
@@ -288,7 +288,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
       },
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(translateAuthError(error.message));
     toast.success("Cadastro criado!");
     onSuccess();
   }
