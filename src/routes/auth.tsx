@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
-  maskCPF, maskCNPJ, maskCEP, maskPhone,
-  isValidCPF, isValidCNPJ, onlyDigits, fetchCEP,
+  maskCPF, maskCNPJ, maskCEP, maskPhone, maskDate, maskPlaca,
+  isValidCPF, isValidCNPJ, isValidPlaca, onlyDigits, fetchCEP,
+  ageFromBRDate, toISODate,
 } from "@/lib/validators";
 
 export const Route = createFileRoute("/auth")({ component: AuthPage });
@@ -35,10 +36,12 @@ const SEGMENTOS = ["Mercado Livre Flex", "E-commerce", "Transportadora", "Distri
 const VEICULOS = [
   { value: "walker", label: "A pé" },
   { value: "biker", label: "Bicicleta" },
+  { value: "moto_eletrica", label: "Moto elétrica" },
   { value: "motoboy", label: "Moto" },
   { value: "carro", label: "Carro" },
   { value: "caminhao", label: "Caminhão" },
 ];
+const VEICULOS_COM_PLACA = ["moto_eletrica", "motoboy", "carro", "caminhao"];
 const PIX_TIPOS = [
   { value: "cpf", label: "CPF" },
   { value: "cnpj", label: "CNPJ" },
@@ -46,7 +49,12 @@ const PIX_TIPOS = [
   { value: "telefone", label: "Telefone" },
   { value: "aleatoria", label: "Aleatória" },
 ];
-const BAIRROS_SUGERIDOS = ["Centro", "Zona Sul", "Zona Norte", "Zona Leste", "Zona Oeste", "Vila Mariana", "Pinheiros", "Moema", "Tatuapé", "Santana"];
+const TURNOS = [
+  { value: "manha", label: "Manhã (06h às 12h)" },
+  { value: "tarde", label: "Tarde (12h às 18h)" },
+  { value: "noite", label: "Noite (18h às 00h)" },
+];
+const PLATAFORMAS = ["Mercado Livre", "iFood", "Rappi", "Loggi", "Shopee", "Lalamove", "Outra"];
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -135,6 +143,21 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
 function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
   const [role, setRole] = useState<Role>("empresa");
+  const [done, setDone] = useState(false);
+
+  if (done) {
+    return (
+      <div className="mt-6 flex flex-col items-center text-center">
+        <div className="grid h-16 w-16 place-content-center rounded-full bg-primary/10 text-primary text-3xl">✓</div>
+        <h1 className="mt-4 text-2xl font-bold">Conta criada com sucesso!</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Tudo pronto. Você já pode acessar a plataforma.</p>
+        <Button onClick={onSuccess} className="mt-6 w-full bg-primary text-primary-foreground hover:opacity-90">
+          Entrar no painel <ArrowRight className="ml-1 h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <>
       <h1 className="text-2xl font-bold">Crie sua conta</h1>
@@ -145,7 +168,9 @@ function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
         <RoleCard active={role === "entregador"} onClick={() => setRole("entregador")} icon={Bike} label="Entregador PJ" desc="Quero entregar" />
       </div>
 
-      {role === "empresa" ? <EmpresaForm onSuccess={onSuccess} /> : <EntregadorForm onSuccess={onSuccess} />}
+      {role === "empresa"
+        ? <EmpresaForm onSuccess={() => setDone(true)} />
+        : <EntregadorForm onSuccess={() => setDone(true)} />}
     </>
   );
 }
@@ -247,28 +272,73 @@ function EmpresaForm({ onSuccess }: { onSuccess: () => void }) {
 
 function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
   const [f, setF] = useState({
-    nome_completo: "", cpf: "", whatsapp: "", email: "",
-    password: "", password2: "", tipo_veiculo: "",
+    nome_completo: "", cpf: "", data_nascimento: "", whatsapp: "", email: "",
+    password: "", password2: "",
+    tipo_veiculo: "", placa: "",
+    cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "",
     pix_tipo: "", pix_chave: "", banco: "",
   });
-  const [bairros, setBairros] = useState<string[]>([]);
+  const [selfieFile, setSelfieFile] = useState<File | null>(null);
+  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
+  const [turnos, setTurnos] = useState<string[]>([]);
+  const [temPlataforma, setTemPlataforma] = useState<"sim" | "nao" | "">("");
+  const [plataformas, setPlataformas] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
   const set = <K extends keyof typeof f>(k: K, v: string) => setF((p) => ({ ...p, [k]: v }));
 
-  function toggleBairro(b: string) {
-    setBairros((prev) => prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]);
+  const exigePlaca = VEICULOS_COM_PLACA.includes(f.tipo_veiculo);
+  const idade = ageFromBRDate(f.data_nascimento);
+  const menorIdade = idade !== null && idade < 18;
+
+  function toggle(list: string[], item: string, setter: (v: string[]) => void) {
+    setter(list.includes(item) ? list.filter((x) => x !== item) : [...list, item]);
+  }
+
+  async function onCepBlur() {
+    if (onlyDigits(f.cep).length !== 8) return;
+    setCepLoading(true);
+    const data = await fetchCEP(f.cep);
+    setCepLoading(false);
+    if (!data) return toast.error("CEP não encontrado");
+    setF((p) => ({ ...p, rua: data.logradouro, bairro: data.bairro, cidade: data.localidade, estado: data.uf }));
+  }
+
+  async function uploadDoc(file: File, prefix: string): Promise<string | null> {
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${prefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error } = await supabase.storage.from("entregador-docs").upload(path, file, { upsert: false });
+    if (error) { toast.error("Falha no upload: " + error.message); return null; }
+    const { data } = supabase.storage.from("entregador-docs").getPublicUrl(path);
+    return data.publicUrl;
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!isValidCPF(f.cpf)) return toast.error("CPF inválido");
+    if (idade === null) return toast.error("Data de nascimento inválida (DD/MM/AAAA)");
+    if (menorIdade) return toast.error("Você precisa ter pelo menos 18 anos para se cadastrar como entregador");
     if (f.password.length < 8) return toast.error("Senha precisa de no mínimo 8 caracteres");
     if (f.password !== f.password2) return toast.error("Senhas não conferem");
-    if (bairros.length === 0) return toast.error("Selecione ao menos um bairro");
+    if (!selfieFile) return toast.error("Envie sua selfie segurando um documento");
     if (!f.tipo_veiculo) return toast.error("Selecione o tipo de veículo");
+    if (exigePlaca && !isValidPlaca(f.placa)) return toast.error("Placa inválida");
+    if (onlyDigits(f.cep).length !== 8) return toast.error("CEP inválido");
+    if (turnos.length === 0) return toast.error("Selecione ao menos um turno");
+    if (temPlataforma === "") return toast.error("Informe se já é cadastrado em alguma plataforma");
+    if (temPlataforma === "sim" && plataformas.length === 0) return toast.error("Selecione ao menos uma plataforma");
+    if (temPlataforma === "sim" && !comprovanteFile) return toast.error("Envie o comprovante de cadastro na plataforma");
     if (!f.pix_tipo || !f.pix_chave) return toast.error("Informe sua chave PIX");
 
     setLoading(true);
+    const selfieUrl = await uploadDoc(selfieFile, "selfies");
+    if (!selfieUrl) { setLoading(false); return; }
+    let comprovanteUrl: string | null = null;
+    if (temPlataforma === "sim" && comprovanteFile) {
+      comprovanteUrl = await uploadDoc(comprovanteFile, "plataformas");
+      if (!comprovanteUrl) { setLoading(false); return; }
+    }
+
     const { error } = await supabase.auth.signUp({
       email: f.email, password: f.password,
       options: {
@@ -278,9 +348,16 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
           full_name: f.nome_completo,
           phone: onlyDigits(f.whatsapp),
           cpf: onlyDigits(f.cpf),
+          data_nascimento: toISODate(f.data_nascimento),
           whatsapp: onlyDigits(f.whatsapp),
           tipo_veiculo: f.tipo_veiculo,
-          bairros,
+          placa: exigePlaca ? f.placa.toUpperCase() : null,
+          selfie_url: selfieUrl,
+          cep: onlyDigits(f.cep), rua: f.rua, numero: f.numero, complemento: f.complemento,
+          bairro: f.bairro, cidade: f.cidade, estado: f.estado,
+          turnos,
+          plataformas: temPlataforma === "sim" ? plataformas : [],
+          plataforma_comprovante_url: comprovanteUrl,
           pix_tipo: f.pix_tipo,
           pix_chave: f.pix_chave,
           banco: f.banco,
@@ -289,7 +366,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
     });
     setLoading(false);
     if (error) return toast.error(translateAuthError(error.message));
-    toast.success("Cadastro criado!");
+    toast.success("Conta criada com sucesso!");
     onSuccess();
   }
 
@@ -298,13 +375,24 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
       <Field label="Nome completo" required value={f.nome_completo} onChange={(v) => set("nome_completo", v)} />
       <Field label="CPF" required value={f.cpf} onChange={(v) => set("cpf", maskCPF(v))}
         error={f.cpf && !isValidCPF(f.cpf) ? "CPF inválido" : undefined} />
+      <Field label="Data de nascimento (DD/MM/AAAA)" required value={f.data_nascimento}
+        onChange={(v) => set("data_nascimento", maskDate(v))}
+        error={menorIdade ? "Você precisa ter pelo menos 18 anos para se cadastrar como entregador" : undefined} />
       <Field label="WhatsApp" required value={f.whatsapp} onChange={(v) => set("whatsapp", maskPhone(v))} />
       <Field label="E-mail" type="email" required value={f.email} onChange={(v) => set("email", v)} />
       <Field label="Senha (mín. 8)" type="password" required value={f.password} onChange={(v) => set("password", v)} />
       <Field label="Confirme a senha" type="password" required value={f.password2} onChange={(v) => set("password2", v)} />
 
+      <div className="space-y-1.5">
+        <Label>Foto selfie <span className="text-destructive">*</span></Label>
+        <Input type="file" accept="image/*" capture="user"
+          onChange={(e) => setSelfieFile(e.target.files?.[0] ?? null)} required />
+        <p className="text-xs text-muted-foreground">Tire uma foto segurando um documento com o rosto visível.</p>
+        {selfieFile && <p className="text-xs text-primary">✓ {selfieFile.name}</p>}
+      </div>
+
       <div className="space-y-2">
-        <Label>Tipo de veículo</Label>
+        <Label>Tipo de veículo <span className="text-destructive">*</span></Label>
         <Select value={f.tipo_veiculo} onValueChange={(v) => set("tipo_veiculo", v)}>
           <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
           <SelectContent>
@@ -313,22 +401,80 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
         </Select>
       </div>
 
+      {exigePlaca && (
+        <Field label="Placa (AAA-0000 ou AAA0A00)" required value={f.placa}
+          onChange={(v) => set("placa", maskPlaca(v))}
+          error={f.placa && !isValidPlaca(f.placa) ? "Placa inválida" : undefined} />
+      )}
+
+      <div className="rounded-lg border p-3 space-y-3">
+        <p className="text-sm font-medium">Endereço completo</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="col-span-2">
+            <Field label="CEP" required value={f.cep} onChange={(v) => set("cep", maskCEP(v))} onBlur={onCepBlur} />
+          </div>
+          <div className="flex items-end pb-1">{cepLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}</div>
+        </div>
+        <Field label="Rua" value={f.rua} onChange={(v) => set("rua", v)} />
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Número" value={f.numero} onChange={(v) => set("numero", v)} />
+          <Field label="Complemento" value={f.complemento} onChange={(v) => set("complemento", v)} />
+        </div>
+        <Field label="Bairro" value={f.bairro} onChange={(v) => set("bairro", v)} />
+        <div className="grid grid-cols-3 gap-2">
+          <div className="col-span-2"><Field label="Cidade" value={f.cidade} onChange={(v) => set("cidade", v)} /></div>
+          <Field label="UF" value={f.estado} onChange={(v) => set("estado", v.toUpperCase().slice(0, 2))} />
+        </div>
+      </div>
+
       <div className="space-y-2">
-        <Label>Bairros que atende</Label>
-        <div className="grid grid-cols-2 gap-2 rounded-lg border p-3 max-h-44 overflow-y-auto">
-          {BAIRROS_SUGERIDOS.map((b) => (
-            <label key={b} className="flex items-center gap-2 text-sm">
-              <Checkbox checked={bairros.includes(b)} onCheckedChange={() => toggleBairro(b)} />
-              {b}
+        <Label>Disponibilidade de turnos <span className="text-destructive">*</span></Label>
+        <div className="space-y-2 rounded-lg border p-3">
+          {TURNOS.map((t) => (
+            <label key={t.value} className="flex items-center gap-2 text-sm">
+              <Checkbox checked={turnos.includes(t.value)} onCheckedChange={() => toggle(turnos, t.value, setTurnos)} />
+              {t.label}
             </label>
           ))}
         </div>
-        {bairros.length > 0 && <p className="text-xs text-muted-foreground">{bairros.length} selecionado(s)</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Já é cadastrado em alguma plataforma de entregas? <span className="text-destructive">*</span></Label>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setTemPlataforma("sim")}
+            className={cn("rounded-md border px-3 py-2 text-sm", temPlataforma === "sim" ? "border-primary bg-primary/5" : "border-border")}>
+            Sim
+          </button>
+          <button type="button" onClick={() => { setTemPlataforma("nao"); setPlataformas([]); setComprovanteFile(null); }}
+            className={cn("rounded-md border px-3 py-2 text-sm", temPlataforma === "nao" ? "border-primary bg-primary/5" : "border-border")}>
+            Não
+          </button>
+        </div>
+        {temPlataforma === "sim" && (
+          <div className="space-y-3 rounded-lg border p-3">
+            <div className="grid grid-cols-2 gap-2">
+              {PLATAFORMAS.map((p) => (
+                <label key={p} className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={plataformas.includes(p)} onCheckedChange={() => toggle(plataformas, p, setPlataformas)} />
+                  {p}
+                </label>
+              ))}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Comprovante de cadastro <span className="text-destructive">*</span></Label>
+              <Input type="file" accept="image/*,application/pdf"
+                onChange={(e) => setComprovanteFile(e.target.files?.[0] ?? null)} />
+              <p className="text-xs text-muted-foreground">Print ou foto comprovando seu cadastro na plataforma.</p>
+              {comprovanteFile && <p className="text-xs text-primary">✓ {comprovanteFile.name}</p>}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-2">
-          <Label>Tipo de chave PIX</Label>
+          <Label>Tipo de chave PIX <span className="text-destructive">*</span></Label>
           <Select value={f.pix_tipo} onValueChange={(v) => set("pix_tipo", v)}>
             <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
             <SelectContent>
@@ -336,11 +482,11 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
             </SelectContent>
           </Select>
         </div>
-        <Field label="Chave PIX" value={f.pix_chave} onChange={(v) => set("pix_chave", v)} />
+        <Field label="Chave PIX" required value={f.pix_chave} onChange={(v) => set("pix_chave", v)} />
       </div>
-      <Field label="Banco" value={f.banco} onChange={(v) => set("banco", v)} />
+      <Field label="Banco" required value={f.banco} onChange={(v) => set("banco", v)} />
 
-      <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:opacity-90">
+      <Button type="submit" disabled={loading || menorIdade} className="w-full bg-primary text-primary-foreground hover:opacity-90">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar conta"}
       </Button>
       <p className="text-center text-xs text-muted-foreground">Acesso imediato após o cadastro.</p>
