@@ -76,41 +76,80 @@ export type Database = {
       }
       entregadores: {
         Row: {
+          bairro: string | null
           bairros: string[]
           banco: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
           cpf: string
           created_at: string
+          data_nascimento: string | null
+          estado: string | null
           id: string
           nome_completo: string
+          numero: string | null
           pix_chave: string | null
           pix_tipo: Database["public"]["Enums"]["pix_tipo"] | null
+          placa: string | null
+          plataforma_comprovante_url: string | null
+          plataformas: string[]
+          rua: string | null
+          selfie_url: string | null
           tipo_veiculo: Database["public"]["Enums"]["veiculo_tipo"] | null
+          turnos: string[]
           updated_at: string
           whatsapp: string | null
         }
         Insert: {
+          bairro?: string | null
           bairros?: string[]
           banco?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
           cpf: string
           created_at?: string
+          data_nascimento?: string | null
+          estado?: string | null
           id: string
           nome_completo: string
+          numero?: string | null
           pix_chave?: string | null
           pix_tipo?: Database["public"]["Enums"]["pix_tipo"] | null
+          placa?: string | null
+          plataforma_comprovante_url?: string | null
+          plataformas?: string[]
+          rua?: string | null
+          selfie_url?: string | null
           tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
+          turnos?: string[]
           updated_at?: string
           whatsapp?: string | null
         }
         Update: {
+          bairro?: string | null
           bairros?: string[]
           banco?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
           cpf?: string
           created_at?: string
+          data_nascimento?: string | null
+          estado?: string | null
           id?: string
           nome_completo?: string
+          numero?: string | null
           pix_chave?: string | null
           pix_tipo?: Database["public"]["Enums"]["pix_tipo"] | null
+          placa?: string | null
+          plataforma_comprovante_url?: string | null
+          plataformas?: string[]
+          rua?: string | null
+          selfie_url?: string | null
           tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
+          turnos?: string[]
           updated_at?: string
           whatsapp?: string | null
         }
@@ -294,7 +333,13 @@ export type Database = {
     Enums: {
       app_role: "admin" | "empresa" | "entregador"
       pix_tipo: "cpf" | "cnpj" | "email" | "telefone" | "aleatoria"
-      veiculo_tipo: "walker" | "biker" | "motoboy" | "carro" | "caminhao"
+      veiculo_tipo:
+        | "walker"
+        | "biker"
+        | "motoboy"
+        | "carro"
+        | "caminhao"
+        | "moto_eletrica"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -424,7 +469,14 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "empresa", "entregador"],
       pix_tipo: ["cpf", "cnpj", "email", "telefone", "aleatoria"],
-      veiculo_tipo: ["walker", "biker", "motoboy", "carro", "caminhao"],
+      veiculo_tipo: [
+        "walker",
+        "biker",
+        "motoboy",
+        "carro",
+        "caminhao",
+        "moto_eletrica",
+      ],
     },
   },
 } as const
