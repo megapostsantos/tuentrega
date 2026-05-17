@@ -20,6 +20,17 @@ export const Route = createFileRoute("/auth")({ component: AuthPage });
 
 type Role = "empresa" | "entregador";
 
+function translateAuthError(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes("weak") || m.includes("pwned")) return "Senha muito fraca ou já vazada. Use uma combinação única de letras, números e símbolos.";
+  if (m.includes("already registered") || m.includes("user already")) return "Este e-mail já está cadastrado. Faça login.";
+  if (m.includes("invalid login") || m.includes("invalid credentials")) return "E-mail ou senha incorretos.";
+  if (m.includes("email") && m.includes("invalid")) return "E-mail inválido.";
+  if (m.includes("rate limit")) return "Muitas tentativas. Aguarde alguns segundos e tente novamente.";
+  if (m.includes("database error")) return "Erro ao salvar cadastro. Verifique os dados e tente novamente.";
+  return msg;
+}
+
 const SEGMENTOS = ["Mercado Livre Flex", "E-commerce", "Transportadora", "Distribuidora", "Loja própria", "Outro"];
 const VEICULOS = [
   { value: "walker", label: "A pé" },
@@ -97,7 +108,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(translateAuthError(error.message));
     toast.success("Bem-vindo!");
     onSuccess();
   }
@@ -185,7 +196,7 @@ function EmpresaForm({ onSuccess }: { onSuccess: () => void }) {
       },
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(translateAuthError(error.message));
     toast.success("Conta criada! Trial de 14 dias ativo.");
     onSuccess();
   }
@@ -277,7 +288,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
       },
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(translateAuthError(error.message));
     toast.success("Cadastro criado!");
     onSuccess();
   }
