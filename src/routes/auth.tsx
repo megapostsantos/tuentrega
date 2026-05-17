@@ -36,10 +36,12 @@ const SEGMENTOS = ["Mercado Livre Flex", "E-commerce", "Transportadora", "Distri
 const VEICULOS = [
   { value: "walker", label: "A pé" },
   { value: "biker", label: "Bicicleta" },
+  { value: "moto_eletrica", label: "Moto elétrica" },
   { value: "motoboy", label: "Moto" },
   { value: "carro", label: "Carro" },
   { value: "caminhao", label: "Caminhão" },
 ];
+const VEICULOS_COM_PLACA = ["moto_eletrica", "motoboy", "carro", "caminhao"];
 const PIX_TIPOS = [
   { value: "cpf", label: "CPF" },
   { value: "cnpj", label: "CNPJ" },
@@ -47,7 +49,12 @@ const PIX_TIPOS = [
   { value: "telefone", label: "Telefone" },
   { value: "aleatoria", label: "Aleatória" },
 ];
-const BAIRROS_SUGERIDOS = ["Centro", "Zona Sul", "Zona Norte", "Zona Leste", "Zona Oeste", "Vila Mariana", "Pinheiros", "Moema", "Tatuapé", "Santana"];
+const TURNOS = [
+  { value: "manha", label: "Manhã (06h às 12h)" },
+  { value: "tarde", label: "Tarde (12h às 18h)" },
+  { value: "noite", label: "Noite (18h às 00h)" },
+];
+const PLATAFORMAS = ["Mercado Livre", "iFood", "Rappi", "Loggi", "Shopee", "Lalamove", "Outra"];
 
 function AuthPage() {
   const navigate = useNavigate();
