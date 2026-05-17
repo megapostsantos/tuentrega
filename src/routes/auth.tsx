@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
-  maskCPF, maskCNPJ, maskCEP, maskPhone,
-  isValidCPF, isValidCNPJ, onlyDigits, fetchCEP,
+  maskCPF, maskCNPJ, maskCEP, maskPhone, maskDate, maskPlaca,
+  isValidCPF, isValidCNPJ, isValidPlaca, onlyDigits, fetchCEP,
+  ageFromBRDate, toISODate,
 } from "@/lib/validators";
 
 export const Route = createFileRoute("/auth")({ component: AuthPage });
