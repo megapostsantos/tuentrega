@@ -14,6 +14,222 @@ export type Database = {
   }
   public: {
     Tables: {
+      empresas: {
+        Row: {
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string
+          complemento: string | null
+          created_at: string
+          estado: string | null
+          id: string
+          nome_fantasia: string | null
+          numero: string | null
+          razao_social: string
+          responsavel: string | null
+          rua: string | null
+          segmento: string | null
+          trial_ends_at: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj: string
+          complemento?: string | null
+          created_at?: string
+          estado?: string | null
+          id: string
+          nome_fantasia?: string | null
+          numero?: string | null
+          razao_social: string
+          responsavel?: string | null
+          rua?: string | null
+          segmento?: string | null
+          trial_ends_at?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string
+          complemento?: string | null
+          created_at?: string
+          estado?: string | null
+          id?: string
+          nome_fantasia?: string | null
+          numero?: string | null
+          razao_social?: string
+          responsavel?: string | null
+          rua?: string | null
+          segmento?: string | null
+          trial_ends_at?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      entregadores: {
+        Row: {
+          bairros: string[]
+          banco: string | null
+          cpf: string
+          created_at: string
+          id: string
+          nome_completo: string
+          pix_chave: string | null
+          pix_tipo: Database["public"]["Enums"]["pix_tipo"] | null
+          tipo_veiculo: Database["public"]["Enums"]["veiculo_tipo"] | null
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          bairros?: string[]
+          banco?: string | null
+          cpf: string
+          created_at?: string
+          id: string
+          nome_completo: string
+          pix_chave?: string | null
+          pix_tipo?: Database["public"]["Enums"]["pix_tipo"] | null
+          tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          bairros?: string[]
+          banco?: string | null
+          cpf?: string
+          created_at?: string
+          id?: string
+          nome_completo?: string
+          pix_chave?: string | null
+          pix_tipo?: Database["public"]["Enums"]["pix_tipo"] | null
+          tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      entregas: {
+        Row: {
+          created_at: string
+          data_entrega: string
+          data_pagamento: string | null
+          empresa_id: string
+          entregador_id: string
+          exige_nota_fiscal: boolean
+          id: string
+          nota_fiscal_url: string | null
+          oferta_id: string | null
+          status: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data_entrega?: string
+          data_pagamento?: string | null
+          empresa_id: string
+          entregador_id: string
+          exige_nota_fiscal?: boolean
+          id?: string
+          nota_fiscal_url?: string | null
+          oferta_id?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          created_at?: string
+          data_entrega?: string
+          data_pagamento?: string | null
+          empresa_id?: string
+          entregador_id?: string
+          exige_nota_fiscal?: boolean
+          id?: string
+          nota_fiscal_url?: string | null
+          oferta_id?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_entregador_id_fkey"
+            columns: ["entregador_id"]
+            isOneToOne: false
+            referencedRelation: "entregadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_oferta_id_fkey"
+            columns: ["oferta_id"]
+            isOneToOne: false
+            referencedRelation: "ofertas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ofertas: {
+        Row: {
+          bairro: string | null
+          created_at: string
+          descricao: string | null
+          empresa_id: string
+          exige_nota_fiscal: boolean
+          id: string
+          status: string
+          titulo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          bairro?: string | null
+          created_at?: string
+          descricao?: string | null
+          empresa_id: string
+          exige_nota_fiscal?: boolean
+          id?: string
+          status?: string
+          titulo: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          bairro?: string | null
+          created_at?: string
+          descricao?: string | null
+          empresa_id?: string
+          exige_nota_fiscal?: boolean
+          id?: string
+          status?: string
+          titulo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ofertas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -77,6 +293,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "empresa" | "entregador"
+      pix_tipo: "cpf" | "cnpj" | "email" | "telefone" | "aleatoria"
+      veiculo_tipo: "walker" | "biker" | "motoboy" | "carro" | "caminhao"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -205,6 +423,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "empresa", "entregador"],
+      pix_tipo: ["cpf", "cnpj", "email", "telefone", "aleatoria"],
+      veiculo_tipo: ["walker", "biker", "motoboy", "carro", "caminhao"],
     },
   },
 } as const
