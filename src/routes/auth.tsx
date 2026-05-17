@@ -143,6 +143,21 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
 function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
   const [role, setRole] = useState<Role>("empresa");
+  const [done, setDone] = useState(false);
+
+  if (done) {
+    return (
+      <div className="mt-6 flex flex-col items-center text-center">
+        <div className="grid h-16 w-16 place-content-center rounded-full bg-primary/10 text-primary text-3xl">✓</div>
+        <h1 className="mt-4 text-2xl font-bold">Conta criada com sucesso!</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Tudo pronto. Você já pode acessar a plataforma.</p>
+        <Button onClick={onSuccess} className="mt-6 w-full bg-primary text-primary-foreground hover:opacity-90">
+          Entrar no painel <ArrowRight className="ml-1 h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <>
       <h1 className="text-2xl font-bold">Crie sua conta</h1>
@@ -153,7 +168,9 @@ function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
         <RoleCard active={role === "entregador"} onClick={() => setRole("entregador")} icon={Bike} label="Entregador PJ" desc="Quero entregar" />
       </div>
 
-      {role === "empresa" ? <EmpresaForm onSuccess={onSuccess} /> : <EntregadorForm onSuccess={onSuccess} />}
+      {role === "empresa"
+        ? <EmpresaForm onSuccess={() => setDone(true)} />
+        : <EntregadorForm onSuccess={() => setDone(true)} />}
     </>
   );
 }
