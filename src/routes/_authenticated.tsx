@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Logo } from "@/components/Logo";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -30,6 +31,7 @@ function AuthenticatedLayout() {
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar role={role} />
         <div className="flex flex-1 flex-col">
+          <ImpersonationBanner />
           <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur">
             <SidebarTrigger />
             <div className="flex-1" />

@@ -14,6 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_impersonations: {
+        Row: {
+          admin_id: string
+          ended_at: string | null
+          id: string
+          started_at: string
+          target_type: string
+          target_user_id: string
+        }
+        Insert: {
+          admin_id: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          target_type: string
+          target_user_id: string
+        }
+        Update: {
+          admin_id?: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          target_type?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
+      admin_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          target: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target?: string | null
+        }
+        Relationships: []
+      }
+      admin_notes: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          note: string
+          target_type: string
+          target_user_id: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          note: string
+          target_type: string
+          target_user_id: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+          target_type?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
+      admin_notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          read_at: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      admin_settings: {
+        Row: {
+          deliverer_subscription_cents: number
+          fiscal_note_deadline_day: number
+          id: number
+          trial_days: number
+          updated_at: string
+          whatsapp_template_new_offer: string
+          whatsapp_template_payment: string
+          whatsapp_template_suspension: string
+        }
+        Insert: {
+          deliverer_subscription_cents?: number
+          fiscal_note_deadline_day?: number
+          id?: number
+          trial_days?: number
+          updated_at?: string
+          whatsapp_template_new_offer?: string
+          whatsapp_template_payment?: string
+          whatsapp_template_suspension?: string
+        }
+        Update: {
+          deliverer_subscription_cents?: number
+          fiscal_note_deadline_day?: number
+          id?: number
+          trial_days?: number
+          updated_at?: string
+          whatsapp_template_new_offer?: string
+          whatsapp_template_payment?: string
+          whatsapp_template_suspension?: string
+        }
+        Relationships: []
+      }
       empresas: {
         Row: {
           bairro: string | null
@@ -26,10 +170,12 @@ export type Database = {
           id: string
           nome_fantasia: string | null
           numero: string | null
+          plano: string
           razao_social: string
           responsavel: string | null
           rua: string | null
           segmento: string | null
+          status: string
           trial_ends_at: string
           updated_at: string
           whatsapp: string | null
@@ -45,10 +191,12 @@ export type Database = {
           id: string
           nome_fantasia?: string | null
           numero?: string | null
+          plano?: string
           razao_social: string
           responsavel?: string | null
           rua?: string | null
           segmento?: string | null
+          status?: string
           trial_ends_at?: string
           updated_at?: string
           whatsapp?: string | null
@@ -64,15 +212,25 @@ export type Database = {
           id?: string
           nome_fantasia?: string | null
           numero?: string | null
+          plano?: string
           razao_social?: string
           responsavel?: string | null
           rua?: string | null
           segmento?: string | null
+          status?: string
           trial_ends_at?: string
           updated_at?: string
           whatsapp?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "empresas_plano_fkey"
+            columns: ["plano"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       entregadores: {
         Row: {
@@ -96,6 +254,7 @@ export type Database = {
           plataformas: string[]
           rua: string | null
           selfie_url: string | null
+          status: string
           tipo_veiculo: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos: string[]
           updated_at: string
@@ -122,6 +281,7 @@ export type Database = {
           plataformas?: string[]
           rua?: string | null
           selfie_url?: string | null
+          status?: string
           tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos?: string[]
           updated_at?: string
@@ -148,6 +308,7 @@ export type Database = {
           plataformas?: string[]
           rua?: string | null
           selfie_url?: string | null
+          status?: string
           tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos?: string[]
           updated_at?: string
@@ -268,6 +429,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      plans: {
+        Row: {
+          created_at: string
+          features: Json
+          id: string
+          name: string
+          price_cents: number
+          trial_days: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          features?: Json
+          id: string
+          name: string
+          price_cents?: number
+          trial_days?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          features?: Json
+          id?: string
+          name?: string
+          price_cents?: number
+          trial_days?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
