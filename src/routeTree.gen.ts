@@ -13,7 +13,14 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminPlansRouteImport } from './routes/admin.plans'
+import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminFinancialRouteImport } from './routes/admin.financial'
+import { Route as AdminDeliverersRouteImport } from './routes/admin.deliverers'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminCompaniesRouteImport } from './routes/admin.companies'
 import { Route as AuthenticatedRotasRouteImport } from './routes/_authenticated/rotas'
 import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
 import { Route as AuthenticatedPacotesRouteImport } from './routes/_authenticated/pacotes'
@@ -45,9 +52,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlansRoute = AdminPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFinancialRoute = AdminFinancialRouteImport.update({
+  id: '/financial',
+  path: '/financial',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDeliverersRoute = AdminDeliverersRouteImport.update({
+  id: '/deliverers',
+  path: '/deliverers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCompaniesRoute = AdminCompaniesRouteImport.update({
+  id: '/companies',
+  path: '/companies',
   getParentRoute: () => AdminRoute,
 } as any)
 const AuthenticatedRotasRoute = AuthenticatedRotasRouteImport.update({
@@ -123,7 +165,14 @@ export interface FileRoutesByFullPath {
   '/pacotes': typeof AuthenticatedPacotesRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/rotas': typeof AuthenticatedRotasRoute
+  '/admin/companies': typeof AdminCompaniesRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/deliverers': typeof AdminDeliverersRoute
+  '/admin/financial': typeof AdminFinancialRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/plans': typeof AdminPlansRoute
+  '/admin/settings': typeof AdminSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -140,7 +189,14 @@ export interface FileRoutesByTo {
   '/pacotes': typeof AuthenticatedPacotesRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/rotas': typeof AuthenticatedRotasRoute
+  '/admin/companies': typeof AdminCompaniesRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/deliverers': typeof AdminDeliverersRoute
+  '/admin/financial': typeof AdminFinancialRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/plans': typeof AdminPlansRoute
+  '/admin/settings': typeof AdminSettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -159,7 +215,14 @@ export interface FileRoutesById {
   '/_authenticated/pacotes': typeof AuthenticatedPacotesRoute
   '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
   '/_authenticated/rotas': typeof AuthenticatedRotasRoute
+  '/admin/companies': typeof AdminCompaniesRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/deliverers': typeof AdminDeliverersRoute
+  '/admin/financial': typeof AdminFinancialRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/plans': typeof AdminPlansRoute
+  '/admin/settings': typeof AdminSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -178,7 +241,14 @@ export interface FileRouteTypes {
     | '/pacotes'
     | '/pagamentos'
     | '/rotas'
+    | '/admin/companies'
+    | '/admin/dashboard'
+    | '/admin/deliverers'
+    | '/admin/financial'
     | '/admin/login'
+    | '/admin/notifications'
+    | '/admin/plans'
+    | '/admin/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -195,7 +265,14 @@ export interface FileRouteTypes {
     | '/pacotes'
     | '/pagamentos'
     | '/rotas'
+    | '/admin/companies'
+    | '/admin/dashboard'
+    | '/admin/deliverers'
+    | '/admin/financial'
     | '/admin/login'
+    | '/admin/notifications'
+    | '/admin/plans'
+    | '/admin/settings'
   id:
     | '__root__'
     | '/'
@@ -213,7 +290,14 @@ export interface FileRouteTypes {
     | '/_authenticated/pacotes'
     | '/_authenticated/pagamentos'
     | '/_authenticated/rotas'
+    | '/admin/companies'
+    | '/admin/dashboard'
+    | '/admin/deliverers'
+    | '/admin/financial'
     | '/admin/login'
+    | '/admin/notifications'
+    | '/admin/plans'
+    | '/admin/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -253,11 +337,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/plans': {
+      id: '/admin/plans'
+      path: '/plans'
+      fullPath: '/admin/plans'
+      preLoaderRoute: typeof AdminPlansRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/login': {
       id: '/admin/login'
       path: '/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/financial': {
+      id: '/admin/financial'
+      path: '/financial'
+      fullPath: '/admin/financial'
+      preLoaderRoute: typeof AdminFinancialRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/deliverers': {
+      id: '/admin/deliverers'
+      path: '/deliverers'
+      fullPath: '/admin/deliverers'
+      preLoaderRoute: typeof AdminDeliverersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/companies': {
+      id: '/admin/companies'
+      path: '/companies'
+      fullPath: '/admin/companies'
+      preLoaderRoute: typeof AdminCompaniesRouteImport
       parentRoute: typeof AdminRoute
     }
     '/_authenticated/rotas': {
@@ -373,11 +506,25 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminCompaniesRoute: typeof AdminCompaniesRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminDeliverersRoute: typeof AdminDeliverersRoute
+  AdminFinancialRoute: typeof AdminFinancialRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminPlansRoute: typeof AdminPlansRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminCompaniesRoute: AdminCompaniesRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminDeliverersRoute: AdminDeliverersRoute,
+  AdminFinancialRoute: AdminFinancialRoute,
   AdminLoginRoute: AdminLoginRoute,
+  AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminPlansRoute: AdminPlansRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
