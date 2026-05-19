@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Building2, Bike, ArrowRight, Loader2 } from "lucide-react";
+import { Building2, Bike, ArrowRight, ArrowLeft, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import {
   maskCPF, maskCNPJ, maskCEP, maskPhone, maskDate, maskPlaca,
   isValidCPF, isValidCNPJ, isValidPlaca, onlyDigits, fetchCEP,
-  ageFromBRDate, toISODate,
+  toISODate,
 } from "@/lib/validators";
 
 export const Route = createFileRoute("/auth")({ component: AuthPage });
@@ -26,7 +26,8 @@ function translateAuthError(msg: string): string {
   if (m.includes("weak") || m.includes("pwned")) return "Senha muito fraca ou já vazada. Use uma combinação única de letras, números e símbolos.";
   if (m.includes("already registered") || m.includes("user already")) return "Este e-mail já está cadastrado. Faça login.";
   if (m.includes("invalid login") || m.includes("invalid credentials")) return "E-mail ou senha incorretos.";
-  if (m.includes("email") && m.includes("invalid")) return "E-mail inválido.";
+  if (m.includes("email") && (m.includes("invalid") || m.includes("required"))) return "Informe um e-mail válido para criar sua conta.";
+  if (m.includes("password") && (m.includes("short") || m.includes("characters") || m.includes("required"))) return "Informe uma senha com pelo menos 8 caracteres.";
   if (m.includes("rate limit")) return "Muitas tentativas. Aguarde alguns segundos e tente novamente.";
   if (m.includes("database error")) return "Erro ao salvar cadastro. Verifique os dados e tente novamente.";
   return msg;
@@ -175,7 +176,72 @@ function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
+/* ---------------- Stepper ---------------- */
+
+function Stepper({ steps, current, onJump }: {
+  steps: string[]; current: number; onJump: (i: number) => void;
+}) {
+  return (
+    <div className="mt-5">
+      <div className="flex items-center gap-2">
+        {steps.map((label, i) => {
+          const isActive = i === current;
+          const isDone = i < current;
+          return (
+            <div key={label} className="flex flex-1 items-center gap-2">
+              <button type="button" onClick={() => onJump(i)}
+                className={cn(
+                  "flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium transition",
+                  isActive && "bg-primary text-primary-foreground",
+                  isDone && !isActive && "bg-primary/10 text-primary",
+                  !isActive && !isDone && "bg-muted text-muted-foreground hover:bg-muted/70",
+                )}>
+                <span className={cn(
+                  "grid h-5 w-5 place-content-center rounded-full text-[10px]",
+                  isActive ? "bg-primary-foreground/20" : isDone ? "bg-primary text-primary-foreground" : "bg-background",
+                )}>
+                  {isDone ? <Check className="h-3 w-3" /> : i + 1}
+                </span>
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+              {i < steps.length - 1 && <div className={cn("h-px flex-1", i < current ? "bg-primary" : "bg-border")} />}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StepNav({ step, total, onBack, onNext, onSubmit, loading }: {
+  step: number; total: number;
+  onBack: () => void; onNext: () => void; onSubmit: () => void; loading: boolean;
+}) {
+  const isLast = step === total - 1;
+  return (
+    <div className="flex gap-2 pt-2">
+      <Button type="button" variant="outline" onClick={onBack} disabled={step === 0} className="flex-1">
+        <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
+      </Button>
+      {isLast ? (
+        <Button type="button" onClick={onSubmit} disabled={loading}
+          className="flex-1 bg-primary text-primary-foreground hover:opacity-90">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar conta"}
+        </Button>
+      ) : (
+        <Button type="button" onClick={onNext} className="flex-1 bg-primary text-primary-foreground hover:opacity-90">
+          Avançar <ArrowRight className="ml-1 h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Empresa ---------------- */
+
 function EmpresaForm({ onSuccess }: { onSuccess: () => void }) {
+  const [step, setStep] = useState(0);
+  const STEPS = ["Empresa", "Endereço", "Acesso"];
   const [f, setF] = useState({
     razao_social: "", cnpj: "", nome_fantasia: "", segmento: "",
     cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "",
@@ -190,16 +256,11 @@ function EmpresaForm({ onSuccess }: { onSuccess: () => void }) {
     setCepLoading(true);
     const data = await fetchCEP(f.cep);
     setCepLoading(false);
-    if (!data) return toast.error("CEP não encontrado");
+    if (!data) return;
     setF((p) => ({ ...p, rua: data.logradouro, bairro: data.bairro, cidade: data.localidade, estado: data.uf }));
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!isValidCNPJ(f.cnpj)) return toast.error("CNPJ inválido");
-    if (f.password.length < 8) return toast.error("Senha precisa de no mínimo 8 caracteres");
-    if (f.password !== f.password2) return toast.error("Senhas não conferem");
-
+  async function submit() {
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email: f.email, password: f.password,
@@ -227,50 +288,79 @@ function EmpresaForm({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="mt-5 space-y-3">
-      <Field label="Razão social" required value={f.razao_social} onChange={(v) => set("razao_social", v)} />
-      <Field label="CNPJ" required value={f.cnpj} onChange={(v) => set("cnpj", maskCNPJ(v))}
-        error={f.cnpj && !isValidCNPJ(f.cnpj) ? "CNPJ inválido" : undefined} />
-      <Field label="Nome fantasia" value={f.nome_fantasia} onChange={(v) => set("nome_fantasia", v)} />
-      <div className="space-y-2">
-        <Label>Segmento</Label>
-        <Select value={f.segmento} onValueChange={(v) => set("segmento", v)}>
-          <SelectTrigger><SelectValue placeholder="Selecione o segmento" /></SelectTrigger>
-          <SelectContent>
-            {SEGMENTOS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
+    <div className="mt-2">
+      <Stepper steps={STEPS} current={step} onJump={setStep} />
+      <div className="mt-5 space-y-3">
+        {step === 0 && (
+          <>
+            <Field label="Razão social" value={f.razao_social} onChange={(v) => set("razao_social", v)} />
+            <Field label="CNPJ" value={f.cnpj} onChange={(v) => set("cnpj", maskCNPJ(v))}
+              valid={f.cnpj ? isValidCNPJ(f.cnpj) : undefined} />
+            <Field label="Nome fantasia" value={f.nome_fantasia} onChange={(v) => set("nome_fantasia", v)} />
+            <div className="space-y-2">
+              <Label>Segmento</Label>
+              <Select value={f.segmento} onValueChange={(v) => set("segmento", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione o segmento" /></SelectTrigger>
+                <SelectContent>
+                  {SEGMENTOS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+
+        {step === 1 && (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <Field label="CEP" value={f.cep} onChange={(v) => set("cep", maskCEP(v))} onBlur={onCepBlur} />
+              </div>
+              <div className="flex items-end pb-1">{cepLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}</div>
+            </div>
+            <Field label="Rua" value={f.rua} onChange={(v) => set("rua", v)} />
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Número" value={f.numero} onChange={(v) => set("numero", v)} />
+              <Field label="Complemento" value={f.complemento} onChange={(v) => set("complemento", v)} />
+            </div>
+            <Field label="Bairro" value={f.bairro} onChange={(v) => set("bairro", v)} />
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2"><Field label="Cidade" value={f.cidade} onChange={(v) => set("cidade", v)} /></div>
+              <Field label="UF" value={f.estado} onChange={(v) => set("estado", v.toUpperCase().slice(0, 2))} />
+            </div>
+            <Field label="WhatsApp" value={f.whatsapp} onChange={(v) => set("whatsapp", maskPhone(v))} />
+            <Field label="Nome do responsável" value={f.responsavel} onChange={(v) => set("responsavel", v)} />
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <Field label="E-mail" type="email" value={f.email} onChange={(v) => set("email", v)} />
+            <Field label="Senha (mín. 8)" type="password" value={f.password} onChange={(v) => set("password", v)} />
+            <Field label="Confirme a senha" type="password" value={f.password2} onChange={(v) => set("password2", v)}
+              valid={f.password2 ? f.password === f.password2 : undefined} />
+            <p className="text-xs text-muted-foreground">
+              Os campos que ficarem em branco podem ser preenchidos depois no seu painel.
+            </p>
+          </>
+        )}
+
+        <StepNav step={step} total={STEPS.length}
+          onBack={() => setStep((s) => Math.max(0, s - 1))}
+          onNext={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+          onSubmit={submit} loading={loading} />
+        {step === STEPS.length - 1 && (
+          <p className="text-center text-xs text-muted-foreground">Acesso imediato com 14 dias grátis.</p>
+        )}
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        <div className="col-span-2">
-          <Field label="CEP" required value={f.cep} onChange={(v) => set("cep", maskCEP(v))} onBlur={onCepBlur} />
-        </div>
-        <div className="flex items-end pb-1">{cepLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}</div>
-      </div>
-      <Field label="Rua" value={f.rua} onChange={(v) => set("rua", v)} />
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Número" value={f.numero} onChange={(v) => set("numero", v)} />
-        <Field label="Complemento" value={f.complemento} onChange={(v) => set("complemento", v)} />
-      </div>
-      <Field label="Bairro" value={f.bairro} onChange={(v) => set("bairro", v)} />
-      <div className="grid grid-cols-3 gap-2">
-        <div className="col-span-2"><Field label="Cidade" value={f.cidade} onChange={(v) => set("cidade", v)} /></div>
-        <Field label="UF" value={f.estado} onChange={(v) => set("estado", v.toUpperCase().slice(0, 2))} />
-      </div>
-      <Field label="WhatsApp" required value={f.whatsapp} onChange={(v) => set("whatsapp", maskPhone(v))} />
-      <Field label="Nome do responsável" required value={f.responsavel} onChange={(v) => set("responsavel", v)} />
-      <Field label="E-mail" type="email" required value={f.email} onChange={(v) => set("email", v)} />
-      <Field label="Senha (mín. 8)" type="password" required value={f.password} onChange={(v) => set("password", v)} />
-      <Field label="Confirme a senha" type="password" required value={f.password2} onChange={(v) => set("password2", v)} />
-      <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:opacity-90">
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar conta e iniciar trial"}
-      </Button>
-      <p className="text-center text-xs text-muted-foreground">Acesso imediato com 14 dias grátis.</p>
-    </form>
+    </div>
   );
 }
 
+/* ---------------- Entregador ---------------- */
+
 function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
+  const [step, setStep] = useState(0);
+  const STEPS = ["Pessoal", "Veículo & Endereço", "Plataformas & PIX"];
   const [f, setF] = useState({
     nome_completo: "", cpf: "", data_nascimento: "", whatsapp: "", email: "",
     password: "", password2: "",
@@ -288,8 +378,6 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
   const set = <K extends keyof typeof f>(k: K, v: string) => setF((p) => ({ ...p, [k]: v }));
 
   const exigePlaca = VEICULOS_COM_PLACA.includes(f.tipo_veiculo);
-  const idade = ageFromBRDate(f.data_nascimento);
-  const menorIdade = idade !== null && idade < 18;
 
   function toggle(list: string[], item: string, setter: (v: string[]) => void) {
     setter(list.includes(item) ? list.filter((x) => x !== item) : [...list, item]);
@@ -300,7 +388,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
     setCepLoading(true);
     const data = await fetchCEP(f.cep);
     setCepLoading(false);
-    if (!data) return toast.error("CEP não encontrado");
+    if (!data) return;
     setF((p) => ({ ...p, rua: data.logradouro, bairro: data.bairro, cidade: data.localidade, estado: data.uf }));
   }
 
@@ -313,31 +401,12 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
     return data.publicUrl;
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!isValidCPF(f.cpf)) return toast.error("CPF inválido");
-    if (idade === null) return toast.error("Data de nascimento inválida (DD/MM/AAAA)");
-    if (menorIdade) return toast.error("Você precisa ter pelo menos 18 anos para se cadastrar como entregador");
-    if (f.password.length < 8) return toast.error("Senha precisa de no mínimo 8 caracteres");
-    if (f.password !== f.password2) return toast.error("Senhas não conferem");
-    if (!selfieFile) return toast.error("Envie sua selfie segurando um documento");
-    if (!f.tipo_veiculo) return toast.error("Selecione o tipo de veículo");
-    if (exigePlaca && !isValidPlaca(f.placa)) return toast.error("Placa inválida");
-    if (onlyDigits(f.cep).length !== 8) return toast.error("CEP inválido");
-    if (turnos.length === 0) return toast.error("Selecione ao menos um turno");
-    if (temPlataforma === "") return toast.error("Informe se já é cadastrado em alguma plataforma");
-    if (temPlataforma === "sim" && plataformas.length === 0) return toast.error("Selecione ao menos uma plataforma");
-    if (temPlataforma === "sim" && !comprovanteFile) return toast.error("Envie o comprovante de cadastro na plataforma");
-    if (!f.pix_tipo || !f.pix_chave) return toast.error("Informe sua chave PIX");
-
+  async function submit() {
     setLoading(true);
-    const selfieUrl = await uploadDoc(selfieFile, "selfies");
-    if (!selfieUrl) { setLoading(false); return; }
+    let selfieUrl: string | null = null;
+    if (selfieFile) selfieUrl = await uploadDoc(selfieFile, "selfies");
     let comprovanteUrl: string | null = null;
-    if (temPlataforma === "sim" && comprovanteFile) {
-      comprovanteUrl = await uploadDoc(comprovanteFile, "plataformas");
-      if (!comprovanteUrl) { setLoading(false); return; }
-    }
+    if (comprovanteFile) comprovanteUrl = await uploadDoc(comprovanteFile, "plataformas");
 
     const { error } = await supabase.auth.signUp({
       email: f.email, password: f.password,
@@ -350,15 +419,15 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
           cpf: onlyDigits(f.cpf),
           data_nascimento: toISODate(f.data_nascimento),
           whatsapp: onlyDigits(f.whatsapp),
-          tipo_veiculo: f.tipo_veiculo,
-          placa: exigePlaca ? f.placa.toUpperCase() : null,
+          tipo_veiculo: f.tipo_veiculo || null,
+          placa: exigePlaca && f.placa ? f.placa.toUpperCase() : null,
           selfie_url: selfieUrl,
           cep: onlyDigits(f.cep), rua: f.rua, numero: f.numero, complemento: f.complemento,
           bairro: f.bairro, cidade: f.cidade, estado: f.estado,
           turnos,
           plataformas: temPlataforma === "sim" ? plataformas : [],
           plataforma_comprovante_url: comprovanteUrl,
-          pix_tipo: f.pix_tipo,
+          pix_tipo: f.pix_tipo || null,
           pix_chave: f.pix_chave,
           banco: f.banco,
         },
@@ -371,140 +440,165 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="mt-5 space-y-3">
-      <Field label="Nome completo" required value={f.nome_completo} onChange={(v) => set("nome_completo", v)} />
-      <Field label="CPF" required value={f.cpf} onChange={(v) => set("cpf", maskCPF(v))}
-        error={f.cpf && !isValidCPF(f.cpf) ? "CPF inválido" : undefined} />
-      <Field label="Data de nascimento (DD/MM/AAAA)" required value={f.data_nascimento}
-        onChange={(v) => set("data_nascimento", maskDate(v))}
-        error={menorIdade ? "Você precisa ter pelo menos 18 anos para se cadastrar como entregador" : undefined} />
-      <Field label="WhatsApp" required value={f.whatsapp} onChange={(v) => set("whatsapp", maskPhone(v))} />
-      <Field label="E-mail" type="email" required value={f.email} onChange={(v) => set("email", v)} />
-      <Field label="Senha (mín. 8)" type="password" required value={f.password} onChange={(v) => set("password", v)} />
-      <Field label="Confirme a senha" type="password" required value={f.password2} onChange={(v) => set("password2", v)} />
+    <div className="mt-2">
+      <Stepper steps={STEPS} current={step} onJump={setStep} />
+      <div className="mt-5 space-y-3">
+        {step === 0 && (
+          <>
+            <Field label="Nome completo" value={f.nome_completo} onChange={(v) => set("nome_completo", v)} />
+            <Field label="CPF" value={f.cpf} onChange={(v) => set("cpf", maskCPF(v))}
+              valid={f.cpf ? isValidCPF(f.cpf) : undefined} />
+            <Field label="Data de nascimento (DD/MM/AAAA)" value={f.data_nascimento}
+              onChange={(v) => set("data_nascimento", maskDate(v))} />
+            <Field label="WhatsApp" value={f.whatsapp} onChange={(v) => set("whatsapp", maskPhone(v))} />
+            <Field label="E-mail" type="email" value={f.email} onChange={(v) => set("email", v)} />
+            <Field label="Senha (mín. 8)" type="password" value={f.password} onChange={(v) => set("password", v)} />
+            <Field label="Confirme a senha" type="password" value={f.password2} onChange={(v) => set("password2", v)}
+              valid={f.password2 ? f.password === f.password2 : undefined} />
 
-      <div className="space-y-1.5">
-        <Label>Foto selfie <span className="text-destructive">*</span></Label>
-        <Input type="file" accept="image/*" capture="user"
-          onChange={(e) => setSelfieFile(e.target.files?.[0] ?? null)} required />
-        <p className="text-xs text-muted-foreground">Tire uma foto segurando um documento com o rosto visível.</p>
-        {selfieFile && <p className="text-xs text-primary">✓ {selfieFile.name}</p>}
-      </div>
-
-      <div className="space-y-2">
-        <Label>Tipo de veículo <span className="text-destructive">*</span></Label>
-        <Select value={f.tipo_veiculo} onValueChange={(v) => set("tipo_veiculo", v)}>
-          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-          <SelectContent>
-            {VEICULOS.map((v) => <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {exigePlaca && (
-        <Field label="Placa (AAA-0000 ou AAA0A00)" required value={f.placa}
-          onChange={(v) => set("placa", maskPlaca(v))}
-          error={f.placa && !isValidPlaca(f.placa) ? "Placa inválida" : undefined} />
-      )}
-
-      <div className="rounded-lg border p-3 space-y-3">
-        <p className="text-sm font-medium">Endereço completo</p>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="col-span-2">
-            <Field label="CEP" required value={f.cep} onChange={(v) => set("cep", maskCEP(v))} onBlur={onCepBlur} />
-          </div>
-          <div className="flex items-end pb-1">{cepLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}</div>
-        </div>
-        <Field label="Rua" value={f.rua} onChange={(v) => set("rua", v)} />
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="Número" value={f.numero} onChange={(v) => set("numero", v)} />
-          <Field label="Complemento" value={f.complemento} onChange={(v) => set("complemento", v)} />
-        </div>
-        <Field label="Bairro" value={f.bairro} onChange={(v) => set("bairro", v)} />
-        <div className="grid grid-cols-3 gap-2">
-          <div className="col-span-2"><Field label="Cidade" value={f.cidade} onChange={(v) => set("cidade", v)} /></div>
-          <Field label="UF" value={f.estado} onChange={(v) => set("estado", v.toUpperCase().slice(0, 2))} />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Disponibilidade de turnos <span className="text-destructive">*</span></Label>
-        <div className="space-y-2 rounded-lg border p-3">
-          {TURNOS.map((t) => (
-            <label key={t.value} className="flex items-center gap-2 text-sm">
-              <Checkbox checked={turnos.includes(t.value)} onCheckedChange={() => toggle(turnos, t.value, setTurnos)} />
-              {t.label}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Já é cadastrado em alguma plataforma de entregas? <span className="text-destructive">*</span></Label>
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => setTemPlataforma("sim")}
-            className={cn("rounded-md border px-3 py-2 text-sm", temPlataforma === "sim" ? "border-primary bg-primary/5" : "border-border")}>
-            Sim
-          </button>
-          <button type="button" onClick={() => { setTemPlataforma("nao"); setPlataformas([]); setComprovanteFile(null); }}
-            className={cn("rounded-md border px-3 py-2 text-sm", temPlataforma === "nao" ? "border-primary bg-primary/5" : "border-border")}>
-            Não
-          </button>
-        </div>
-        {temPlataforma === "sim" && (
-          <div className="space-y-3 rounded-lg border p-3">
-            <div className="grid grid-cols-2 gap-2">
-              {PLATAFORMAS.map((p) => (
-                <label key={p} className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={plataformas.includes(p)} onCheckedChange={() => toggle(plataformas, p, setPlataformas)} />
-                  {p}
-                </label>
-              ))}
-            </div>
             <div className="space-y-1.5">
-              <Label>Comprovante de cadastro <span className="text-destructive">*</span></Label>
-              <Input type="file" accept="image/*,application/pdf"
-                onChange={(e) => setComprovanteFile(e.target.files?.[0] ?? null)} />
-              <p className="text-xs text-muted-foreground">Print ou foto comprovando seu cadastro na plataforma.</p>
-              {comprovanteFile && <p className="text-xs text-primary">✓ {comprovanteFile.name}</p>}
+              <Label>Foto selfie</Label>
+              <Input type="file" accept="image/*" capture="user"
+                onChange={(e) => setSelfieFile(e.target.files?.[0] ?? null)} />
+              <p className="text-xs text-muted-foreground">Opcional — você pode adicionar depois no seu perfil.</p>
+              {selfieFile && <p className="text-xs text-primary">✓ {selfieFile.name}</p>}
             </div>
-          </div>
+          </>
+        )}
+
+        {step === 1 && (
+          <>
+            <div className="space-y-2">
+              <Label>Tipo de veículo</Label>
+              <Select value={f.tipo_veiculo} onValueChange={(v) => set("tipo_veiculo", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {VEICULOS.map((v) => <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {exigePlaca && (
+              <Field label="Placa (AAA-0000 ou AAA0A00)" value={f.placa}
+                onChange={(v) => set("placa", maskPlaca(v))}
+                valid={f.placa ? isValidPlaca(f.placa) : undefined} />
+            )}
+
+            <div className="rounded-lg border p-3 space-y-3">
+              <p className="text-sm font-medium">Endereço completo</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <Field label="CEP" value={f.cep} onChange={(v) => set("cep", maskCEP(v))} onBlur={onCepBlur} />
+                </div>
+                <div className="flex items-end pb-1">{cepLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}</div>
+              </div>
+              <Field label="Rua" value={f.rua} onChange={(v) => set("rua", v)} />
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Número" value={f.numero} onChange={(v) => set("numero", v)} />
+                <Field label="Complemento" value={f.complemento} onChange={(v) => set("complemento", v)} />
+              </div>
+              <Field label="Bairro" value={f.bairro} onChange={(v) => set("bairro", v)} />
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2"><Field label="Cidade" value={f.cidade} onChange={(v) => set("cidade", v)} /></div>
+                <Field label="UF" value={f.estado} onChange={(v) => set("estado", v.toUpperCase().slice(0, 2))} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Disponibilidade de turnos</Label>
+              <div className="space-y-2 rounded-lg border p-3">
+                {TURNOS.map((t) => (
+                  <label key={t.value} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={turnos.includes(t.value)} onCheckedChange={() => toggle(turnos, t.value, setTurnos)} />
+                    {t.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <div className="space-y-2">
+              <Label>Já é cadastrado em alguma plataforma de entregas?</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setTemPlataforma("sim")}
+                  className={cn("rounded-md border px-3 py-2 text-sm", temPlataforma === "sim" ? "border-primary bg-primary/5" : "border-border")}>
+                  Sim
+                </button>
+                <button type="button" onClick={() => { setTemPlataforma("nao"); setPlataformas([]); setComprovanteFile(null); }}
+                  className={cn("rounded-md border px-3 py-2 text-sm", temPlataforma === "nao" ? "border-primary bg-primary/5" : "border-border")}>
+                  Não
+                </button>
+              </div>
+              {temPlataforma === "sim" && (
+                <div className="space-y-3 rounded-lg border p-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    {PLATAFORMAS.map((p) => (
+                      <label key={p} className="flex items-center gap-2 text-sm">
+                        <Checkbox checked={plataformas.includes(p)} onCheckedChange={() => toggle(plataformas, p, setPlataformas)} />
+                        {p}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Comprovante de cadastro</Label>
+                    <Input type="file" accept="image/*,application/pdf"
+                      onChange={(e) => setComprovanteFile(e.target.files?.[0] ?? null)} />
+                    <p className="text-xs text-muted-foreground">Opcional — você pode adicionar depois no seu perfil.</p>
+                    {comprovanteFile && <p className="text-xs text-primary">✓ {comprovanteFile.name}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label>Tipo de chave PIX</Label>
+                <Select value={f.pix_tipo} onValueChange={(v) => set("pix_tipo", v)}>
+                  <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+                  <SelectContent>
+                    {PIX_TIPOS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Field label="Chave PIX" value={f.pix_chave} onChange={(v) => set("pix_chave", v)} />
+            </div>
+            <Field label="Banco" value={f.banco} onChange={(v) => set("banco", v)} />
+            <p className="text-xs text-muted-foreground">
+              Você pode deixar campos em branco e completar depois no painel.
+            </p>
+          </>
+        )}
+
+        <StepNav step={step} total={STEPS.length}
+          onBack={() => setStep((s) => Math.max(0, s - 1))}
+          onNext={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+          onSubmit={submit} loading={loading} />
+        {step === STEPS.length - 1 && (
+          <p className="text-center text-xs text-muted-foreground">Acesso imediato após o cadastro.</p>
         )}
       </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-2">
-          <Label>Tipo de chave PIX <span className="text-destructive">*</span></Label>
-          <Select value={f.pix_tipo} onValueChange={(v) => set("pix_tipo", v)}>
-            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
-            <SelectContent>
-              {PIX_TIPOS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <Field label="Chave PIX" required value={f.pix_chave} onChange={(v) => set("pix_chave", v)} />
-      </div>
-      <Field label="Banco" required value={f.banco} onChange={(v) => set("banco", v)} />
-
-      <Button type="submit" disabled={loading || menorIdade} className="w-full bg-primary text-primary-foreground hover:opacity-90">
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar conta"}
-      </Button>
-      <p className="text-center text-xs text-muted-foreground">Acesso imediato após o cadastro.</p>
-    </form>
+    </div>
   );
 }
 
-function Field({ label, value, onChange, type = "text", required, error, onBlur }: {
+/* ---------------- Shared ---------------- */
+
+function Field({ label, value, onChange, type = "text", valid, onBlur }: {
   label: string; value: string; onChange: (v: string) => void;
-  type?: string; required?: boolean; error?: string; onBlur?: () => void;
+  type?: string; valid?: boolean; onBlur?: () => void;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}{required && <span className="text-destructive"> *</span>}</Label>
-      <Input type={type} required={required} value={value}
+      <Label>{label}</Label>
+      <Input type={type} value={value}
         onChange={(e) => onChange(e.target.value)} onBlur={onBlur}
-        className={cn(error && "border-destructive")} />
-      {error && <p className="text-xs text-destructive">{error}</p>}
+        className={cn(
+          valid === true && "border-emerald-500 focus-visible:ring-emerald-500/40",
+          valid === false && "border-destructive focus-visible:ring-destructive/40",
+        )} />
     </div>
   );
 }
