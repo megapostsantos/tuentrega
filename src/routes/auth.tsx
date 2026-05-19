@@ -23,7 +23,7 @@ type Role = "empresa" | "entregador";
 
 function translateAuthError(msg: string): string {
   const m = msg.toLowerCase();
-  if (m.includes("weak") || m.includes("pwned")) return "Senha muito fraca ou já vazada. Use uma combinação única de letras, números e símbolos.";
+  
   if (m.includes("already registered") || m.includes("user already")) return "Este e-mail já está cadastrado. Faça login.";
   if (m.includes("invalid login") || m.includes("invalid credentials")) return "E-mail ou senha incorretos.";
   if (m.includes("email") && (m.includes("invalid") || m.includes("required"))) return "Informe um e-mail válido para criar sua conta.";
