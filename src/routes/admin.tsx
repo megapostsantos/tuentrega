@@ -28,16 +28,16 @@ function AdminLayout() {
   }, [isLogin, loading, user, isAdmin, navigate]);
 
   useEffect(() => {
-    if (isLogin || role !== "admin") return;
+    if (isLogin || !isAdmin) return;
     let cancel = false;
     (supabase as any).from("admin_notifications").select("id", { count: "exact", head: true }).is("read_at", null)
       .then(({ count }: { count: number | null }) => { if (!cancel) setUnread(count ?? 0); });
     return () => { cancel = true; };
-  }, [isLogin, role, path]);
+  }, [isLogin, isAdmin, path]);
 
   if (isLogin) return <Outlet />;
 
-  if (loading || !user || role !== "admin") {
+  if (loading || !user || !isAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Logo />
