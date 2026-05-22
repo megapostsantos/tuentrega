@@ -27,8 +27,7 @@ export function ImpersonationBanner() {
     <div className="sticky top-0 z-50 flex items-center gap-3 border-b border-amber-500/40 bg-amber-500/15 px-4 py-2 text-sm text-amber-900 dark:text-amber-100">
       <AlertTriangle className="h-4 w-4 shrink-0" />
       <span className="flex-1 truncate">
-        ⚠️ Você está visualizando como <strong>{imp.targetName}</strong> ({imp.targetType}).
-        Pagamentos e aceites estão bloqueados.
+        ⚠️ Você está usando o sistema como <strong>{imp.targetName}</strong> ({imp.targetType}). Tudo que fizer ficará salvo no perfil dessa conta.
       </span>
       <button
         onClick={exit}

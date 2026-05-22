@@ -14,28 +14,30 @@ export const Route = createFileRoute("/admin")({
 function AdminLayout() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const isLogin = path === "/admin/login";
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, isImpersonating } = useAuth();
   const navigate = useNavigate();
   const [unread, setUnread] = useState(0);
+  // The admin is still the real signed-in user even while impersonating.
+  const isAdmin = role === "admin" || isImpersonating;
 
   useEffect(() => {
     if (isLogin) return;
     if (loading) return;
     if (!user) { navigate({ to: "/admin/login" }); return; }
-    if (role !== "admin") { navigate({ to: "/admin/login" }); return; }
-  }, [isLogin, loading, user, role, navigate]);
+    if (!isAdmin) { navigate({ to: "/admin/login" }); return; }
+  }, [isLogin, loading, user, isAdmin, navigate]);
 
   useEffect(() => {
-    if (isLogin || role !== "admin") return;
+    if (isLogin || !isAdmin) return;
     let cancel = false;
     (supabase as any).from("admin_notifications").select("id", { count: "exact", head: true }).is("read_at", null)
       .then(({ count }: { count: number | null }) => { if (!cancel) setUnread(count ?? 0); });
     return () => { cancel = true; };
-  }, [isLogin, role, path]);
+  }, [isLogin, isAdmin, path]);
 
   if (isLogin) return <Outlet />;
 
-  if (loading || !user || role !== "admin") {
+  if (loading || !user || !isAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Logo />
