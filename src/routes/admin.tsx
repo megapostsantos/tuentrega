@@ -14,16 +14,18 @@ export const Route = createFileRoute("/admin")({
 function AdminLayout() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const isLogin = path === "/admin/login";
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, isImpersonating } = useAuth();
   const navigate = useNavigate();
   const [unread, setUnread] = useState(0);
+  // The admin is still the real signed-in user even while impersonating.
+  const isAdmin = role === "admin" || isImpersonating;
 
   useEffect(() => {
     if (isLogin) return;
     if (loading) return;
     if (!user) { navigate({ to: "/admin/login" }); return; }
-    if (role !== "admin") { navigate({ to: "/admin/login" }); return; }
-  }, [isLogin, loading, user, role, navigate]);
+    if (!isAdmin) { navigate({ to: "/admin/login" }); return; }
+  }, [isLogin, loading, user, isAdmin, navigate]);
 
   useEffect(() => {
     if (isLogin || role !== "admin") return;
