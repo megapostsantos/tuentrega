@@ -383,42 +383,108 @@ export type Database = {
           },
         ]
       }
+      entregas_pacotes: {
+        Row: {
+          created_at: string
+          endereco_entrega: string | null
+          id: string
+          numero_pacote: number
+          oferta_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          endereco_entrega?: string | null
+          id?: string
+          numero_pacote: number
+          oferta_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          endereco_entrega?: string | null
+          id?: string
+          numero_pacote?: number
+          oferta_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ofertas: {
         Row: {
           bairro: string | null
           created_at: string
+          data_trabalho: string | null
           descricao: string | null
           empresa_id: string
+          endereco_coleta: string | null
+          entregador_id: string | null
           exige_nota_fiscal: boolean
+          expira_em: string | null
+          hora_fim: string | null
+          hora_inicio: string | null
           id: string
+          prazo_pagamento: string | null
+          prazo_pagamento_data: string | null
+          quantidade_pacotes: number | null
           status: string
+          tipo_entrega: string | null
           titulo: string
           updated_at: string
           valor: number
+          valor_por_pacote: number | null
+          veiculo_necessario: string | null
         }
         Insert: {
           bairro?: string | null
           created_at?: string
+          data_trabalho?: string | null
           descricao?: string | null
           empresa_id: string
+          endereco_coleta?: string | null
+          entregador_id?: string | null
           exige_nota_fiscal?: boolean
+          expira_em?: string | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
           id?: string
+          prazo_pagamento?: string | null
+          prazo_pagamento_data?: string | null
+          quantidade_pacotes?: number | null
           status?: string
+          tipo_entrega?: string | null
           titulo: string
           updated_at?: string
           valor?: number
+          valor_por_pacote?: number | null
+          veiculo_necessario?: string | null
         }
         Update: {
           bairro?: string | null
           created_at?: string
+          data_trabalho?: string | null
           descricao?: string | null
           empresa_id?: string
+          endereco_coleta?: string | null
+          entregador_id?: string | null
           exige_nota_fiscal?: boolean
+          expira_em?: string | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
           id?: string
+          prazo_pagamento?: string | null
+          prazo_pagamento_data?: string | null
+          quantidade_pacotes?: number | null
           status?: string
+          tipo_entrega?: string | null
           titulo?: string
           updated_at?: string
           valor?: number
+          valor_por_pacote?: number | null
+          veiculo_necessario?: string | null
         }
         Relationships: [
           {
