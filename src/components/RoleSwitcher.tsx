@@ -9,9 +9,8 @@ import {
   useImpersonation,
 } from "@/lib/impersonation";
 import { supabase } from "@/integrations/supabase/client";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -179,22 +178,24 @@ function AccountPicker({
   );
 
   return (
-    <Popover open={!!type} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <PopoverTrigger asChild>
-        <span className="sr-only">picker</span>
-      </PopoverTrigger>
-      <PopoverContent side="right" align="start" className="w-80 p-2">
-        <div className="mb-2 flex items-center gap-2">
+    <Dialog open={!!type} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>
+            Escolher {type === "empresa" ? "empresa" : "entregador"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex items-center gap-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
             autoFocus
-            placeholder={`Buscar ${type === "empresa" ? "empresa" : "entregador"}…`}
+            placeholder="Buscar pelo nome…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="h-8"
+            className="h-9"
           />
         </div>
-        <div className="max-h-72 space-y-0.5 overflow-y-auto">
+        <div className="max-h-80 space-y-0.5 overflow-y-auto">
           {loading && <p className="p-2 text-xs text-muted-foreground">Carregando…</p>}
           {!loading && filtered.length === 0 && (
             <p className="p-2 text-xs text-muted-foreground">Nenhuma conta encontrada.</p>
@@ -203,17 +204,16 @@ function AccountPicker({
             <button
               key={r.id}
               onClick={() => type && onPick(type, r)}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted"
             >
-              {type === "empresa" ? <Building2 className="h-3.5 w-3.5 text-muted-foreground" /> : <Bike className="h-3.5 w-3.5 text-muted-foreground" />}
+              {type === "empresa"
+                ? <Building2 className="h-4 w-4 text-muted-foreground" />
+                : <Bike className="h-4 w-4 text-muted-foreground" />}
               <span className="truncate">{r.name}</span>
             </button>
           ))}
         </div>
-        <div className="mt-2 flex justify-end">
-          <Button size="sm" variant="ghost" onClick={onClose}>Fechar</Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }
