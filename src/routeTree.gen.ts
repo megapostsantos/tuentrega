@@ -32,7 +32,6 @@ import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
-import { Route as ApiPublicSeedTestUsersRouteImport } from './routes/api/public/seed-test-users'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -150,11 +149,6 @@ const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const ApiPublicSeedTestUsersRoute = ApiPublicSeedTestUsersRouteImport.update({
-  id: '/api/public/seed-test-users',
-  path: '/api/public/seed-test-users',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -179,7 +173,6 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
-  '/api/public/seed-test-users': typeof ApiPublicSeedTestUsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -204,7 +197,6 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
-  '/api/public/seed-test-users': typeof ApiPublicSeedTestUsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -231,7 +223,6 @@ export interface FileRoutesById {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
-  '/api/public/seed-test-users': typeof ApiPublicSeedTestUsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -258,7 +249,6 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
-    | '/api/public/seed-test-users'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -283,7 +273,6 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
-    | '/api/public/seed-test-users'
   id:
     | '__root__'
     | '/'
@@ -309,7 +298,6 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
-    | '/api/public/seed-test-users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -317,7 +305,6 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
-  ApiPublicSeedTestUsersRoute: typeof ApiPublicSeedTestUsersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -483,13 +470,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAgendaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/api/public/seed-test-users': {
-      id: '/api/public/seed-test-users'
-      path: '/api/public/seed-test-users'
-      fullPath: '/api/public/seed-test-users'
-      preLoaderRoute: typeof ApiPublicSeedTestUsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -554,8 +534,17 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
-  ApiPublicSeedTestUsersRoute: ApiPublicSeedTestUsersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
