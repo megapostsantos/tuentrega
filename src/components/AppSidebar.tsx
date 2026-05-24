@@ -8,6 +8,7 @@ import {
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/Logo";
+import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import type { AppRole } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -65,7 +66,9 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        <RoleSwitcher />
         <SidebarGroup>
+
           <SidebarGroupLabel>Geral</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>

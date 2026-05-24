@@ -8,6 +8,7 @@ import {
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/Logo";
+import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -42,7 +43,9 @@ export function AdminSidebar({ unreadCount = 0 }: { unreadCount?: number }) {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        <RoleSwitcher />
         <SidebarGroup>
+
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((it) => (

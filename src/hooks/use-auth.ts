@@ -14,6 +14,8 @@ export interface AuthState {
   isImpersonating: boolean;
   /** Real admin user id when impersonating, otherwise null. */
   realUserId: string | null;
+  /** Real role of the signed-in user (admin even while impersonating). */
+  realRole: AppRole | null;
 }
 
 export function useAuth(): AuthState {
@@ -72,6 +74,7 @@ export function useAuth(): AuthState {
       loading,
       isImpersonating: true,
       realUserId: realUser.id,
+      realRole: "admin",
     };
   }
 
@@ -82,5 +85,6 @@ export function useAuth(): AuthState {
     loading,
     isImpersonating: false,
     realUserId: null,
+    realRole: role,
   };
 }
