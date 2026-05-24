@@ -176,6 +176,10 @@ export type Database = {
           rua: string | null
           segmento: string | null
           status: string
+          tms_metodo_padrao: string | null
+          tms_mostrar_margem: boolean
+          tms_pacotes_por_rota: number | null
+          tms_valor_padrao_pacote: number | null
           trial_ends_at: string
           updated_at: string
           whatsapp: string | null
@@ -197,6 +201,10 @@ export type Database = {
           rua?: string | null
           segmento?: string | null
           status?: string
+          tms_metodo_padrao?: string | null
+          tms_mostrar_margem?: boolean
+          tms_pacotes_por_rota?: number | null
+          tms_valor_padrao_pacote?: number | null
           trial_ends_at?: string
           updated_at?: string
           whatsapp?: string | null
@@ -218,6 +226,10 @@ export type Database = {
           rua?: string | null
           segmento?: string | null
           status?: string
+          tms_metodo_padrao?: string | null
+          tms_mostrar_margem?: boolean
+          tms_pacotes_por_rota?: number | null
+          tms_valor_padrao_pacote?: number | null
           trial_ends_at?: string
           updated_at?: string
           whatsapp?: string | null
@@ -427,9 +439,12 @@ export type Database = {
           hora_fim: string | null
           hora_inicio: string | null
           id: string
+          operacao_id: string | null
           prazo_pagamento: string | null
           prazo_pagamento_data: string | null
           quantidade_pacotes: number | null
+          quantidade_paradas: number | null
+          rota_operacao_id: string | null
           status: string
           tipo_entrega: string | null
           titulo: string
@@ -451,9 +466,12 @@ export type Database = {
           hora_fim?: string | null
           hora_inicio?: string | null
           id?: string
+          operacao_id?: string | null
           prazo_pagamento?: string | null
           prazo_pagamento_data?: string | null
           quantidade_pacotes?: number | null
+          quantidade_paradas?: number | null
+          rota_operacao_id?: string | null
           status?: string
           tipo_entrega?: string | null
           titulo: string
@@ -475,9 +493,12 @@ export type Database = {
           hora_fim?: string | null
           hora_inicio?: string | null
           id?: string
+          operacao_id?: string | null
           prazo_pagamento?: string | null
           prazo_pagamento_data?: string | null
           quantidade_pacotes?: number | null
+          quantidade_paradas?: number | null
+          rota_operacao_id?: string | null
           status?: string
           tipo_entrega?: string | null
           titulo?: string
@@ -495,6 +516,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      operacoes: {
+        Row: {
+          created_at: string
+          data_operacao: string
+          empresa_id: string
+          id: string
+          metodo_divisao: string
+          observacoes: string | null
+          pacotes_a_mais: number
+          pacotes_faltando: number
+          status: string
+          total_pacotes_contados: number
+          total_pacotes_sistema: number
+          total_paradas: number
+          updated_at: string
+          valor_ml_por_pacote: number
+          valor_por_pacote: number
+        }
+        Insert: {
+          created_at?: string
+          data_operacao?: string
+          empresa_id: string
+          id?: string
+          metodo_divisao?: string
+          observacoes?: string | null
+          pacotes_a_mais?: number
+          pacotes_faltando?: number
+          status?: string
+          total_pacotes_contados?: number
+          total_pacotes_sistema?: number
+          total_paradas?: number
+          updated_at?: string
+          valor_ml_por_pacote?: number
+          valor_por_pacote?: number
+        }
+        Update: {
+          created_at?: string
+          data_operacao?: string
+          empresa_id?: string
+          id?: string
+          metodo_divisao?: string
+          observacoes?: string | null
+          pacotes_a_mais?: number
+          pacotes_faltando?: number
+          status?: string
+          total_pacotes_contados?: number
+          total_pacotes_sistema?: number
+          total_paradas?: number
+          updated_at?: string
+          valor_ml_por_pacote?: number
+          valor_por_pacote?: number
+        }
+        Relationships: []
       }
       plans: {
         Row: {
@@ -552,6 +627,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      rotas_operacao: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+          oferta_id: string | null
+          operacao_id: string
+          quantidade_pacotes: number
+          quantidade_paradas: number
+          status: string
+          updated_at: string
+          valor_total: number
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          oferta_id?: string | null
+          operacao_id: string
+          quantidade_pacotes?: number
+          quantidade_paradas?: number
+          status?: string
+          updated_at?: string
+          valor_total?: number
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          oferta_id?: string | null
+          operacao_id?: string
+          quantidade_pacotes?: number
+          quantidade_paradas?: number
+          status?: string
+          updated_at?: string
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rotas_operacao_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
