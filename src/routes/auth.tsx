@@ -392,23 +392,17 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
     setF((p) => ({ ...p, rua: data.logradouro, bairro: data.bairro, cidade: data.localidade, estado: data.uf }));
   }
 
-  async function uploadDoc(file: File, prefix: string): Promise<string | null> {
+  async function uploadDoc(file: File, userId: string, prefix: string): Promise<string | null> {
     const ext = file.name.split(".").pop() || "jpg";
-    const path = `${prefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const path = `${userId}/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await supabase.storage.from("entregador-docs").upload(path, file, { upsert: false });
     if (error) { toast.error("Falha no upload: " + error.message); return null; }
-    const { data } = supabase.storage.from("entregador-docs").getPublicUrl(path);
-    return data.publicUrl;
+    return path;
   }
 
   async function submit() {
     setLoading(true);
-    let selfieUrl: string | null = null;
-    if (selfieFile) selfieUrl = await uploadDoc(selfieFile, "selfies");
-    let comprovanteUrl: string | null = null;
-    if (comprovanteFile) comprovanteUrl = await uploadDoc(comprovanteFile, "plataformas");
-
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email: f.email, password: f.password,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
@@ -421,20 +415,30 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
           whatsapp: onlyDigits(f.whatsapp),
           tipo_veiculo: f.tipo_veiculo || null,
           placa: exigePlaca && f.placa ? f.placa.toUpperCase() : null,
-          selfie_url: selfieUrl,
           cep: onlyDigits(f.cep), rua: f.rua, numero: f.numero, complemento: f.complemento,
           bairro: f.bairro, cidade: f.cidade, estado: f.estado,
           turnos,
           plataformas: temPlataforma === "sim" ? plataformas : [],
-          plataforma_comprovante_url: comprovanteUrl,
           pix_tipo: f.pix_tipo || null,
           pix_chave: f.pix_chave,
           banco: f.banco,
         },
       },
     });
+    if (error) { setLoading(false); return toast.error(translateAuthError(error.message)); }
+
+    const userId = signUpData.user?.id;
+    if (userId) {
+      const selfiePath = selfieFile ? await uploadDoc(selfieFile, userId, "selfie") : null;
+      const comprovantePath = comprovanteFile ? await uploadDoc(comprovanteFile, userId, "plataforma") : null;
+      if (selfiePath || comprovantePath) {
+        await supabase.from("entregadores").update({
+          ...(selfiePath ? { selfie_url: selfiePath } : {}),
+          ...(comprovantePath ? { plataforma_comprovante_url: comprovantePath } : {}),
+        }).eq("id", userId);
+      }
+    }
     setLoading(false);
-    if (error) return toast.error(translateAuthError(error.message));
     toast.success("Conta criada com sucesso!");
     onSuccess();
   }
