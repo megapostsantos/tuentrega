@@ -106,10 +106,12 @@ function OfertasPage() {
     let q = supabase.from("ofertas").select("*").order("created_at", { ascending: false });
     if (role === "empresa" && user) q = q.eq("empresa_id", user.id);
     const { data, error } = await q;
+    console.log("[ofertas] role=", role, "rows=", data?.length, "error=", error?.message, data);
     if (error) toast.error(error.message);
     setOfertas((data ?? []) as Oferta[]);
     setLoading(false);
   }
+
 
   useEffect(() => {
     if (!role) return;
@@ -379,13 +381,11 @@ function EntregadorView({
   useEffect(() => {
     if (!user) return;
     supabase.from("entregadores").select("tipo_veiculo").eq("id", user.id).maybeSingle()
-      .then(({ data }) => {
-        const v = data?.tipo_veiculo ?? null;
-        setMyVehicle(v);
-        if (v && vehicleFilter === "all") setVehicleFilter(v);
-      });
+      .then(({ data }) => setMyVehicle(data?.tipo_veiculo ?? null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+  void myVehicle;
+
 
   const available = useMemo(() => {
     return ofertas.filter((o) => {
