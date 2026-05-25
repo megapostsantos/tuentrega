@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Store, Plus, FileText, MapPin, Loader2, Clock, Package, Copy,
@@ -22,8 +22,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { CloseRouteDialog } from "@/components/CloseRouteDialog";
 
 export const Route = createFileRoute("/_authenticated/ofertas")({
+  validateSearch: (s: Record<string, unknown>) => ({ close: typeof s.close === "string" ? s.close : undefined }),
   component: OfertasPage,
 });
 
@@ -49,6 +51,10 @@ type Oferta = {
   hora_fim: string | null;
   expira_em: string | null;
   created_at: string;
+  updated_at: string;
+  pacotes_entregues: number | null;
+  pacotes_nao_entregues: number | null;
+  closed_at: string | null;
 };
 
 const VEHICLES = [
@@ -376,7 +382,10 @@ function EntregadorView({
   const [vmin, setVmin] = useState("");
   const [vmax, setVmax] = useState("");
   const [selected, setSelected] = useState<Oferta | null>(null);
+  const [closing, setClosing] = useState<Oferta | null>(null);
   const [myVehicle, setMyVehicle] = useState<string | null>(null);
+  const search = useSearch({ from: "/_authenticated/ofertas" });
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) return;
@@ -385,6 +394,13 @@ function EntregadorView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
   void myVehicle;
+
+  // Deep link from active route banner
+  useEffect(() => {
+    if (!search.close) return;
+    const found = ofertas.find((o) => o.id === search.close && o.status === "in_progress");
+    if (found) setClosing(found);
+  }, [search.close, ofertas]);
 
 
   const available = useMemo(() => {
@@ -461,7 +477,14 @@ function EntregadorView({
         </TabsContent>
       </Tabs>
 
-      {selected && <DetailsDialog o={selected} onClose={() => setSelected(null)} role="entregador" reload={reload} />}
+      {selected && <DetailsDialog o={selected} onClose={() => setSelected(null)} role="entregador" reload={reload} onCloseRoute={(o) => setClosing(o)} />}
+      {closing && (
+        <CloseRouteDialog
+          oferta={closing as never}
+          onClose={() => { setClosing(null); navigate({ to: "/ofertas", search: {} }); }}
+          onClosed={() => { setClosing(null); reload(); navigate({ to: "/ofertas", search: {} }); }}
+        />
+      )}
     </div>
   );
 }
@@ -529,8 +552,8 @@ function OfertaCard({
 }
 
 function DetailsDialog({
-  o, onClose, role, reload,
-}: { o: Oferta; onClose: () => void; role: "empresa" | "entregador"; reload: () => void }) {
+  o, onClose, role, reload, onCloseRoute,
+}: { o: Oferta; onClose: () => void; role: "empresa" | "entregador"; reload: () => void; onCloseRoute?: (o: Oferta) => void }) {
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -660,6 +683,11 @@ function DetailsDialog({
             </p>
           )}
 
+          {/* EMPRESA: delivery report (after closing) */}
+          {role === "empresa" && o.closed_at && (
+            <DeliveryReport oferta={o} />
+          )}
+
           {/* EMPRESA: deliverer info + payment */}
           {role === "empresa" && o.entregador_id && deliverer && (
             <div className="space-y-3 rounded-lg border p-3">
@@ -728,8 +756,11 @@ function DetailsDialog({
                 </Button>
               )}
               {o.status === "in_progress" && (
-                <Button className="w-full bg-primary text-primary-foreground hover:opacity-90" onClick={() => changeStatus("completed")} disabled={busy}>
-                  Concluir entrega
+                <Button
+                  className="w-full bg-primary text-primary-foreground hover:opacity-90"
+                  onClick={() => { onClose(); onCloseRoute?.(o); }}
+                >
+                  Fechar rota
                 </Button>
               )}
               {o.status === "completed" && o.exige_nota_fiscal && (
@@ -767,4 +798,68 @@ function prazoLabel(p: string, d: string | null) {
   if (p === "mes") return "Este mês";
   if (p === "custom" && d) return new Date(d).toLocaleDateString("pt-BR");
   return p;
+}
+
+function DeliveryReport({ oferta }: { oferta: Oferta }) {
+  const [occ, setOcc] = useState<any[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any).from("entregas_ocorrencias")
+        .select("*").eq("oferta_id", oferta.id).order("numero_pacote");
+      setOcc(data ?? []);
+      const allPaths: string[] = (data ?? []).flatMap((o: any) => o.fotos_urls ?? []);
+      const urls: Record<string, string> = {};
+      await Promise.all(allPaths.map(async (p) => {
+        const { data: s } = await supabase.storage.from("entregas-fotos").createSignedUrl(p, 3600);
+        if (s) urls[p] = s.signedUrl;
+      }));
+      setPhotoUrls(urls);
+    })();
+  }, [oferta.id]);
+
+  const total = oferta.quantidade_pacotes ?? 0;
+  const delivered = oferta.pacotes_entregues ?? 0;
+  const pct = total ? Math.round((delivered / total) * 100) : 0;
+  const valor = delivered * (oferta.valor_por_pacote ?? (total ? oferta.valor / total : 0));
+  const counts = new Map<string, number>();
+  for (const o of occ) counts.set(o.motivo, (counts.get(o.motivo) ?? 0) + 1);
+  const MLABEL: Record<string, string> = {
+    address_not_visited: "Endereço não visitado",
+    lost: "Pacote perdido",
+    damaged: "Pacote danificado",
+    could_not_deliver: "Não foi possível entregar",
+  };
+
+  return (
+    <div className="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-3 text-sm space-y-2">
+      <p className="font-semibold">📋 Relatório de entrega</p>
+      <p>Total: <strong>{total}</strong> · Entregues: <strong>{delivered} ({pct}%)</strong> · Não entregues: <strong>{oferta.pacotes_nao_entregues ?? 0}</strong></p>
+      {counts.size > 0 && (
+        <ul className="ml-4 list-disc text-xs">
+          {Array.from(counts.entries()).map(([m, n]) => (
+            <li key={m}>{n}× {MLABEL[m] ?? m}</li>
+          ))}
+        </ul>
+      )}
+      {Object.keys(photoUrls).length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(photoUrls).map(([path, url]) => (
+            <img key={path} src={url} alt="" onClick={() => setLightbox(url)}
+              className="h-16 w-16 cursor-pointer rounded border object-cover" />
+          ))}
+        </div>
+      )}
+      <p className="pt-1 font-semibold">💰 Valor a pagar: R$ {valor.toFixed(2)}</p>
+      {lightbox && (
+        <Dialog open onOpenChange={() => setLightbox(null)}>
+          <DialogContent className="max-w-3xl">
+            <img src={lightbox} alt="" className="w-full" />
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
 }

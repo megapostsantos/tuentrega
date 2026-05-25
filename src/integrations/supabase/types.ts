@@ -584,6 +584,45 @@ export type Database = {
           },
         ]
       }
+      entregas_ocorrencias: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          entregador_id: string
+          fotos_urls: string[]
+          id: string
+          motivo: string
+          numero_pacote: number
+          oferta_id: string
+          score_impact: number
+          sub_motivo: string | null
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          entregador_id: string
+          fotos_urls?: string[]
+          id?: string
+          motivo: string
+          numero_pacote: number
+          oferta_id: string
+          score_impact?: number
+          sub_motivo?: string | null
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          entregador_id?: string
+          fotos_urls?: string[]
+          id?: string
+          motivo?: string
+          numero_pacote?: number
+          oferta_id?: string
+          score_impact?: number
+          sub_motivo?: string | null
+        }
+        Relationships: []
+      }
       entregas_pacotes: {
         Row: {
           created_at: string
@@ -618,6 +657,8 @@ export type Database = {
         Row: {
           bairro: string | null
           cancelamento_ate: string | null
+          closed_at: string | null
+          closing_notes: string | null
           created_at: string
           data_trabalho: string | null
           descricao: string | null
@@ -630,6 +671,8 @@ export type Database = {
           hora_inicio: string | null
           id: string
           operacao_id: string | null
+          pacotes_entregues: number | null
+          pacotes_nao_entregues: number | null
           permite_cancelamento: boolean | null
           prazo_pagamento: string | null
           prazo_pagamento_data: string | null
@@ -648,6 +691,8 @@ export type Database = {
         Insert: {
           bairro?: string | null
           cancelamento_ate?: string | null
+          closed_at?: string | null
+          closing_notes?: string | null
           created_at?: string
           data_trabalho?: string | null
           descricao?: string | null
@@ -660,6 +705,8 @@ export type Database = {
           hora_inicio?: string | null
           id?: string
           operacao_id?: string | null
+          pacotes_entregues?: number | null
+          pacotes_nao_entregues?: number | null
           permite_cancelamento?: boolean | null
           prazo_pagamento?: string | null
           prazo_pagamento_data?: string | null
@@ -678,6 +725,8 @@ export type Database = {
         Update: {
           bairro?: string | null
           cancelamento_ate?: string | null
+          closed_at?: string | null
+          closing_notes?: string | null
           created_at?: string
           data_trabalho?: string | null
           descricao?: string | null
@@ -690,6 +739,8 @@ export type Database = {
           hora_inicio?: string | null
           id?: string
           operacao_id?: string | null
+          pacotes_entregues?: number | null
+          pacotes_nao_entregues?: number | null
           permite_cancelamento?: boolean | null
           prazo_pagamento?: string | null
           prazo_pagamento_data?: string | null
