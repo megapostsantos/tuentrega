@@ -131,12 +131,22 @@
 
 @layer base {
   * { border-color: var(--color-border); }
-  html, body { font-family: var(--font-sans); }
+  html, body {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: contain;
   }
+  /* Remove 300ms touch delay on mobile */
+  button, a, [role="button"] { touch-action: manipulation; }
+  /* Min touch target */
+  button, a[role="button"] { min-height: 44px; }
+  /* Prevent body scroll when modal/sheet open (radix sets data-state) */
+  body[data-scroll-locked] { overflow: hidden !important; }
 }
 
 @layer utilities {
