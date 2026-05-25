@@ -8,6 +8,8 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -89,8 +91,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster position="top-right" richColors />
+      <ErrorBoundary>
+        <OfflineBanner />
+        <Outlet />
+        <Toaster position="top-right" richColors />
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }

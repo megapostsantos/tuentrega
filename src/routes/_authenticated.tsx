@@ -1,7 +1,8 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { Logo } from "@/components/Logo";
+import { SplashScreen } from "@/components/SplashScreen";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { ActiveRouteBanner } from "@/components/ActiveRouteBanner";
 import { TopAppBar } from "@/components/TopAppBar";
@@ -14,27 +15,32 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
   const { user, role, loading } = useAuth();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
   }, [loading, user, navigate]);
 
-  if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Logo />
-      </div>
-    );
-  }
+  if (loading || !user) return <SplashScreen />;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
       <ImpersonationBanner />
       <ActiveRouteBanner />
       <TopAppBar />
-      <main className="flex-1 pb-20">
+      <main className="flex-1 pb-24">
         <div className="mx-auto w-full max-w-2xl">
-          <Outlet />
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
       <BottomNav role={role} />
