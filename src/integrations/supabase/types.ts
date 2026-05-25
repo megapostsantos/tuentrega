@@ -158,6 +158,183 @@ export type Database = {
         }
         Relationships: []
       }
+      agenda_previsoes: {
+        Row: {
+          cancelamento_ate: string | null
+          created_at: string
+          data_prevista: string
+          empresa_id: string
+          endereco_coleta: string | null
+          hora_abertura: string | null
+          id: string
+          pacotes_estimados: number
+          pacotes_por_rota: number
+          permite_cancelamento: boolean
+          rotas_estimadas: number
+          status: string
+          updated_at: string
+          valor_por_pacote: number
+          veiculo_necessario: string | null
+        }
+        Insert: {
+          cancelamento_ate?: string | null
+          created_at?: string
+          data_prevista: string
+          empresa_id: string
+          endereco_coleta?: string | null
+          hora_abertura?: string | null
+          id?: string
+          pacotes_estimados?: number
+          pacotes_por_rota?: number
+          permite_cancelamento?: boolean
+          rotas_estimadas?: number
+          status?: string
+          updated_at?: string
+          valor_por_pacote?: number
+          veiculo_necessario?: string | null
+        }
+        Update: {
+          cancelamento_ate?: string | null
+          created_at?: string
+          data_prevista?: string
+          empresa_id?: string
+          endereco_coleta?: string | null
+          hora_abertura?: string | null
+          id?: string
+          pacotes_estimados?: number
+          pacotes_por_rota?: number
+          permite_cancelamento?: boolean
+          rotas_estimadas?: number
+          status?: string
+          updated_at?: string
+          valor_por_pacote?: number
+          veiculo_necessario?: string | null
+        }
+        Relationships: []
+      }
+      alocacoes: {
+        Row: {
+          alocado_em: string
+          created_at: string
+          empresa_id: string
+          entregador_id: string
+          id: string
+          oferta_id: string | null
+          operacao_id: string
+          rota_id: string
+          status: string
+        }
+        Insert: {
+          alocado_em?: string
+          created_at?: string
+          empresa_id: string
+          entregador_id: string
+          id?: string
+          oferta_id?: string | null
+          operacao_id: string
+          rota_id: string
+          status?: string
+        }
+        Update: {
+          alocado_em?: string
+          created_at?: string
+          empresa_id?: string
+          entregador_id?: string
+          id?: string
+          oferta_id?: string | null
+          operacao_id?: string
+          rota_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      auditoria_faixas: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          faixa_fim: number
+          faixa_inicio: number
+          id: string
+          operacao_id: string
+          ordem: number
+          pacotes_contados: number
+          rota_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          faixa_fim: number
+          faixa_inicio: number
+          id?: string
+          operacao_id: string
+          ordem?: number
+          pacotes_contados?: number
+          rota_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          faixa_fim?: number
+          faixa_inicio?: number
+          id?: string
+          operacao_id?: string
+          ordem?: number
+          pacotes_contados?: number
+          rota_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      confiabilidade_historico: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          entregador_id: string
+          evento: string
+          id: string
+          pontos: number
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          entregador_id: string
+          evento: string
+          id?: string
+          pontos?: number
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          entregador_id?: string
+          evento?: string
+          id?: string
+          pontos?: number
+        }
+        Relationships: []
+      }
+      confiabilidade_score: {
+        Row: {
+          entregador_id: string
+          nivel: string
+          score: number
+          updated_at: string
+        }
+        Insert: {
+          entregador_id: string
+          nivel?: string
+          score?: number
+          updated_at?: string
+        }
+        Update: {
+          entregador_id?: string
+          nivel?: string
+          score?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       empresas: {
         Row: {
           bairro: string | null
@@ -264,9 +441,13 @@ export type Database = {
           placa: string | null
           plataforma_comprovante_url: string | null
           plataformas: string[]
+          reliability_level: string | null
+          reliability_score: number | null
           rua: string | null
           selfie_url: string | null
           status: string
+          suspended_at: string | null
+          suspension_reason: string | null
           tipo_veiculo: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos: string[]
           updated_at: string
@@ -291,9 +472,13 @@ export type Database = {
           placa?: string | null
           plataforma_comprovante_url?: string | null
           plataformas?: string[]
+          reliability_level?: string | null
+          reliability_score?: number | null
           rua?: string | null
           selfie_url?: string | null
           status?: string
+          suspended_at?: string | null
+          suspension_reason?: string | null
           tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos?: string[]
           updated_at?: string
@@ -318,9 +503,13 @@ export type Database = {
           placa?: string | null
           plataforma_comprovante_url?: string | null
           plataformas?: string[]
+          reliability_level?: string | null
+          reliability_score?: number | null
           rua?: string | null
           selfie_url?: string | null
           status?: string
+          suspended_at?: string | null
+          suspension_reason?: string | null
           tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos?: string[]
           updated_at?: string
@@ -428,6 +617,7 @@ export type Database = {
       ofertas: {
         Row: {
           bairro: string | null
+          cancelamento_ate: string | null
           created_at: string
           data_trabalho: string | null
           descricao: string | null
@@ -440,8 +630,10 @@ export type Database = {
           hora_inicio: string | null
           id: string
           operacao_id: string | null
+          permite_cancelamento: boolean | null
           prazo_pagamento: string | null
           prazo_pagamento_data: string | null
+          previsao_id: string | null
           quantidade_pacotes: number | null
           quantidade_paradas: number | null
           rota_operacao_id: string | null
@@ -455,6 +647,7 @@ export type Database = {
         }
         Insert: {
           bairro?: string | null
+          cancelamento_ate?: string | null
           created_at?: string
           data_trabalho?: string | null
           descricao?: string | null
@@ -467,8 +660,10 @@ export type Database = {
           hora_inicio?: string | null
           id?: string
           operacao_id?: string | null
+          permite_cancelamento?: boolean | null
           prazo_pagamento?: string | null
           prazo_pagamento_data?: string | null
+          previsao_id?: string | null
           quantidade_pacotes?: number | null
           quantidade_paradas?: number | null
           rota_operacao_id?: string | null
@@ -482,6 +677,7 @@ export type Database = {
         }
         Update: {
           bairro?: string | null
+          cancelamento_ate?: string | null
           created_at?: string
           data_trabalho?: string | null
           descricao?: string | null
@@ -494,8 +690,10 @@ export type Database = {
           hora_inicio?: string | null
           id?: string
           operacao_id?: string | null
+          permite_cancelamento?: boolean | null
           prazo_pagamento?: string | null
           prazo_pagamento_data?: string | null
+          previsao_id?: string | null
           quantidade_pacotes?: number | null
           quantidade_paradas?: number | null
           rota_operacao_id?: string | null
@@ -704,6 +902,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_reliability_event: {
+        Args: {
+          _descricao: string
+          _entregador_id: string
+          _evento: string
+          _pontos: number
+        }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
