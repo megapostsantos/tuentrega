@@ -707,7 +707,7 @@ function BarcodeScanner({ onCancel, onDetected }: {
       ]);
       const reader = new BrowserMultiFormatReader(hints);
       readerRef.current = reader;
-      reader.decodeFromVideoElement(videoRef.current, (result, err) => {
+      reader.decodeFromStream(stream, videoRef.current, (result) => {
         if (result) {
           const code = result.getText();
           try { (navigator as any).vibrate?.(200); } catch {}
