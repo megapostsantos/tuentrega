@@ -683,6 +683,11 @@ function DetailsDialog({
             </p>
           )}
 
+          {/* EMPRESA: delivery report (after closing) */}
+          {role === "empresa" && o.closed_at && (
+            <DeliveryReport oferta={o} />
+          )}
+
           {/* EMPRESA: deliverer info + payment */}
           {role === "empresa" && o.entregador_id && deliverer && (
             <div className="space-y-3 rounded-lg border p-3">
