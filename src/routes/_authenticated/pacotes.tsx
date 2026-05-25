@@ -438,14 +438,22 @@ function CreateOperation({
               <div>Margem total hoje: <strong>R$ {margemTotal.toFixed(2)}</strong></div>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setStep("audit")}
+                disabled={data.total_pacotes_sistema <= 0 || data.total_paradas <= 0 || data.valor_por_pacote <= 0}
+              >
+                Auditar por faixas
+              </Button>
               <Button
                 onClick={() => setStep(2)}
                 disabled={data.total_pacotes_sistema <= 0 || data.valor_por_pacote <= 0}
               >
-                Próximo: dividir rotas
+                Pular auditoria · Dividir rotas
               </Button>
             </div>
+
           </CardContent>
         </Card>
       )}
