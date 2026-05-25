@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  Package, Truck, Wallet, Users, BarChart3, Building2, CalendarDays, Store, Star, Plus, ChevronRight,
+  Package, Truck, Wallet, BarChart3, Building2, CalendarDays, Store, Star, Plus, ChevronRight, Users,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { StatCard } from "@/components/StatCard";
