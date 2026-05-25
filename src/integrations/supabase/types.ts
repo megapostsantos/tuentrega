@@ -659,6 +659,42 @@ export type Database = {
         }
         Relationships: []
       }
+      extratos_mensais: {
+        Row: {
+          created_at: string
+          entregador_id: string
+          id: string
+          mes_referencia: string
+          total_bruto: number
+          total_entregas: number
+          total_pacotes: number
+          total_pendente: number
+          total_recebido: number
+        }
+        Insert: {
+          created_at?: string
+          entregador_id: string
+          id?: string
+          mes_referencia: string
+          total_bruto?: number
+          total_entregas?: number
+          total_pacotes?: number
+          total_pendente?: number
+          total_recebido?: number
+        }
+        Update: {
+          created_at?: string
+          entregador_id?: string
+          id?: string
+          mes_referencia?: string
+          total_bruto?: number
+          total_entregas?: number
+          total_pacotes?: number
+          total_pendente?: number
+          total_recebido?: number
+        }
+        Relationships: []
+      }
       ofertas: {
         Row: {
           bairro: string | null
@@ -679,6 +715,10 @@ export type Database = {
           operacao_id: string | null
           pacotes_entregues: number | null
           pacotes_nao_entregues: number | null
+          payment_confirmed_by: string | null
+          payment_date: string | null
+          payment_notes: string | null
+          payment_status: string
           permite_cancelamento: boolean | null
           prazo_pagamento: string | null
           prazo_pagamento_data: string | null
@@ -713,6 +753,10 @@ export type Database = {
           operacao_id?: string | null
           pacotes_entregues?: number | null
           pacotes_nao_entregues?: number | null
+          payment_confirmed_by?: string | null
+          payment_date?: string | null
+          payment_notes?: string | null
+          payment_status?: string
           permite_cancelamento?: boolean | null
           prazo_pagamento?: string | null
           prazo_pagamento_data?: string | null
@@ -747,6 +791,10 @@ export type Database = {
           operacao_id?: string | null
           pacotes_entregues?: number | null
           pacotes_nao_entregues?: number | null
+          payment_confirmed_by?: string | null
+          payment_date?: string | null
+          payment_notes?: string | null
+          payment_status?: string
           permite_cancelamento?: boolean | null
           prazo_pagamento?: string | null
           prazo_pagamento_data?: string | null
@@ -823,6 +871,42 @@ export type Database = {
           updated_at?: string
           valor_ml_por_pacote?: number
           valor_por_pacote?: number
+        }
+        Relationships: []
+      }
+      pagamentos: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_pagamento: string
+          empresa_id: string
+          entregador_id: string
+          id: string
+          observacao: string | null
+          ofertas_ids: string[]
+          valor_total: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_pagamento?: string
+          empresa_id: string
+          entregador_id: string
+          id?: string
+          observacao?: string | null
+          ofertas_ids?: string[]
+          valor_total?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_pagamento?: string
+          empresa_id?: string
+          entregador_id?: string
+          id?: string
+          observacao?: string | null
+          ofertas_ids?: string[]
+          valor_total?: number
         }
         Relationships: []
       }

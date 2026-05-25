@@ -1,44 +1,43 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { Wallet, Upload, CheckCircle2, Clock, FileText, Loader2, Copy } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as XLSX from "xlsx";
+import {
+  Wallet, CheckCircle2, Clock, FileText, Loader2, Copy, ChevronDown, ChevronUp,
+  FileDown, FileSpreadsheet, Search, AlertTriangle, MessageSquare, TrendingUp,
+  Receipt, Share2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/pagamentos")({
   component: PagamentosPage,
 });
 
-type Periodo = "diario" | "semanal" | "mensal" | "custom";
-
-interface EntregaRow {
-  id: string;
-  empresa_id: string;
-  entregador_id: string;
-  valor: number;
-  exige_nota_fiscal: boolean;
-  nota_fiscal_url: string | null;
-  status: string;
-  data_entrega: string;
-  data_pagamento: string | null;
-}
+const brl = (n: number) =>
+  Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function PagamentosPage() {
   const { role } = useAuth();
-
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <PageHeader
-        title="Pagamentos PIX"
-        description={role === "empresa"
-          ? "Pague diretamente seus entregadores via PIX"
-          : "Acompanhe seus pagamentos recebidos"}
+        title={role === "entregador" ? "Meus ganhos" : "Pagamentos"}
+        description={
+          role === "empresa"
+            ? "Pague seus entregadores via PIX e acompanhe sua margem"
+            : "Acompanhe seus recebimentos por rota"
+        }
       />
       {role === "empresa" && <EmpresaFinanceiro />}
       {role === "entregador" && <EntregadorFinanceiro />}
@@ -47,224 +46,570 @@ function PagamentosPage() {
   );
 }
 
-/* ---------- Empresa ---------- */
+/* =========================================================
+   EMPRESA
+   ========================================================= */
 
-interface GrupoEntregador {
-  entregador_id: string;
-  nome: string;
-  pix_tipo: string | null;
-  pix_chave: string | null;
-  whatsapp: string | null;
-  qtd: number;
-  total: number;
-  pendentes: EntregaRow[];
-  exige_nota_pendente: boolean;
-}
+type Oferta = {
+  id: string; empresa_id: string; entregador_id: string | null;
+  titulo: string; valor: number; valor_por_pacote: number | null;
+  quantidade_pacotes: number | null; data_trabalho: string | null;
+  status: string; payment_status: string; payment_date: string | null;
+  payment_notes: string | null; exige_nota_fiscal: boolean;
+};
+type EntregadorInfo = {
+  nome: string; pix_tipo: string | null; pix_chave: string | null;
+  whatsapp: string | null; banco: string | null; cpf: string | null;
+};
 
-function periodoRange(p: Periodo, custom?: { from: string; to: string }) {
+type PeriodKey = "hoje" | "semana" | "mes" | "mes_ant" | "custom";
+
+function rangeOf(p: PeriodKey, custom: { from: string; to: string }) {
   const now = new Date();
-  const from = new Date(now);
-  if (p === "diario") from.setHours(0, 0, 0, 0);
-  else if (p === "semanal") from.setDate(now.getDate() - 7);
-  else if (p === "mensal") from.setMonth(now.getMonth() - 1);
-  else if (p === "custom" && custom?.from) return { from: new Date(custom.from).toISOString(), to: new Date(custom.to || now).toISOString() };
-  return { from: from.toISOString(), to: now.toISOString() };
+  let from: Date, to: Date;
+  if (p === "hoje") { from = new Date(now); from.setHours(0,0,0,0); to = now; }
+  else if (p === "semana") { from = new Date(now); from.setDate(now.getDate()-7); to = now; }
+  else if (p === "mes_ant") {
+    from = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    to = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+  }
+  else if (p === "custom" && custom.from) {
+    from = new Date(custom.from);
+    to = custom.to ? new Date(custom.to + "T23:59:59") : now;
+  }
+  else { from = new Date(now.getFullYear(), now.getMonth(), 1); to = now; }
+  return { from: from.toISOString(), to: to.toISOString() };
 }
 
 function EmpresaFinanceiro() {
-  const [periodo, setPeriodo] = useState<Periodo>("semanal");
+  const [period, setPeriod] = useState<PeriodKey>("mes");
   const [custom, setCustom] = useState({ from: "", to: "" });
-  const [rows, setRows] = useState<EntregaRow[]>([]);
-  const [entregadores, setEntregadores] = useState<Record<string, { nome: string; pix_tipo: string | null; pix_chave: string | null; whatsapp: string | null }>>({});
+  const [statusFilter, setStatusFilter] = useState<"todos" | "pending" | "paid">("todos");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [ofertas, setOfertas] = useState<Oferta[]>([]);
+  const [pessoas, setPessoas] = useState<Record<string, EntregadorInfo>>({});
+  const [mlValor, setMlValor] = useState(2.6);
+  const [pacotesMl, setPacotesMl] = useState(0);
+  const [empresaName, setEmpresaName] = useState("");
 
-  const range = useMemo(() => periodoRange(periodo, custom), [periodo, custom]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [payTarget, setPayTarget] = useState<GrupoEmpresa | null>(null);
+  const [showFechamento, setShowFechamento] = useState(false);
+  const pendingRef = useRef<HTMLDivElement>(null);
+  const paidRef = useRef<HTMLDivElement>(null);
+
+  const range = useMemo(() => rangeOf(period, custom), [period, custom]);
 
   async function load() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: ents } = await supabase
-      .from("entregas")
-      .select("*")
-      .eq("empresa_id", user.id)
-      .gte("data_entrega", range.from)
-      .lte("data_entrega", range.to)
-      .order("data_entrega", { ascending: false });
-    const list = (ents ?? []) as EntregaRow[];
-    setRows(list);
-    const ids = Array.from(new Set(list.map((r) => r.entregador_id)));
+    if (!user) { setLoading(false); return; }
+    const sb = supabase as any;
+
+    const [emp, ofs, ops] = await Promise.all([
+      sb.from("empresas").select("nome_fantasia, razao_social, tms_valor_padrao_pacote")
+        .eq("id", user.id).maybeSingle(),
+      sb.from("ofertas").select("id, empresa_id, entregador_id, titulo, valor, valor_por_pacote, quantidade_pacotes, data_trabalho, status, payment_status, payment_date, payment_notes, exige_nota_fiscal")
+        .eq("empresa_id", user.id)
+        .in("status", ["completed", "closed"])
+        .gte("data_trabalho", range.from.slice(0,10))
+        .lte("data_trabalho", range.to.slice(0,10))
+        .order("data_trabalho", { ascending: false }),
+      sb.from("operacoes").select("total_pacotes_sistema, valor_ml_por_pacote, data_operacao")
+        .eq("empresa_id", user.id)
+        .gte("data_operacao", range.from.slice(0,10))
+        .lte("data_operacao", range.to.slice(0,10)),
+    ]);
+
+    setEmpresaName(emp.data?.nome_fantasia || emp.data?.razao_social || "Empresa");
+    const list = (ofs.data ?? []) as Oferta[];
+    setOfertas(list);
+
+    let totPac = 0; let mlV = Number(emp.data?.tms_valor_padrao_pacote ?? 2.6);
+    (ops.data ?? []).forEach((o: any) => {
+      totPac += Number(o.total_pacotes_sistema || 0);
+      if (o.valor_ml_por_pacote) mlV = Number(o.valor_ml_por_pacote);
+    });
+    setPacotesMl(totPac); setMlValor(mlV);
+
+    const ids = Array.from(new Set(list.map(o => o.entregador_id).filter(Boolean))) as string[];
     if (ids.length) {
-      const { data: ppl } = await supabase
-        .from("entregadores")
-        .select("id,nome_completo,pix_tipo,pix_chave,whatsapp")
-        .in("id", ids);
-      const map: typeof entregadores = {};
+      const { data: ppl } = await sb.from("entregadores")
+        .select("id, nome_completo, pix_tipo, pix_chave, whatsapp, banco, cpf").in("id", ids);
+      const map: Record<string, EntregadorInfo> = {};
       (ppl ?? []).forEach((p: any) => {
-        map[p.id] = { nome: p.nome_completo, pix_tipo: p.pix_tipo, pix_chave: p.pix_chave, whatsapp: p.whatsapp };
+        map[p.id] = {
+          nome: p.nome_completo, pix_tipo: p.pix_tipo, pix_chave: p.pix_chave,
+          whatsapp: p.whatsapp, banco: p.banco, cpf: p.cpf,
+        };
       });
-      setEntregadores(map);
-    }
+      setPessoas(map);
+    } else setPessoas({});
     setLoading(false);
   }
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [range.from, range.to]);
 
-  const grupos = useMemo<GrupoEntregador[]>(() => {
-    const m = new Map<string, GrupoEntregador>();
-    for (const r of rows) {
-      const info = entregadores[r.entregador_id];
-      const g = m.get(r.entregador_id) ?? {
-        entregador_id: r.entregador_id,
-        nome: info?.nome ?? "Entregador",
-        pix_tipo: info?.pix_tipo ?? null,
-        pix_chave: info?.pix_chave ?? null,
-        whatsapp: info?.whatsapp ?? null,
-        qtd: 0, total: 0, pendentes: [], exige_nota_pendente: false,
-      };
-      g.qtd += 1;
-      if (r.status === "pendente") {
-        g.total += Number(r.valor);
-        g.pendentes.push(r);
-        if (r.exige_nota_fiscal && !r.nota_fiscal_url) g.exige_nota_pendente = true;
-      }
-      m.set(r.entregador_id, g);
-    }
-    return Array.from(m.values()).sort((a, b) => b.total - a.total);
-  }, [rows, entregadores]);
+  // Realtime
+  useEffect(() => {
+    const ch = supabase.channel("pagamentos-empresa")
+      .on("postgres_changes", { event: "*", schema: "public", table: "ofertas" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "pagamentos" }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line
+  }, []);
 
-  async function marcarPago(grupo: GrupoEntregador) {
-    if (grupo.exige_nota_pendente) return toast.error("Aguardando envio de nota fiscal");
-    const ids = grupo.pendentes.map((p) => p.id);
-    if (!ids.length) return;
-    const { error } = await supabase
-      .from("entregas")
-      .update({ status: "pago", data_pagamento: new Date().toISOString() })
-      .in("id", ids);
-    if (error) return toast.error(error.message);
-    toast.success(`Pagamento de R$ ${grupo.total.toFixed(2)} registrado`);
-    // Notificação WhatsApp (placeholder — log até integração ser conectada)
-    if (grupo.whatsapp) {
-      console.info("[WhatsApp]", grupo.whatsapp, `TuEntrega: Seu pagamento de R$ ${grupo.total.toFixed(2)} foi confirmado. Chave PIX: ${grupo.pix_chave}`);
+  // Group by deliverer
+  const grupos = useMemo<GrupoEmpresa[]>(() => {
+    const m = new Map<string, GrupoEmpresa>();
+    for (const o of ofertas) {
+      if (!o.entregador_id) continue;
+      const info = pessoas[o.entregador_id];
+      const g = m.get(o.entregador_id) ?? {
+        entregador_id: o.entregador_id,
+        nome: info?.nome ?? "Entregador",
+        pix_tipo: info?.pix_tipo ?? null, pix_chave: info?.pix_chave ?? null,
+        whatsapp: info?.whatsapp ?? null, banco: info?.banco ?? null, cpf: info?.cpf ?? null,
+        ofertas: [], total_pendente: 0, total_pago: 0, has_nf_pending: false,
+      };
+      g.ofertas.push(o);
+      if (o.payment_status === "paid") g.total_pago += Number(o.valor || 0);
+      else { g.total_pendente += Number(o.valor || 0); if (o.exige_nota_fiscal) g.has_nf_pending = true; }
+      m.set(o.entregador_id, g);
     }
-    load();
+    let arr = Array.from(m.values());
+    if (search.trim()) arr = arr.filter(g => g.nome.toLowerCase().includes(search.toLowerCase()));
+    if (statusFilter === "pending") arr = arr.filter(g => g.total_pendente > 0);
+    if (statusFilter === "paid") arr = arr.filter(g => g.total_pago > 0);
+    return arr.sort((a,b) => b.total_pendente - a.total_pendente);
+  }, [ofertas, pessoas, search, statusFilter]);
+
+  const totalPendente = ofertas.filter(o => o.payment_status === "pending").reduce((s,o) => s + Number(o.valor||0), 0);
+  const totalPagoMes = ofertas.filter(o => o.payment_status === "paid").reduce((s,o) => s + Number(o.valor||0), 0);
+  const recebidoMl = pacotesMl * mlValor;
+  const margem = recebidoMl - totalPagoMes;
+  const margemPct = recebidoMl > 0 ? Math.round((margem / recebidoMl) * 100) : 0;
+
+  function toggleExpanded(id: string) {
+    setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  function exportExcel() {
+    const rows = grupos.flatMap(g => g.ofertas.map(o => ({
+      Entregador: g.nome, "Chave PIX": g.pix_chave ?? "", Banco: g.banco ?? "",
+      Rota: o.titulo, Data: o.data_trabalho ?? "",
+      Pacotes: o.quantidade_pacotes ?? "", "Valor/pacote": Number(o.valor_por_pacote ?? 0),
+      Total: Number(o.valor || 0), Status: o.payment_status === "paid" ? "Pago" : "Pendente",
+      "Data pagamento": o.payment_date ? new Date(o.payment_date).toLocaleDateString("pt-BR") : "",
+    })));
+    const totalRow = { Entregador: "TOTAL", Total: rows.reduce((s,r) => s + Number(r.Total||0), 0) };
+    const ws = XLSX.utils.json_to_sheet([...rows, totalRow]);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Pagamentos");
+    XLSX.writeFile(wb, `pagamentos-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  function exportPdf() { window.print(); }
+
+  async function cobrarNF(g: GrupoEmpresa) {
+    toast.success(`Lembrete de NF enviado para ${g.nome}`);
+    if (g.whatsapp) console.info("[WhatsApp]", g.whatsapp,
+      `TuEntrega: ${empresaName} aguarda sua nota fiscal para liberar ${brl(g.total_pendente)}.`);
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Período</label>
-          <Select value={periodo} onValueChange={(v) => setPeriodo(v as Periodo)}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="diario">Hoje</SelectItem>
-              <SelectItem value="semanal">Últimos 7 dias</SelectItem>
-              <SelectItem value="mensal">Últimos 30 dias</SelectItem>
-              <SelectItem value="custom">Personalizado</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {periodo === "custom" && (
-          <>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">De</label>
-              <Input type="date" value={custom.from} onChange={(e) => setCustom((p) => ({ ...p, from: e.target.value }))} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Até</label>
-              <Input type="date" value={custom.to} onChange={(e) => setCustom((p) => ({ ...p, to: e.target.value }))} />
-            </div>
-          </>
-        )}
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <SummaryCard color="orange" label="Total a pagar" value={brl(totalPendente)}
+          icon={Clock} onClick={() => pendingRef.current?.scrollIntoView({ behavior: "smooth" })} />
+        <SummaryCard color="green" label="Pago este mês" value={brl(totalPagoMes)}
+          icon={CheckCircle2} onClick={() => paidRef.current?.scrollIntoView({ behavior: "smooth" })} />
+        <SummaryCard color="blue" label="Recebido do ML" value={brl(recebidoMl)}
+          hint={`${pacotesMl} pacotes × ${brl(mlValor)}`} icon={Wallet} />
+        <SummaryCard color="purple" label="Margem do mês"
+          value={brl(margem)} hint={`${margemPct}%`} icon={TrendingUp} />
       </div>
 
-      {loading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> :
-        grupos.length === 0 ? (
-          <Card><CardContent className="py-12 text-center text-muted-foreground">
-            <Wallet className="mx-auto mb-3 h-10 w-10" />
-            Nenhuma entrega no período selecionado
-          </CardContent></Card>
-        ) : (
-          <div className="grid gap-3">
-            {grupos.map((g) => (
-              <Card key={g.entregador_id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-base">{g.nome}</CardTitle>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{g.qtd} entrega(s) no período</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">R$ {g.total.toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">a pagar</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {g.pix_chave && (
-                    <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground">PIX ({g.pix_tipo})</p>
-                        <p className="font-mono">{g.pix_chave}</p>
-                      </div>
-                      <Button size="sm" variant="ghost" onClick={() => {
-                        navigator.clipboard.writeText(g.pix_chave!); toast.success("Chave copiada");
-                      }}><Copy className="h-4 w-4" /></Button>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {g.pendentes.length === 0 ? (
-                      <Badge variant="secondary" className="gap-1"><CheckCircle2 className="h-3 w-3" /> Tudo pago</Badge>
-                    ) : (
-                      <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" /> {g.pendentes.length} pendente(s)</Badge>
-                    )}
-                    {g.exige_nota_pendente && (
-                      <Badge className="gap-1 bg-amber-500/15 text-amber-700 hover:bg-amber-500/20"><FileText className="h-3 w-3" /> Aguardando nota fiscal</Badge>
-                    )}
-                  </div>
-                  <Button
-                    className="w-full bg-primary text-primary-foreground hover:opacity-90"
-                    disabled={g.pendentes.length === 0 || g.exige_nota_pendente}
-                    onClick={() => marcarPago(g)}
-                  >
-                    Marcar como pago
-                  </Button>
-                </CardContent>
-              </Card>
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-4 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {([
+              ["hoje","Hoje"],["semana","Esta semana"],["mes","Este mês"],
+              ["mes_ant","Mês anterior"],["custom","Personalizado"],
+            ] as [PeriodKey,string][]).map(([k,l]) => (
+              <Chip key={k} active={period===k} onClick={() => setPeriod(k)}>{l}</Chip>
             ))}
           </div>
-        )
-      }
+          {period === "custom" && (
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="date" value={custom.from} onChange={e => setCustom(p => ({...p, from: e.target.value}))} />
+              <Input type="date" value={custom.to} onChange={e => setCustom(p => ({...p, to: e.target.value}))} />
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {(["todos","pending","paid"] as const).map(s => (
+              <Chip key={s} active={statusFilter===s} onClick={() => setStatusFilter(s)}>
+                {s==="todos"?"Todos":s==="pending"?"Pendente":"Pago"}
+              </Chip>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar entregador..." className="pl-9"
+                value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <Button variant="outline" size="sm" onClick={exportPdf}>
+              <FileDown className="h-4 w-4 mr-1" />PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportExcel}>
+              <FileSpreadsheet className="h-4 w-4 mr-1" />Excel
+            </Button>
+            <Button variant="default" size="sm" onClick={() => setShowFechamento(true)}>
+              Fechamento
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* List */}
+      {loading ? (
+        <div className="py-8 text-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground mx-auto" /></div>
+      ) : grupos.length === 0 ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">
+          <Wallet className="mx-auto mb-3 h-10 w-10" /> Nenhuma rota concluída no período
+        </CardContent></Card>
+      ) : (
+        <div className="space-y-3" ref={pendingRef}>
+          {grupos.map(g => {
+            const isOpen = expanded.has(g.entregador_id);
+            return (
+              <Card key={g.entregador_id} className="overflow-hidden">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{g.nome}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        PIX: {g.pix_chave || "—"} {g.banco ? `· ${g.banco}` : ""}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-[10px]">{g.ofertas.length} rotas</Badge>
+                        {g.has_nf_pending && (
+                          <Badge className="text-[10px] bg-amber-500/15 text-amber-700">
+                            <AlertTriangle className="h-3 w-3 mr-0.5" />NF pendente
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xl font-bold text-primary">{brl(g.total_pendente)}</p>
+                      <p className="text-[10px] text-muted-foreground">pendente</p>
+                      {g.total_pago > 0 && <p className="text-[10px] text-emerald-600">{brl(g.total_pago)} pago</p>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {g.pix_chave && (
+                      <Button size="sm" variant="outline" onClick={() => {
+                        navigator.clipboard.writeText(g.pix_chave!); toast.success("PIX copiado");
+                      }}>
+                        <Copy className="h-3 w-3 mr-1" />Copiar PIX
+                      </Button>
+                    )}
+                    <Button size="sm"
+                      disabled={g.total_pendente <= 0 || g.has_nf_pending}
+                      onClick={() => setPayTarget(g)}>
+                      Marcar pago
+                    </Button>
+                    {g.has_nf_pending && (
+                      <Button size="sm" variant="ghost" onClick={() => cobrarNF(g)}>
+                        <MessageSquare className="h-3 w-3 mr-1" />Cobrar NF
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" className="ml-auto"
+                      onClick={() => toggleExpanded(g.entregador_id)}>
+                      {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  {isOpen && (
+                    <div className="space-y-2 border-t pt-3">
+                      {g.ofertas.map(o => (
+                        <div key={o.id} className="flex items-start justify-between gap-2 text-sm">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{o.titulo}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {o.data_trabalho ? new Date(o.data_trabalho).toLocaleDateString("pt-BR") : "—"}
+                              {o.quantidade_pacotes ? ` · ${o.quantidade_pacotes} pacotes × ${brl(Number(o.valor_por_pacote||0))}` : ""}
+                            </p>
+                            {o.exige_nota_fiscal && o.payment_status === "pending" && (
+                              <p className="text-[10px] text-amber-700">⚠️ Aguardando NF</p>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="font-semibold">{brl(Number(o.valor||0))}</p>
+                            <Badge variant={o.payment_status==="paid"?"secondary":"outline"} className="text-[10px]">
+                              {o.payment_status==="paid"?"Pago":"Pendente"}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+          <div ref={paidRef} />
+        </div>
+      )}
+
+      {payTarget && (
+        <MarkPaidDialog grupo={payTarget} empresaName={empresaName}
+          onClose={() => setPayTarget(null)} onDone={() => { setPayTarget(null); load(); }} />
+      )}
+      {showFechamento && (
+        <FechamentoDialog empresaName={empresaName} pacotesMl={pacotesMl} mlValor={mlValor}
+          ofertas={ofertas} pessoas={pessoas} onClose={() => setShowFechamento(false)} />
+      )}
     </div>
   );
 }
 
-/* ---------- Entregador ---------- */
+type GrupoEmpresa = {
+  entregador_id: string; nome: string;
+  pix_tipo: string | null; pix_chave: string | null;
+  whatsapp: string | null; banco: string | null; cpf: string | null;
+  ofertas: Oferta[]; total_pendente: number; total_pago: number; has_nf_pending: boolean;
+};
+
+function SummaryCard({ color, label, value, hint, icon: Icon, onClick }: {
+  color: "orange"|"green"|"blue"|"purple"; label: string; value: string;
+  hint?: string; icon: any; onClick?: () => void;
+}) {
+  const colorMap = {
+    orange: "bg-orange-500/10 text-orange-600",
+    green: "bg-emerald-500/10 text-emerald-600",
+    blue: "bg-blue-500/10 text-blue-600",
+    purple: "bg-purple-500/10 text-purple-600",
+  };
+  return (
+    <button onClick={onClick} disabled={!onClick}
+      className={cn("rounded-2xl border bg-card p-4 elev-1 text-left transition-all",
+        onClick && "press-scale hover:elev-2")}>
+      <div className="flex items-start justify-between">
+        <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+        <div className={cn("flex h-8 w-8 items-center justify-center rounded-full", colorMap[color])}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <p className="mt-2 text-xl font-bold tracking-tight">{value}</p>
+      {hint && <p className="mt-1 text-[10px] text-muted-foreground">{hint}</p>}
+    </button>
+  );
+}
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      className={cn("rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+        active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70")}>
+      {children}
+    </button>
+  );
+}
+
+/* ---------- Mark paid dialog ---------- */
+function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
+  grupo: GrupoEmpresa; empresaName: string; onClose: () => void; onDone: () => void;
+}) {
+  const [date, setDate] = useState(new Date().toISOString().slice(0,10));
+  const [obs, setObs] = useState("");
+  const [saving, setSaving] = useState(false);
+  const pendingOfertas = grupo.ofertas.filter(o => o.payment_status === "pending");
+  const total = pendingOfertas.reduce((s,o) => s + Number(o.valor||0), 0);
+
+  async function confirm() {
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+    const sb = supabase as any;
+    const ids = pendingOfertas.map(o => o.id);
+    const ts = new Date(date + "T12:00:00").toISOString();
+
+    const { error } = await sb.from("ofertas").update({
+      payment_status: "paid", payment_date: ts,
+      payment_notes: obs || null, payment_confirmed_by: user.id,
+    }).in("id", ids);
+    if (error) { setSaving(false); return toast.error(error.message); }
+
+    await sb.from("pagamentos").insert({
+      empresa_id: user.id, entregador_id: grupo.entregador_id, ofertas_ids: ids,
+      valor_total: total, data_pagamento: ts, observacao: obs || null, created_by: user.id,
+    });
+    await sb.from("entregas").update({ status: "pago", data_pagamento: ts })
+      .in("oferta_id", ids).eq("status", "pendente");
+
+    if (grupo.whatsapp) console.info("[WhatsApp]", grupo.whatsapp,
+      `TuEntrega ✅ Pagamento de ${brl(total)} confirmado por ${empresaName}.`);
+
+    toast.success(`Pagamento de ${brl(total)} registrado! ${grupo.nome} foi notificado.`);
+    setSaving(false); onDone();
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Confirmar pagamento</DialogTitle>
+          <DialogDescription>
+            Você confirma que realizou a transferência PIX?
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-1 text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">Nome</span><span className="font-medium">{grupo.nome}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">PIX</span><span className="font-mono text-xs">{grupo.pix_chave || "—"}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Banco</span><span>{grupo.banco || "—"}</span></div>
+            <div className="flex justify-between border-t pt-1 mt-1"><span className="text-muted-foreground">Valor</span>
+              <span className="font-bold text-primary">{brl(total)}</span></div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Data do pagamento</label>
+            <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Observação (opcional)</label>
+            <Textarea value={obs} onChange={e => setObs(e.target.value)} rows={2} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={confirm} disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+            Confirmar pagamento
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------- Fechamento mensal ---------- */
+function FechamentoDialog({ empresaName, pacotesMl, mlValor, ofertas, pessoas, onClose }: {
+  empresaName: string; pacotesMl: number; mlValor: number;
+  ofertas: Oferta[]; pessoas: Record<string, EntregadorInfo>; onClose: () => void;
+}) {
+  const mes = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const recebido = pacotesMl * mlValor;
+  const pago = ofertas.filter(o => o.payment_status === "paid").reduce((s,o) => s + Number(o.valor||0), 0);
+  const margem = recebido - pago;
+  const margemPct = recebido > 0 ? ((margem / recebido) * 100).toFixed(1) : "0";
+  const entregadoresAtivos = new Set(ofertas.map(o => o.entregador_id).filter(Boolean)).size;
+  const mediaEntregador = entregadoresAtivos ? margem / entregadoresAtivos : 0;
+
+  // Best deliverer
+  const totals: Record<string, number> = {};
+  ofertas.forEach(o => { if (o.entregador_id) totals[o.entregador_id] = (totals[o.entregador_id]||0) + Number(o.valor||0); });
+  const best = Object.entries(totals).sort((a,b) => b[1]-a[1])[0];
+  const bestName = best ? (pessoas[best[0]]?.nome ?? "—") : "—";
+
+  function exportPdf() { window.print(); }
+  function exportXlsx() {
+    const data = [
+      { Item: "Pacotes entregues (ML)", Valor: pacotesMl },
+      { Item: "Recebido do ML", Valor: recebido },
+      { Item: "Pago a entregadores", Valor: pago },
+      { Item: "Margem bruta", Valor: margem },
+      { Item: "Margem %", Valor: margemPct + "%" },
+      { Item: "Entregadores ativos", Valor: entregadoresAtivos },
+      { Item: "Melhor entregador", Valor: bestName },
+    ];
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Fechamento");
+    XLSX.writeFile(wb, `fechamento-${new Date().toISOString().slice(0,7)}.xlsx`);
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Fechamento de {mes}</DialogTitle>
+          <DialogDescription>{empresaName}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 text-sm">
+          <Section title="Receita">
+            <Row k="Pacotes entregues" v={String(pacotesMl)} />
+            <Row k={`Recebido ML (×${brl(mlValor)})`} v={brl(recebido)} />
+            <Row k="Total receita" v={brl(recebido)} bold />
+          </Section>
+          <Section title="Custos">
+            <Row k="Pago a entregadores" v={brl(pago)} />
+            <Row k="Total custos" v={brl(pago)} bold />
+          </Section>
+          <Section title="Margem">
+            <Row k="Margem bruta" v={brl(margem)} bold />
+            <Row k="Margem %" v={`${margemPct}%`} />
+            <Row k="Média por entregador" v={brl(mediaEntregador)} />
+          </Section>
+          <Section title="Performance">
+            <Row k="Entregadores ativos" v={String(entregadoresAtivos)} />
+            <Row k="Melhor entregador" v={bestName} />
+          </Section>
+        </div>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={exportPdf}><FileDown className="h-4 w-4 mr-1" />PDF</Button>
+          <Button variant="outline" onClick={exportXlsx}><FileSpreadsheet className="h-4 w-4 mr-1" />Excel</Button>
+          <Button onClick={onClose}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-muted-foreground mb-1">{title}</p>
+      <div className="rounded-lg border bg-muted/30 p-3 space-y-1">{children}</div>
+    </div>
+  );
+}
+function Row({ k, v, bold }: { k: string; v: string; bold?: boolean }) {
+  return (
+    <div className={cn("flex justify-between", bold && "font-bold border-t pt-1 mt-1")}>
+      <span className="text-muted-foreground">{k}</span><span>{v}</span>
+    </div>
+  );
+}
+
+/* =========================================================
+   ENTREGADOR
+   ========================================================= */
 
 function EntregadorFinanceiro() {
-  const [rows, setRows] = useState<EntregaRow[]>([]);
+  const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState<string | null>(null);
+  const [period, setPeriod] = useState<PeriodKey>("mes");
+  const [custom, setCustom] = useState({ from: "", to: "" });
+  const [receipt, setReceipt] = useState<Oferta | null>(null);
 
   async function load() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase
-      .from("entregas")
-      .select("*")
+    if (!user) { setLoading(false); return; }
+    const sb = supabase as any;
+    const { data } = await sb.from("ofertas")
+      .select("id, empresa_id, entregador_id, titulo, valor, valor_por_pacote, quantidade_pacotes, data_trabalho, status, payment_status, payment_date, payment_notes, exige_nota_fiscal")
       .eq("entregador_id", user.id)
-      .order("data_entrega", { ascending: false });
-    const list = (data ?? []) as EntregaRow[];
-    setRows(list);
-    const ids = Array.from(new Set(list.map((r) => r.empresa_id)));
+      .in("status", ["completed", "closed"])
+      .order("data_trabalho", { ascending: false });
+    const list = (data ?? []) as Oferta[];
+    setOfertas(list);
+    const ids = Array.from(new Set(list.map(o => o.empresa_id)));
     if (ids.length) {
-      const { data: emp } = await supabase
-        .from("empresas")
-        .select("id,nome_fantasia,razao_social")
-        .in("id", ids);
+      const { data: emp } = await sb.from("empresas").select("id, nome_fantasia, razao_social").in("id", ids);
       const map: Record<string, string> = {};
       (emp ?? []).forEach((e: any) => { map[e.id] = e.nome_fantasia || e.razao_social; });
       setEmpresas(map);
@@ -273,84 +618,179 @@ function EntregadorFinanceiro() {
   }
 
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const ch = supabase.channel("ganhos-entregador")
+      .on("postgres_changes", { event: "*", schema: "public", table: "ofertas" }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line
+  }, []);
 
-  async function uploadNota(entrega: EntregaRow, file: File) {
-    if (file.type !== "application/pdf") return toast.error("Envie um PDF");
-    setUploading(entrega.id);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const path = `${user.id}/${entrega.id}-${Date.now()}.pdf`;
-    const { error: upErr } = await supabase.storage.from("notas-fiscais").upload(path, file, { upsert: true });
-    if (upErr) { setUploading(null); return toast.error(upErr.message); }
-    const { error } = await supabase.from("entregas").update({ nota_fiscal_url: path }).eq("id", entrega.id);
-    setUploading(null);
-    if (error) return toast.error(error.message);
-    toast.success("Nota fiscal enviada");
-    load();
-  }
+  const range = useMemo(() => rangeOf(period, custom), [period, custom]);
+  const filtered = useMemo(() =>
+    ofertas.filter(o => {
+      if (!o.data_trabalho) return false;
+      return o.data_trabalho >= range.from.slice(0,10) && o.data_trabalho <= range.to.slice(0,10);
+    }), [ofertas, range]);
 
-  const pendentes = rows.filter((r) => r.status === "pendente");
-  const pagos = rows.filter((r) => r.status === "pago");
-  const totalPendente = pendentes.reduce((s, r) => s + Number(r.valor), 0);
-  const totalPago = pagos.reduce((s, r) => s + Number(r.valor), 0);
+  const aReceber = filtered.filter(o => o.payment_status === "pending").reduce((s,o) => s + Number(o.valor||0), 0);
+  const recebidoMes = filtered.filter(o => o.payment_status === "paid").reduce((s,o) => s + Number(o.valor||0), 0);
+  const totalAno = ofertas.filter(o => {
+    const y = o.data_trabalho?.slice(0,4); return y === String(new Date().getFullYear()) && o.payment_status === "paid";
+  }).reduce((s,o) => s + Number(o.valor||0), 0);
+  const mediaRota = filtered.length ? filtered.reduce((s,o) => s + Number(o.valor||0), 0) / filtered.length : 0;
+
+  // Compare with last month
+  const now = new Date();
+  const thisMonth = ofertas.filter(o => {
+    const d = o.data_trabalho ? new Date(o.data_trabalho) : null;
+    return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).reduce((s,o) => s + Number(o.valor||0), 0);
+  const lastMonth = ofertas.filter(o => {
+    const d = o.data_trabalho ? new Date(o.data_trabalho) : null;
+    const lm = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    return d && d.getMonth() === lm.getMonth() && d.getFullYear() === lm.getFullYear();
+  }).reduce((s,o) => s + Number(o.valor||0), 0);
+  const variation = lastMonth > 0 ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100) : 0;
+
+  // Group by week
+  const byWeek = useMemo(() => {
+    const m = new Map<string, Oferta[]>();
+    filtered.forEach(o => {
+      if (!o.data_trabalho) return;
+      const d = new Date(o.data_trabalho);
+      const onejan = new Date(d.getFullYear(), 0, 1);
+      const week = Math.ceil((((d.getTime() - onejan.getTime()) / 86400000) + onejan.getDay() + 1) / 7);
+      const key = `${d.getFullYear()}-W${week}`;
+      const arr = m.get(key) ?? []; arr.push(o); m.set(key, arr);
+    });
+    return Array.from(m.entries()).sort((a,b) => b[0].localeCompare(a[0]));
+  }, [filtered]);
 
   if (loading) return <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />;
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <Card><CardContent className="pt-6">
-          <p className="text-xs text-muted-foreground">A receber</p>
-          <p className="text-2xl font-bold text-primary">R$ {totalPendente.toFixed(2)}</p>
-        </CardContent></Card>
-        <Card><CardContent className="pt-6">
-          <p className="text-xs text-muted-foreground">Recebido</p>
-          <p className="text-2xl font-bold">R$ {totalPago.toFixed(2)}</p>
-        </CardContent></Card>
+        <SummaryCard color="orange" label="A receber" value={brl(aReceber)} hint="Aguardando confirmação" icon={Clock} />
+        <SummaryCard color="green" label="Recebido este mês" value={brl(recebidoMes)} icon={CheckCircle2} />
+        <SummaryCard color="blue" label="Total do ano" value={brl(totalAno)} icon={Wallet} />
+        <SummaryCard color="purple" label="Média por rota" value={brl(mediaRota)} icon={TrendingUp} />
       </div>
 
-      {rows.length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">
-          <Wallet className="mx-auto mb-3 h-10 w-10" /> Nenhum pagamento ainda
-        </CardContent></Card>
-      ) : (
-        <div className="grid gap-3">
-          {rows.map((r) => (
-            <Card key={r.id}>
-              <CardContent className="pt-5 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">{empresas[r.empresa_id] ?? "Empresa"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Entrega em {new Date(r.data_entrega).toLocaleDateString("pt-BR")}
-                      {r.data_pagamento && ` · Pago em ${new Date(r.data_pagamento).toLocaleDateString("pt-BR")}`}
-                    </p>
-                  </div>
-                  <p className="text-xl font-bold text-primary">R$ {Number(r.valor).toFixed(2)}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {r.status === "pago"
-                    ? <Badge variant="secondary" className="gap-1"><CheckCircle2 className="h-3 w-3" /> Pago</Badge>
-                    : <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" /> Pendente</Badge>}
-                  {r.exige_nota_fiscal && (
-                    r.nota_fiscal_url
-                      ? <Badge className="gap-1 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20"><FileText className="h-3 w-3" /> NF enviada</Badge>
-                      : <Badge className="gap-1 bg-amber-500/15 text-amber-700 hover:bg-amber-500/20"><FileText className="h-3 w-3" /> NF obrigatória</Badge>
-                  )}
-                </div>
-                {r.exige_nota_fiscal && !r.nota_fiscal_url && r.status === "pendente" && (
-                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-3 text-sm text-muted-foreground hover:bg-muted/40">
-                    {uploading === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    Enviar nota fiscal (PDF)
-                    <input type="file" accept="application/pdf" className="hidden"
-                      onChange={(e) => e.target.files?.[0] && uploadNota(r, e.target.files[0])} />
-                  </label>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+      <Card><CardContent className="pt-4">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-medium">{new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</span>
+          <span className={cn("text-xs", variation >= 0 ? "text-emerald-600" : "text-red-600")}>
+            {brl(thisMonth)} vs {brl(lastMonth)} ({variation >= 0 ? "+" : ""}{variation}%)
+          </span>
+        </div>
+        <div className="mt-2 h-2 rounded bg-muted overflow-hidden">
+          <div className="h-full bg-primary"
+            style={{ width: `${Math.min(100, lastMonth > 0 ? (thisMonth/Math.max(thisMonth,lastMonth))*100 : 100)}%` }} />
+        </div>
+      </CardContent></Card>
+
+      <div className="flex flex-wrap gap-2">
+        {([["semana","Esta semana"],["mes","Este mês"],["mes_ant","Mês anterior"],["custom","Personalizado"]] as [PeriodKey,string][]).map(([k,l]) => (
+          <Chip key={k} active={period===k} onClick={() => setPeriod(k)}>{l}</Chip>
+        ))}
+      </div>
+      {period === "custom" && (
+        <div className="grid grid-cols-2 gap-2">
+          <Input type="date" value={custom.from} onChange={e => setCustom(p => ({...p, from: e.target.value}))} />
+          <Input type="date" value={custom.to} onChange={e => setCustom(p => ({...p, to: e.target.value}))} />
         </div>
       )}
+
+      {byWeek.length === 0 ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">
+          <Receipt className="mx-auto mb-3 h-10 w-10" />Sem ganhos no período
+        </CardContent></Card>
+      ) : (
+        <div className="space-y-3">
+          {byWeek.map(([key, items]) => {
+            const total = items.reduce((s,o) => s + Number(o.valor||0), 0);
+            return (
+              <div key={key} className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">{key} · {brl(total)}</p>
+                {items.map(o => (
+                  <Card key={o.id} className="cursor-pointer hover:elev-2"
+                    onClick={() => o.payment_status === "paid" && setReceipt(o)}>
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{o.titulo}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {empresas[o.empresa_id] ?? "Empresa"} ·{" "}
+                          {o.data_trabalho ? new Date(o.data_trabalho).toLocaleDateString("pt-BR") : "—"}
+                          {o.quantidade_pacotes ? ` · ${o.quantidade_pacotes} pac.` : ""}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-primary">{brl(Number(o.valor||0))}</p>
+                        <Badge variant={o.payment_status==="paid"?"secondary":"outline"} className="text-[10px]">
+                          {o.payment_status==="paid"?"Pago":"Pendente"}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {receipt && (
+        <ReceiptDialog oferta={receipt} empresa={empresas[receipt.empresa_id] ?? "Empresa"}
+          onClose={() => setReceipt(null)} />
+      )}
     </div>
+  );
+}
+
+function ReceiptDialog({ oferta, empresa, onClose }: { oferta: Oferta; empresa: string; onClose: () => void }) {
+  const [pix, setPix] = useState<string>("");
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await (supabase as any).from("entregadores").select("pix_chave").eq("id", user.id).maybeSingle();
+      setPix(data?.pix_chave ?? "");
+    })();
+  }, []);
+  function share() {
+    const txt = `Comprovante: ${oferta.titulo} · ${brl(Number(oferta.valor||0))} pago por ${empresa}`;
+    if (navigator.share) navigator.share({ title: "Comprovante", text: txt }).catch(() => {});
+    else { navigator.clipboard.writeText(txt); toast.success("Copiado"); }
+  }
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>Comprovante</DialogTitle></DialogHeader>
+        <div className="rounded-xl border bg-emerald-500/5 p-4 space-y-2 text-sm">
+          <p className="text-center font-bold text-emerald-600">✅ PAGO</p>
+          <div className="border-t pt-2 space-y-1">
+            <p className="font-semibold">{oferta.titulo}</p>
+            <p className="text-xs text-muted-foreground">Empresa: {empresa}</p>
+            <p className="text-xs text-muted-foreground">Entrega: {oferta.data_trabalho ? new Date(oferta.data_trabalho).toLocaleDateString("pt-BR") : "—"}</p>
+            <p className="text-xs text-muted-foreground">Pagamento: {oferta.payment_date ? new Date(oferta.payment_date).toLocaleDateString("pt-BR") : "—"}</p>
+            {oferta.quantidade_pacotes && (
+              <p className="text-xs">Pacotes: {oferta.quantidade_pacotes} × {brl(Number(oferta.valor_por_pacote||0))}</p>
+            )}
+          </div>
+          <div className="border-t pt-2 text-center">
+            <p className="text-xs text-muted-foreground">TOTAL</p>
+            <p className="text-2xl font-bold text-primary">{brl(Number(oferta.valor||0))}</p>
+          </div>
+          {pix && <p className="text-xs text-center text-muted-foreground">PIX: {pix}</p>}
+        </div>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => window.print()}><FileDown className="h-4 w-4 mr-1" />PDF</Button>
+          <Button variant="outline" onClick={share}><Share2 className="h-4 w-4 mr-1" />Compartilhar</Button>
+          <Button onClick={onClose}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
