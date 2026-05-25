@@ -477,7 +477,7 @@ function EntregadorView({
         </TabsContent>
       </Tabs>
 
-      {selected && <DetailsDialog o={selected} onClose={() => setSelected(null)} role="entregador" reload={reload} onClose Route={(o) => setClosing(o)} />}
+      {selected && <DetailsDialog o={selected} onClose={() => setSelected(null)} role="entregador" reload={reload} onCloseRoute={(o) => setClosing(o)} />}
       {closing && (
         <CloseRouteDialog
           oferta={closing as never}
