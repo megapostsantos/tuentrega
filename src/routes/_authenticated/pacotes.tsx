@@ -744,8 +744,323 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
             <div>Pago aos entregadores: <strong>R$ {totalPago.toFixed(2)}</strong></div>
             {showMargem && <div>Margem: <strong>R$ {margem.toFixed(2)}</strong></div>}
           </div>
+          <AllocationPanel operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={rotas} />
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+/* ============ Audit by ranges ============ */
+
+type Faixa = { inicio: number; fim: number; pacotes: number };
+
+function AuditByRanges({
+  totalStops, totalPackages, valorPorPacote, initialFaixas, onBack, onConfirm,
+}: {
+  totalStops: number; totalPackages: number; valorPorPacote: number;
+  initialFaixas: Faixa[];
+  onBack: () => void;
+  onConfirm: (faixas: Faixa[], rotas: Rota[]) => void;
+}) {
+  const [phase, setPhase] = useState<"define" | "count" | "group">("define");
+  const [stopsPerRange, setStopsPerRange] = useState(10);
+  const [faixas, setFaixas] = useState<Faixa[]>(initialFaixas.length ? initialFaixas : []);
+  const [targetPerRoute, setTargetPerRoute] = useState(50);
+  const [groups, setGroups] = useState<number[][]>([]); // each group is list of faixa indices
+
+  function generate() {
+    const out: Faixa[] = [];
+    let s = 1;
+    while (s <= totalStops) {
+      const e = Math.min(totalStops, s + stopsPerRange - 1);
+      out.push({ inicio: s, fim: e, pacotes: 0 });
+      s = e + 1;
+    }
+    setFaixas(out);
+    setPhase("count");
+  }
+
+  function updateFaixa(i: number, patch: Partial<Faixa>) {
+    setFaixas(faixas.map((f, idx) => idx === i ? { ...f, ...patch } : f));
+  }
+  function addFaixa() {
+    const last = faixas[faixas.length - 1];
+    const s = last ? last.fim + 1 : 1;
+    setFaixas([...faixas, { inicio: s, fim: Math.min(totalStops, s + 9), pacotes: 0 }]);
+  }
+  function removeFaixa(i: number) { setFaixas(faixas.filter((_, idx) => idx !== i)); }
+
+  const contadoTotal = faixas.reduce((s, f) => s + (Number(f.pacotes) || 0), 0);
+  const pct = totalPackages > 0 ? Math.min(100, (contadoTotal / totalPackages) * 100) : 0;
+  const diff = contadoTotal - totalPackages;
+
+  function suggestGroups() {
+    const g: number[][] = [];
+    let cur: number[] = [];
+    let curPkg = 0;
+    faixas.forEach((f, i) => {
+      if (curPkg + f.pacotes > targetPerRoute && cur.length) {
+        g.push(cur); cur = []; curPkg = 0;
+      }
+      cur.push(i); curPkg += f.pacotes;
+    });
+    if (cur.length) g.push(cur);
+    setGroups(g);
+  }
+
+  function moveFaixaToGroup(faixaIdx: number, targetGroup: number) {
+    const next = groups.map((g) => g.filter((i) => i !== faixaIdx));
+    if (targetGroup >= 0) {
+      next[targetGroup] = [...(next[targetGroup] || []), faixaIdx];
+    }
+    setGroups(next.filter((g) => g.length > 0));
+  }
+
+  const groupRotas: Rota[] = useMemo(() => groups.map((g, i) => {
+    const pkg = g.reduce((s, idx) => s + (faixas[idx]?.pacotes || 0), 0);
+    const stops = g.reduce((s, idx) => s + ((faixas[idx]?.fim - faixas[idx]?.inicio + 1) || 0), 0);
+    return { nome: `Rota ${i + 1}`, quantidade_pacotes: pkg, quantidade_paradas: stops, valor_total: pkg * valorPorPacote };
+  }), [groups, faixas, valorPorPacote]);
+
+  const assigned = groups.flat();
+  const unassigned = faixas.map((_, i) => i).filter((i) => !assigned.includes(i));
+  const unassignedPkg = unassigned.reduce((s, i) => s + faixas[i].pacotes, 0);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Auditoria por faixas — {phase === "define" ? "Definir faixas" : phase === "count" ? "Contar pacotes" : "Agrupar em rotas"}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {phase === "define" && (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Separar a cada X paradas</Label>
+                <Input type="number" min={1} value={stopsPerRange} onChange={(e) => setStopsPerRange(Math.max(1, Number(e.target.value) || 1))} />
+              </div>
+              <div className="text-sm text-muted-foreground self-end">Total de paradas: <strong>{totalStops}</strong></div>
+            </div>
+            <Button onClick={generate}>Gerar faixas</Button>
+            {faixas.length > 0 && (
+              <div className="space-y-2">
+                {faixas.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input className="w-20" type="number" value={f.inicio} onChange={(e) => updateFaixa(i, { inicio: Number(e.target.value) || 0 })} />
+                    <span>até</span>
+                    <Input className="w-20" type="number" value={f.fim} onChange={(e) => updateFaixa(i, { fim: Number(e.target.value) || 0 })} />
+                    <Button variant="ghost" size="icon" onClick={() => removeFaixa(i)}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={addFaixa}><Plus className="mr-1 h-4 w-4" />Adicionar faixa</Button>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={onBack}>Voltar</Button>
+              <Button onClick={() => setPhase("count")} disabled={faixas.length === 0}>Próximo: contar</Button>
+            </div>
+          </>
+        )}
+
+        {phase === "count" && (
+          <>
+            <div className="space-y-3">
+              {faixas.map((f, i) => (
+                <div key={i} className="rounded border p-3">
+                  <div className="mb-2 text-sm font-medium">Faixa: paradas {f.inicio} a {f.fim}</div>
+                  <Label className="text-xs">Pacotes contados</Label>
+                  <Input type="number" min={0} value={f.pacotes || ""} onChange={(e) => updateFaixa(i, { pacotes: Number(e.target.value) || 0 })} />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-1">
+              <div className="text-sm">Contados até agora: <strong>{contadoTotal}</strong> / {totalPackages} pacotes</div>
+              <Progress value={pct} />
+              {diff !== 0 && (
+                <div className={`rounded border p-2 text-sm ${diff < 0 ? "border-amber-300 bg-amber-50 text-amber-900" : "border-blue-300 bg-blue-50 text-blue-900"}`}>
+                  ⚠️ Contado {contadoTotal}, esperado {totalPackages} — {Math.abs(diff)} pacote(s) {diff < 0 ? "faltando" : "a mais"}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setPhase("define")}>Voltar</Button>
+              <Button onClick={() => { suggestGroups(); setPhase("group"); }}>Próximo: agrupar</Button>
+            </div>
+          </>
+        )}
+
+        {phase === "group" && (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Pacotes-alvo por rota</Label>
+                <Input type="number" min={1} value={targetPerRoute} onChange={(e) => setTargetPerRoute(Math.max(1, Number(e.target.value) || 1))} />
+              </div>
+              <Button variant="outline" onClick={suggestGroups} className="self-end">Sugerir agrupamento</Button>
+            </div>
+
+            <div className="space-y-3">
+              {groups.map((g, gi) => {
+                const r = groupRotas[gi];
+                return (
+                  <div key={gi} className="rounded border p-3">
+                    <div className="mb-2 font-medium">{r.nome} — {r.quantidade_pacotes} pacotes / {r.quantidade_paradas} paradas = R$ {r.valor_total.toFixed(2)}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {g.map((fi) => {
+                        const f = faixas[fi];
+                        return (
+                          <Badge key={fi} variant="outline" className="cursor-pointer" onClick={() => moveFaixaToGroup(fi, -1)}>
+                            {f.inicio}-{f.fim} · {f.pacotes}p ✕
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              <Button variant="outline" size="sm" onClick={() => setGroups([...groups, []])}>
+                <Plus className="mr-1 h-4 w-4" />Nova rota
+              </Button>
+            </div>
+
+            {unassigned.length > 0 && (
+              <div className="rounded border border-amber-300 bg-amber-50 p-3">
+                <div className="mb-2 text-sm font-medium text-amber-900">⚠️ {unassignedPkg} pacote(s) não atribuídos a rotas</div>
+                <div className="flex flex-wrap gap-2">
+                  {unassigned.map((fi) => {
+                    const f = faixas[fi];
+                    return (
+                      <div key={fi} className="flex items-center gap-1">
+                        <Badge variant="outline">{f.inicio}-{f.fim} · {f.pacotes}p</Badge>
+                        <Select onValueChange={(v) => moveFaixaToGroup(fi, Number(v))}>
+                          <SelectTrigger className="w-32 h-7"><SelectValue placeholder="→ Rota" /></SelectTrigger>
+                          <SelectContent>
+                            {groups.map((_, gi) => <SelectItem key={gi} value={String(gi)}>Rota {gi + 1}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setPhase("count")}>Voltar</Button>
+              <Button
+                onClick={() => onConfirm(faixas, groupRotas)}
+                disabled={groupRotas.length === 0 || unassigned.length > 0}
+              >
+                Confirmar rotas
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ============ Allocation panel ============ */
+
+function AllocationPanel({
+  operacaoId, empresaId, dataOperacao, rotas,
+}: { operacaoId: string; empresaId: string; dataOperacao: string; rotas: any[] }) {
+  const [aceitos, setAceitos] = useState<any[]>([]);
+  const [alocacoes, setAlocacoes] = useState<any[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    const sb = supabase as any;
+    // entregadores que aceitaram previsoes do dia
+    const { data: prevs } = await sb.from("agenda_previsoes")
+      .select("id").eq("empresa_id", empresaId).eq("data_prevista", dataOperacao);
+    const prevIds = (prevs ?? []).map((p: any) => p.id);
+    let entregadoresAceitos: any[] = [];
+    if (prevIds.length) {
+      const { data: ofs } = await sb.from("ofertas")
+        .select("id, entregador_id, updated_at, entregadores(nome_completo, tipo_veiculo, reliability_level, reliability_score)")
+        .in("previsao_id", prevIds).not("entregador_id", "is", null)
+        .order("updated_at", { ascending: true });
+      entregadoresAceitos = ofs ?? [];
+    }
+    setAceitos(entregadoresAceitos);
+    const { data: alc } = await sb.from("alocacoes").select("*, entregadores(nome_completo)").eq("operacao_id", operacaoId);
+    setAlocacoes(alc ?? []);
+  }
+  useEffect(() => { load(); }, [operacaoId, empresaId, dataOperacao]);
+
+  function alocadoPara(rotaId: string) {
+    return alocacoes.find((a) => a.rota_id === rotaId);
+  }
+
+  async function autoAllocate() {
+    setBusy(true);
+    try {
+      const sb = supabase as any;
+      const disponiveis = aceitos.filter((a) => !alocacoes.some((al) => al.entregador_id === a.entregador_id));
+      const rotasLivres = rotas.filter((r) => !alocadoPara(r.id));
+      let i = 0;
+      for (const rota of rotasLivres) {
+        if (i >= disponiveis.length) break;
+        const ent = disponiveis[i++];
+        const { error } = await sb.from("alocacoes").insert({
+          operacao_id: operacaoId, rota_id: rota.id, entregador_id: ent.entregador_id,
+          oferta_id: rota.oferta_id, empresa_id: empresaId, status: "allocated",
+        });
+        if (error) throw error;
+        if (rota.oferta_id) {
+          await sb.from("ofertas").update({ entregador_id: ent.entregador_id, status: "accepted" }).eq("id", rota.oferta_id);
+        }
+      }
+      toast.success(`${Math.min(disponiveis.length, rotasLivres.length)} rota(s) alocadas.`);
+      load();
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+  }
+
+  async function startOperation() {
+    const sb = supabase as any;
+    const ofertaIds = rotas.map((r) => r.oferta_id).filter(Boolean);
+    if (ofertaIds.length) await sb.from("ofertas").update({ status: "in_progress" }).in("id", ofertaIds);
+    await sb.from("alocacoes").update({ status: "started" }).eq("operacao_id", operacaoId);
+    toast.success("Operação iniciada!");
+    load();
+  }
+
+  return (
+    <div className="rounded border p-3 space-y-3">
+      <div className="flex items-center gap-2 font-medium"><Users className="h-4 w-4" />Alocação ({alocacoes.length}/{rotas.length})</div>
+      <p className="text-sm text-muted-foreground">
+        {aceitos.length} entregador(es) aceitaram previsões para {new Date(dataOperacao).toLocaleDateString("pt-BR")}.
+      </p>
+
+      <Table>
+        <TableHeader>
+          <TableRow><TableHead>Rota</TableHead><TableHead>Entregador</TableHead></TableRow>
+        </TableHeader>
+        <TableBody>
+          {rotas.map((r) => {
+            const a = alocadoPara(r.id);
+            return (
+              <TableRow key={r.id}>
+                <TableCell>{r.nome} · {r.quantidade_pacotes}p · R$ {Number(r.valor_total).toFixed(2)}</TableCell>
+                <TableCell>{a ? <span className="text-emerald-700">✅ {(a.entregadores as any)?.nome_completo}</span> : <span className="text-muted-foreground">❌ ninguém</span>}</TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={autoAllocate} disabled={busy || aceitos.length === 0} className="bg-primary text-primary-foreground hover:bg-primary/90">
+          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Auto-alocar
+        </Button>
+        <Button variant="outline" onClick={startOperation} disabled={alocacoes.length === 0}>
+          Iniciar operação
+        </Button>
+      </div>
+    </div>
+  );
+}
+
