@@ -751,8 +751,11 @@ function DetailsDialog({
                 </Button>
               )}
               {o.status === "in_progress" && (
-                <Button className="w-full bg-primary text-primary-foreground hover:opacity-90" onClick={() => changeStatus("completed")} disabled={busy}>
-                  Concluir entrega
+                <Button
+                  className="w-full bg-primary text-primary-foreground hover:opacity-90"
+                  onClick={() => { onClose(); onCloseRoute?.(o); }}
+                >
+                  Fechar rota
                 </Button>
               )}
               {o.status === "completed" && o.exige_nota_fiscal && (
