@@ -1,11 +1,11 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Logo } from "@/components/Logo";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { ActiveRouteBanner } from "@/components/ActiveRouteBanner";
+import { TopAppBar } from "@/components/TopAppBar";
+import { BottomNav } from "@/components/BottomNav";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -21,31 +21,23 @@ function AuthenticatedLayout() {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Logo />
       </div>
     );
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
-        <AppSidebar role={role} />
-        <div className="flex flex-1 flex-col">
-          <ImpersonationBanner />
-          <ActiveRouteBanner />
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur">
-            <SidebarTrigger />
-            <div className="flex-1" />
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary capitalize">
-              {role ?? "..."}
-            </span>
-          </header>
-          <main className="flex-1">
-            <Outlet />
-          </main>
+    <div className="flex min-h-screen w-full flex-col bg-background">
+      <ImpersonationBanner />
+      <ActiveRouteBanner />
+      <TopAppBar />
+      <main className="flex-1 pb-20">
+        <div className="mx-auto w-full max-w-2xl">
+          <Outlet />
         </div>
-      </div>
-    </SidebarProvider>
+      </main>
+      <BottomNav role={role} />
+    </div>
   );
 }
