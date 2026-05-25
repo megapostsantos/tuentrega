@@ -799,3 +799,67 @@ function prazoLabel(p: string, d: string | null) {
   if (p === "custom" && d) return new Date(d).toLocaleDateString("pt-BR");
   return p;
 }
+
+function DeliveryReport({ oferta }: { oferta: Oferta }) {
+  const [occ, setOcc] = useState<any[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any).from("entregas_ocorrencias")
+        .select("*").eq("oferta_id", oferta.id).order("numero_pacote");
+      setOcc(data ?? []);
+      const allPaths: string[] = (data ?? []).flatMap((o: any) => o.fotos_urls ?? []);
+      const urls: Record<string, string> = {};
+      await Promise.all(allPaths.map(async (p) => {
+        const { data: s } = await supabase.storage.from("entregas-fotos").createSignedUrl(p, 3600);
+        if (s) urls[p] = s.signedUrl;
+      }));
+      setPhotoUrls(urls);
+    })();
+  }, [oferta.id]);
+
+  const total = oferta.quantidade_pacotes ?? 0;
+  const delivered = oferta.pacotes_entregues ?? 0;
+  const pct = total ? Math.round((delivered / total) * 100) : 0;
+  const valor = delivered * (oferta.valor_por_pacote ?? (total ? oferta.valor / total : 0));
+  const counts = new Map<string, number>();
+  for (const o of occ) counts.set(o.motivo, (counts.get(o.motivo) ?? 0) + 1);
+  const MLABEL: Record<string, string> = {
+    address_not_visited: "Endereço não visitado",
+    lost: "Pacote perdido",
+    damaged: "Pacote danificado",
+    could_not_deliver: "Não foi possível entregar",
+  };
+
+  return (
+    <div className="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-3 text-sm space-y-2">
+      <p className="font-semibold">📋 Relatório de entrega</p>
+      <p>Total: <strong>{total}</strong> · Entregues: <strong>{delivered} ({pct}%)</strong> · Não entregues: <strong>{oferta.pacotes_nao_entregues ?? 0}</strong></p>
+      {counts.size > 0 && (
+        <ul className="ml-4 list-disc text-xs">
+          {Array.from(counts.entries()).map(([m, n]) => (
+            <li key={m}>{n}× {MLABEL[m] ?? m}</li>
+          ))}
+        </ul>
+      )}
+      {Object.keys(photoUrls).length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(photoUrls).map(([path, url]) => (
+            <img key={path} src={url} alt="" onClick={() => setLightbox(url)}
+              className="h-16 w-16 cursor-pointer rounded border object-cover" />
+          ))}
+        </div>
+      )}
+      <p className="pt-1 font-semibold">💰 Valor a pagar: R$ {valor.toFixed(2)}</p>
+      {lightbox && (
+        <Dialog open onOpenChange={() => setLightbox(null)}>
+          <DialogContent className="max-w-3xl">
+            <img src={lightbox} alt="" className="w-full" />
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
