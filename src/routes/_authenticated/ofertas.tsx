@@ -552,8 +552,8 @@ function OfertaCard({
 }
 
 function DetailsDialog({
-  o, onClose, role, reload,
-}: { o: Oferta; onClose: () => void; role: "empresa" | "entregador"; reload: () => void }) {
+  o, onClose, role, reload, onCloseRoute,
+}: { o: Oferta; onClose: () => void; role: "empresa" | "entregador"; reload: () => void; onCloseRoute?: (o: Oferta) => void }) {
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
