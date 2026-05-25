@@ -477,7 +477,14 @@ function EntregadorView({
         </TabsContent>
       </Tabs>
 
-      {selected && <DetailsDialog o={selected} onClose={() => setSelected(null)} role="entregador" reload={reload} />}
+      {selected && <DetailsDialog o={selected} onClose={() => setSelected(null)} role="entregador" reload={reload} onClose Route={(o) => setClosing(o)} />}
+      {closing && (
+        <CloseRouteDialog
+          oferta={closing as never}
+          onClose={() => { setClosing(null); navigate({ to: "/ofertas", search: {} }); }}
+          onClosed={() => { setClosing(null); reload(); navigate({ to: "/ofertas", search: {} }); }}
+        />
+      )}
     </div>
   );
 }
