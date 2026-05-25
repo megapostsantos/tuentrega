@@ -51,6 +51,10 @@ type Oferta = {
   hora_fim: string | null;
   expira_em: string | null;
   created_at: string;
+  updated_at: string;
+  pacotes_entregues: number | null;
+  pacotes_nao_entregues: number | null;
+  closed_at: string | null;
 };
 
 const VEHICLES = [
