@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Package, Truck, Wallet, Users, BarChart3, Building2, CalendarDays, Store } from "lucide-react";
+import { Package, Truck, Wallet, Users, BarChart3, Building2, CalendarDays, Store, Star } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
