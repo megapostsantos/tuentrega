@@ -33,6 +33,7 @@ type DivMethod = "packages" | "stops" | "manual";
 type Rota = { nome: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number };
 type Operacao = {
   id: string;
+  empresa_id: string;
   data_operacao: string;
   total_pacotes_sistema: number;
   total_pacotes_contados: number;
@@ -46,6 +47,7 @@ type Operacao = {
   observacoes: string | null;
   created_at: string;
 };
+
 type EmpresaTms = {
   tms_valor_padrao_pacote: number | null;
   tms_pacotes_por_rota: number | null;
