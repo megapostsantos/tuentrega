@@ -224,9 +224,9 @@ function OperationCard({ op, onView, showMargem }: { op: Operacao; onView: () =>
 function CreateOperation({
   userId, empresa, onCancel, onDone,
 }: { userId: string; empresa: EmpresaTms | null; onCancel: () => void; onDone: () => void }) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | "audit" | 2 | 3>(1);
+  const [auditFaixas, setAuditFaixas] = useState<{ inicio: number; fim: number; pacotes: number }[]>([]);
 
-  // step 1: data
   const [data, setData] = useState({
     data_operacao: new Date().toISOString().slice(0, 10),
     total_pacotes_sistema: 0,
