@@ -458,7 +458,24 @@ function CreateOperation({
         </Card>
       )}
 
+      {step === "audit" && (
+        <AuditByRanges
+          totalStops={data.total_paradas}
+          totalPackages={data.total_pacotes_sistema}
+          valorPorPacote={Number(data.valor_por_pacote)}
+          initialFaixas={auditFaixas}
+          onBack={() => setStep(1)}
+          onConfirm={(faixas, rotasFromAudit) => {
+            setAuditFaixas(faixas);
+            setMetodo("manual");
+            setManualRotas(rotasFromAudit);
+            setStep(3);
+          }}
+        />
+      )}
+
       {step === 2 && (
+
         <Card>
           <CardHeader><CardTitle>Divisão em rotas</CardTitle></CardHeader>
           <CardContent className="space-y-5">
