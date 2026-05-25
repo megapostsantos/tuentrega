@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Store, Plus, FileText, MapPin, Loader2, Clock, Package, Copy,
@@ -22,8 +22,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { CloseRouteDialog } from "@/components/CloseRouteDialog";
 
 export const Route = createFileRoute("/_authenticated/ofertas")({
+  validateSearch: (s: Record<string, unknown>) => ({ close: typeof s.close === "string" ? s.close : undefined }),
   component: OfertasPage,
 });
 
