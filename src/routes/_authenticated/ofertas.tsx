@@ -382,7 +382,10 @@ function EntregadorView({
   const [vmin, setVmin] = useState("");
   const [vmax, setVmax] = useState("");
   const [selected, setSelected] = useState<Oferta | null>(null);
+  const [closing, setClosing] = useState<Oferta | null>(null);
   const [myVehicle, setMyVehicle] = useState<string | null>(null);
+  const search = useSearch({ from: "/_authenticated/ofertas" });
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) return;
@@ -391,6 +394,13 @@ function EntregadorView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
   void myVehicle;
+
+  // Deep link from active route banner
+  useEffect(() => {
+    if (!search.close) return;
+    const found = ofertas.find((o) => o.id === search.close && o.status === "in_progress");
+    if (found) setClosing(found);
+  }, [search.close, ofertas]);
 
 
   const available = useMemo(() => {
