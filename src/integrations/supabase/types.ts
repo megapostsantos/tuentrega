@@ -594,6 +594,8 @@ export type Database = {
           motivo: string
           numero_pacote: number
           oferta_id: string
+          package_id: string | null
+          package_id_scan_method: string | null
           score_impact: number
           sub_motivo: string | null
         }
@@ -606,6 +608,8 @@ export type Database = {
           motivo: string
           numero_pacote: number
           oferta_id: string
+          package_id?: string | null
+          package_id_scan_method?: string | null
           score_impact?: number
           sub_motivo?: string | null
         }
@@ -618,6 +622,8 @@ export type Database = {
           motivo?: string
           numero_pacote?: number
           oferta_id?: string
+          package_id?: string | null
+          package_id_scan_method?: string | null
           score_impact?: number
           sub_motivo?: string | null
         }
