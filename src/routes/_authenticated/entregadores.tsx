@@ -165,17 +165,92 @@ function ListaEntregadores() {
     </div>
   );
 }
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      <ScoreHistoryDialog ent={detail} onClose={() => setDetail(null)} />
-    </div>
+function DispatcherDialog({ ent, onClose, onDone }: { ent: Ent | null; onClose: () => void; onDone: () => void }) {
+  const [valor, setValor] = useState("2.00");
+  const [plataformas, setPlataformas] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (ent) { setValor("2.00"); setPlataformas(new Set()); }
+  }, [ent]);
+
+  if (!ent) return null;
+
+  const ALL_PLATS = ["Mercado Livre Flex", "iFood", "Shopee", "Lalamove", "Todas"];
+
+  function togglePlat(p: string) {
+    setPlataformas((prev) => {
+      const next = new Set(prev);
+      if (p === "Todas") return next.has("Todas") ? new Set() : new Set(ALL_PLATS);
+      if (next.has(p)) next.delete(p); else next.add(p);
+      next.delete("Todas");
+      return next;
+    });
+  }
+
+  async function confirm() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (!Number(valor) || Number(valor) <= 0) { toast.error("Defina um valor por pacote válido."); return; }
+    if (plataformas.size === 0) { toast.error("Selecione ao menos uma plataforma."); return; }
+    setSaving(true);
+    const sb = supabase as any;
+
+    // 1. Add dispatcher role
+    const { error: roleErr } = await sb.from("user_roles")
+      .upsert({ user_id: ent.id, role: "dispatcher" }, { onConflict: "user_id,role", ignoreDuplicates: true });
+    if (roleErr && !roleErr.message?.includes("duplicate")) {
+      setSaving(false); toast.error("Falha ao adicionar role: " + roleErr.message); return;
+    }
+
+    // 2. Create dispatcher record
+    const { error: dErr } = await sb.from("dispatchers").upsert({
+      entregador_id: ent.id,
+      empresa_id: user.id,
+      valor_por_pacote: Number(valor),
+      plataformas: Array.from(plataformas),
+      status: "ativo",
+    }, { onConflict: "entregador_id,empresa_id" });
+    setSaving(false);
+    if (dErr) { toast.error(dErr.message); return; }
+    toast.success(`${ent.nome_completo} agora é Dispatcher!`);
+    onDone();
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Tornar {ent.nome_completo} Dispatcher?</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Valor por pacote que você paga a ele (R$)</Label>
+            <Input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="ex: 2,00" />
+            <p className="text-xs text-muted-foreground">Quanto a empresa paga ao dispatcher por pacote.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Plataformas que ele gerencia</Label>
+            <div className="space-y-2">
+              {ALL_PLATS.map((p) => (
+                <label key={p} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox checked={plataformas.has(p)} onCheckedChange={() => togglePlat(p)} />
+                  {p}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={confirm} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
+
 
 function ScoreHistoryDialog({ ent, onClose }: { ent: Ent | null; onClose: () => void }) {
   const [hist, setHist] = useState<any[]>([]);
