@@ -134,6 +134,7 @@ export type Database = {
           updated_at: string
           whatsapp_template_new_offer: string
           whatsapp_template_payment: string
+          whatsapp_template_private_invite: string
           whatsapp_template_suspension: string
         }
         Insert: {
@@ -144,6 +145,7 @@ export type Database = {
           updated_at?: string
           whatsapp_template_new_offer?: string
           whatsapp_template_payment?: string
+          whatsapp_template_private_invite?: string
           whatsapp_template_suspension?: string
         }
         Update: {
@@ -154,6 +156,7 @@ export type Database = {
           updated_at?: string
           whatsapp_template_new_offer?: string
           whatsapp_template_payment?: string
+          whatsapp_template_private_invite?: string
           whatsapp_template_suspension?: string
         }
         Relationships: []
@@ -332,6 +335,66 @@ export type Database = {
           nivel?: string
           score?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      dispatcher_alocacoes: {
+        Row: {
+          created_at: string
+          dispatcher_id: string
+          empresa_id: string
+          id: string
+          operacao_id: string
+          pacotes_alocados: number
+          paradas_alocadas: number
+        }
+        Insert: {
+          created_at?: string
+          dispatcher_id: string
+          empresa_id: string
+          id?: string
+          operacao_id: string
+          pacotes_alocados?: number
+          paradas_alocadas?: number
+        }
+        Update: {
+          created_at?: string
+          dispatcher_id?: string
+          empresa_id?: string
+          id?: string
+          operacao_id?: string
+          pacotes_alocados?: number
+          paradas_alocadas?: number
+        }
+        Relationships: []
+      }
+      dispatchers: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          entregador_id: string
+          id: string
+          plataformas: string[]
+          status: string
+          valor_por_pacote: number
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          entregador_id: string
+          id?: string
+          plataformas?: string[]
+          status?: string
+          valor_por_pacote?: number
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          entregador_id?: string
+          id?: string
+          plataformas?: string[]
+          status?: string
+          valor_por_pacote?: number
         }
         Relationships: []
       }
@@ -704,6 +767,7 @@ export type Database = {
           created_at: string
           data_trabalho: string | null
           descricao: string | null
+          dispatcher_id: string | null
           empresa_id: string
           endereco_coleta: string | null
           entregador_id: string | null
@@ -727,6 +791,7 @@ export type Database = {
           quantidade_paradas: number | null
           rota_operacao_id: string | null
           status: string
+          tipo: string
           tipo_entrega: string | null
           titulo: string
           updated_at: string
@@ -742,6 +807,7 @@ export type Database = {
           created_at?: string
           data_trabalho?: string | null
           descricao?: string | null
+          dispatcher_id?: string | null
           empresa_id: string
           endereco_coleta?: string | null
           entregador_id?: string | null
@@ -765,6 +831,7 @@ export type Database = {
           quantidade_paradas?: number | null
           rota_operacao_id?: string | null
           status?: string
+          tipo?: string
           tipo_entrega?: string | null
           titulo: string
           updated_at?: string
@@ -780,6 +847,7 @@ export type Database = {
           created_at?: string
           data_trabalho?: string | null
           descricao?: string | null
+          dispatcher_id?: string | null
           empresa_id?: string
           endereco_coleta?: string | null
           entregador_id?: string | null
@@ -803,6 +871,7 @@ export type Database = {
           quantidade_paradas?: number | null
           rota_operacao_id?: string | null
           status?: string
+          tipo?: string
           tipo_entrega?: string | null
           titulo?: string
           updated_at?: string
@@ -819,6 +888,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ofertas_privadas_config: {
+        Row: {
+          aceito_em: string | null
+          created_at: string
+          empresa_id: string
+          entregador_id: string
+          id: string
+          notificado_em: string | null
+          oferta_id: string
+          status: string
+          valor_por_pacote: number
+        }
+        Insert: {
+          aceito_em?: string | null
+          created_at?: string
+          empresa_id: string
+          entregador_id: string
+          id?: string
+          notificado_em?: string | null
+          oferta_id: string
+          status?: string
+          valor_por_pacote?: number
+        }
+        Update: {
+          aceito_em?: string | null
+          created_at?: string
+          empresa_id?: string
+          entregador_id?: string
+          id?: string
+          notificado_em?: string | null
+          oferta_id?: string
+          status?: string
+          valor_por_pacote?: number
+        }
+        Relationships: []
       }
       operacoes: {
         Row: {
@@ -1061,7 +1166,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "empresa" | "entregador"
+      app_role: "admin" | "empresa" | "entregador" | "dispatcher"
       pix_tipo: "cpf" | "cnpj" | "email" | "telefone" | "aleatoria"
       veiculo_tipo:
         | "walker"
@@ -1197,7 +1302,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "empresa", "entregador"],
+      app_role: ["admin", "empresa", "entregador", "dispatcher"],
       pix_tipo: ["cpf", "cnpj", "email", "telefone", "aleatoria"],
       veiculo_tipo: [
         "walker",

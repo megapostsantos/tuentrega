@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, Loader2, ShieldOff, RotateCcw, Star } from "lucide-react";
+import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -9,8 +9,11 @@ import { EmptyModule } from "@/components/EmptyModule";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/entregadores")({
   component: EntregadoresPage,
@@ -49,11 +52,19 @@ function ListaEntregadores() {
   const [list, setList] = useState<Ent[]>([]);
   const [load, setLoad] = useState(true);
   const [detail, setDetail] = useState<Ent | null>(null);
+  const [dispatcherTarget, setDispatcherTarget] = useState<Ent | null>(null);
+  const [dispatcherIds, setDispatcherIds] = useState<Set<string>>(new Set());
 
   async function fetchList() {
     setLoad(true);
     const { data } = await (supabase as any).from("entregadores").select("*").order("nome_completo");
     setList((data as Ent[]) ?? []);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: dispData } = await (supabase as any)
+        .from("dispatchers").select("entregador_id").eq("empresa_id", user.id).eq("status", "ativo");
+      setDispatcherIds(new Set((dispData ?? []).map((d: any) => d.entregador_id)));
+    }
     setLoad(false);
   }
   useEffect(() => { fetchList(); }, []);
@@ -121,6 +132,13 @@ function ListaEntregadores() {
                           {e.suspended_at ? <Badge variant="destructive">Suspenso</Badge> : <Badge variant="outline">{e.status}</Badge>}
                         </TableCell>
                         <TableCell className="text-right" onClick={(ev) => ev.stopPropagation()}>
+                          {dispatcherIds.has(e.id) ? (
+                            <Badge variant="outline" className="mr-1">Dispatcher</Badge>
+                          ) : (
+                            <Button variant="outline" size="sm" className="mr-1" onClick={() => setDispatcherTarget(e)}>
+                              <UserCog className="h-3.5 w-3.5 mr-1" /> Tornar Dispatcher
+                            </Button>
+                          )}
                           <Button variant="ghost" size="sm" onClick={() => suspendManually(e.id)}>
                             <ShieldOff className="h-4 w-4" />
                           </Button>
@@ -139,9 +157,101 @@ function ListaEntregadores() {
       </Card>
 
       <ScoreHistoryDialog ent={detail} onClose={() => setDetail(null)} />
+      <DispatcherDialog
+        ent={dispatcherTarget}
+        onClose={() => setDispatcherTarget(null)}
+        onDone={() => { setDispatcherTarget(null); fetchList(); }}
+      />
     </div>
   );
 }
+
+function DispatcherDialog({ ent, onClose, onDone }: { ent: Ent | null; onClose: () => void; onDone: () => void }) {
+  const [valor, setValor] = useState("2.00");
+  const [plataformas, setPlataformas] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (ent) { setValor("2.00"); setPlataformas(new Set()); }
+  }, [ent]);
+
+  if (!ent) return null;
+
+  const ALL_PLATS = ["Mercado Livre Flex", "iFood", "Shopee", "Lalamove", "Todas"];
+
+  function togglePlat(p: string) {
+    setPlataformas((prev) => {
+      const next = new Set(prev);
+      if (p === "Todas") return next.has("Todas") ? new Set() : new Set(ALL_PLATS);
+      if (next.has(p)) next.delete(p); else next.add(p);
+      next.delete("Todas");
+      return next;
+    });
+  }
+
+  async function confirm() {
+    const target = ent;
+    if (!target) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (!Number(valor) || Number(valor) <= 0) { toast.error("Defina um valor por pacote válido."); return; }
+    if (plataformas.size === 0) { toast.error("Selecione ao menos uma plataforma."); return; }
+    setSaving(true);
+    const sb = supabase as any;
+
+    // 1. Add dispatcher role
+    const { error: roleErr } = await sb.from("user_roles")
+      .upsert({ user_id: target.id, role: "dispatcher" }, { onConflict: "user_id,role", ignoreDuplicates: true });
+    if (roleErr && !roleErr.message?.includes("duplicate")) {
+      setSaving(false); toast.error("Falha ao adicionar role: " + roleErr.message); return;
+    }
+
+    const { error: dErr } = await sb.from("dispatchers").upsert({
+      entregador_id: target.id,
+      empresa_id: user.id,
+      valor_por_pacote: Number(valor),
+      plataformas: Array.from(plataformas),
+      status: "ativo",
+    }, { onConflict: "entregador_id,empresa_id" });
+    setSaving(false);
+    if (dErr) { toast.error(dErr.message); return; }
+    toast.success(`${target.nome_completo} agora é Dispatcher!`);
+    onDone();
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Tornar {ent.nome_completo} Dispatcher?</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Valor por pacote que você paga a ele (R$)</Label>
+            <Input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="ex: 2,00" />
+            <p className="text-xs text-muted-foreground">Quanto a empresa paga ao dispatcher por pacote.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Plataformas que ele gerencia</Label>
+            <div className="space-y-2">
+              {ALL_PLATS.map((p) => (
+                <label key={p} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox checked={plataformas.has(p)} onCheckedChange={() => togglePlat(p)} />
+                  {p}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={confirm} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function ScoreHistoryDialog({ ent, onClose }: { ent: Ent | null; onClose: () => void }) {
   const [hist, setHist] = useState<any[]>([]);

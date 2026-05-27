@@ -199,7 +199,14 @@ function EmpresaView({
   );
 }
 
+type Invitee = { id: string; nome: string; veiculo: string | null; score: number | null; valor: string };
+
 function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
+  const [tipo, setTipo] = useState<"public" | "private">("public");
+  const [inviteSearch, setInviteSearch] = useState("");
+  const [inviteResults, setInviteResults] = useState<Invitee[]>([]);
+  const [invitees, setInvitees] = useState<Invitee[]>([]);
+  const [searching, setSearching] = useState(false);
   const [f, setF] = useState({
     titulo: "", tipo_entrega: "pacotes", veiculo_necessario: "moto",
     bairro: "", quantidade_pacotes: "", descricao: "", endereco_coleta: "",
@@ -217,12 +224,63 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
     return v / q;
   }, [f.valor, f.quantidade_pacotes, f.tipo_entrega]);
 
+  // Search entregadores by name (debounced)
+  useEffect(() => {
+    if (tipo !== "private" || inviteSearch.trim().length < 2) {
+      setInviteResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      const { data } = await (supabase as any)
+        .from("entregadores")
+        .select("id, nome_completo, tipo_veiculo, reliability_score, status")
+        .ilike("nome_completo", `%${inviteSearch.trim()}%`)
+        .eq("status", "ativo")
+        .limit(15);
+      setSearching(false);
+      const ids = new Set(invitees.map((i) => i.id));
+      setInviteResults(
+        (data ?? [])
+          .filter((r: any) => !ids.has(r.id))
+          .map((r: any) => ({
+            id: r.id,
+            nome: r.nome_completo ?? "(sem nome)",
+            veiculo: r.tipo_veiculo,
+            score: r.reliability_score,
+            valor: "",
+          })),
+      );
+    }, 250);
+    return () => clearTimeout(t);
+  }, [inviteSearch, tipo, invitees]);
+
+  function addInvitee(r: Invitee) {
+    setInvitees((prev) => [...prev, r]);
+    setInviteSearch("");
+    setInviteResults([]);
+  }
+  function removeInvitee(id: string) {
+    setInvitees((prev) => prev.filter((i) => i.id !== id));
+  }
+  function setInviteeValor(id: string, valor: string) {
+    setInvitees((prev) => prev.map((i) => (i.id === id ? { ...i, valor } : i)));
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (tipo === "private" && invitees.length === 0) {
+      toast.error("Convide pelo menos um entregador para uma oferta privada.");
+      return;
+    }
+    if (tipo === "private" && invitees.some((i) => !i.valor || Number(i.valor) <= 0)) {
+      toast.error("Defina um valor por pacote para cada entregador convidado.");
+      return;
+    }
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
-    const { error } = await supabase.from("ofertas").insert({
+    const { data: inserted, error } = await (supabase as any).from("ofertas").insert({
       empresa_id: user.id,
       titulo: f.titulo || "Oferta sem título",
       descricao: f.descricao || null,
@@ -230,6 +288,7 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
       valor: Number(f.valor) || 0,
       valor_por_pacote: perPkg,
       exige_nota_fiscal: f.exige_nota_fiscal,
+      tipo: tipo,
       tipo_entrega: f.tipo_entrega,
       veiculo_necessario: f.veiculo_necessario,
       quantidade_pacotes: f.tipo_entrega === "pacotes" ? Number(f.quantidade_pacotes) || null : null,
@@ -241,19 +300,129 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
       hora_fim: f.hora_fim || null,
       expira_em: f.expira_em ? new Date(f.expira_em).toISOString() : null,
       status: "open",
-    });
+    }).select("id").single();
+
+    if (error || !inserted) {
+      setLoading(false);
+      return toast.error(error?.message ?? "Falha ao criar oferta");
+    }
+
+    if (tipo === "private") {
+      const rows = invitees.map((i) => ({
+        oferta_id: inserted.id,
+        entregador_id: i.id,
+        empresa_id: user.id,
+        valor_por_pacote: Number(i.valor) || 0,
+        status: "invited",
+        notificado_em: new Date().toISOString(),
+      }));
+      const { error: cfgErr } = await (supabase as any).from("ofertas_privadas_config").insert(rows);
+      if (cfgErr) {
+        setLoading(false);
+        return toast.error("Oferta criada, mas falhou ao salvar convites: " + cfgErr.message);
+      }
+    }
+
     setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Oferta publicada com sucesso!");
+    toast.success(tipo === "private" ? `Oferta privada enviada para ${invitees.length} entregador(es)!` : "Oferta publicada com sucesso!");
     onCreated();
   }
 
+
   return (
     <form onSubmit={submit} className="space-y-4">
+      {/* Public vs Private selector */}
+      <div className="grid grid-cols-2 gap-3">
+        {([
+          { v: "public", icon: "🌍", title: "Oferta Pública", desc: "Qualquer entregador pode ver e aceitar" },
+          { v: "private", icon: "🔒", title: "Oferta Privada", desc: "Apenas entregadores que você convidar" },
+        ] as const).map((o) => (
+          <button
+            type="button"
+            key={o.v}
+            onClick={() => setTipo(o.v)}
+            className={`rounded-xl border-2 p-3 text-left transition ${tipo === o.v ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+          >
+            <div className="text-2xl">{o.icon}</div>
+            <div className="mt-1 text-sm font-semibold">{o.title}</div>
+            <div className="text-xs text-muted-foreground">{o.desc}</div>
+          </button>
+        ))}
+      </div>
+
+      {tipo === "private" && (
+        <div className="space-y-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3">
+          <Label className="text-sm font-semibold">Convidar entregadores</Label>
+          <div className="relative">
+            <Input
+              placeholder="Buscar entregador pelo nome..."
+              value={inviteSearch}
+              onChange={(e) => setInviteSearch(e.target.value)}
+            />
+            {(searching || inviteResults.length > 0) && (
+              <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-md border bg-background shadow-lg">
+                {searching && <div className="p-2 text-xs text-muted-foreground">Buscando…</div>}
+                {!searching && inviteResults.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => addInvitee(r)}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
+                  >
+                    <div>
+                      <div className="font-medium">{r.nome}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {r.veiculo ?? "—"} {r.score != null && <>· ⭐ {r.score}</>}
+                      </div>
+                    </div>
+                    <Plus className="h-4 w-4 text-primary" />
+                  </button>
+                ))}
+                {!searching && inviteResults.length === 0 && inviteSearch.trim().length >= 2 && (
+                  <div className="p-2 text-xs text-muted-foreground">Nenhum entregador encontrado.</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {invitees.length > 0 && (
+            <div className="space-y-2">
+              {invitees.map((i) => (
+                <div key={i.id} className="flex items-center gap-2 rounded-md border bg-background p-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate text-sm font-medium">{i.nome}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {i.veiculo ?? "—"} {i.score != null && <>· ⭐ {i.score}</>}
+                    </div>
+                  </div>
+                  <div className="w-24">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="ex: 1,80"
+                      value={i.valor}
+                      onChange={(e) => setInviteeValor(i.id, e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeInvitee(i.id)} className="h-8 w-8">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">
+                {invitees.length} entregador(es) convidado(s) · Valores: {invitees.map((i) => `R$${i.valor || "0"}`).join(" / ")}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label>Título da oferta</Label>
         <Input placeholder="Ex: Gonzaga - Sábado pela manhã" value={f.titulo} onChange={(e) => setF((p) => ({ ...p, titulo: e.target.value }))} />
       </div>
+
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">

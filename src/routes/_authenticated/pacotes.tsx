@@ -408,51 +408,22 @@ function CreateOperation({
               <Field label="Total de paradas (Logísticos)">
                 <Input type="number" min={0} value={data.total_paradas || ""} onChange={(e) => setData({ ...data, total_paradas: Number(e.target.value) || 0 })} />
               </Field>
-              <Field label="Pacotes contados fisicamente">
-                <Input type="number" min={0} value={data.total_pacotes_contados || ""} onChange={(e) => setData({ ...data, total_pacotes_contados: Number(e.target.value) || 0 })} />
-              </Field>
             </div>
-
-            {(faltando > 0 || aMais > 0) && (
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-                <div className="flex items-center gap-2 font-medium"><AlertTriangle className="h-4 w-4" />Divergência detectada</div>
-                <div>Contados: {data.total_pacotes_contados} | Esperados: {data.total_pacotes_sistema}</div>
-                {faltando > 0 && <div>Faltando: <strong>{faltando}</strong> pacote(s) — possível extravio.</div>}
-                {aMais > 0 && <div>A mais: <strong>{aMais}</strong> pacote(s).</div>}
-              </div>
-            )}
 
             <Field label="Observações (opcional)">
               <Textarea value={data.observacoes} onChange={(e) => setData({ ...data, observacoes: e.target.value })} placeholder="Pacotes faltando, danos, etc." />
             </Field>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="ML paga por pacote (R$)">
-                <Input type="number" step="0.01" value={data.valor_ml_por_pacote} onChange={(e) => setData({ ...data, valor_ml_por_pacote: Number(e.target.value) || 0 })} />
-              </Field>
-              <Field label="Você paga ao entregador por pacote (R$)">
-                <Input type="number" step="0.01" value={data.valor_por_pacote} onChange={(e) => setData({ ...data, valor_por_pacote: Number(e.target.value) || 0 })} />
-              </Field>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              A contagem física dos pacotes acontece no Step 2 (auditoria). Valores financeiros padrão ficam em Configurações.
+            </p>
 
-            <div className="rounded-md bg-muted p-3 text-sm">
-              <div>Sua margem: <strong>R$ {margemPorPacote.toFixed(2)}</strong> por pacote</div>
-              <div>Margem total hoje: <strong>R$ {margemTotal.toFixed(2)}</strong></div>
-            </div>
-
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex justify-end">
               <Button
-                variant="outline"
                 onClick={() => setStep("audit")}
-                disabled={data.total_pacotes_sistema <= 0 || data.total_paradas <= 0 || data.valor_por_pacote <= 0}
+                disabled={data.total_pacotes_sistema <= 0 || data.total_paradas <= 0}
               >
-                Auditar por faixas
-              </Button>
-              <Button
-                onClick={() => setStep(2)}
-                disabled={data.total_pacotes_sistema <= 0 || data.valor_por_pacote <= 0}
-              >
-                Pular auditoria · Dividir rotas
+                Iniciar auditoria →
               </Button>
             </div>
 
