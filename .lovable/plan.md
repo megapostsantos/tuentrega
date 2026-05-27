@@ -1,109 +1,68 @@
-## Plan: TuEntrega - Operations Form, Public/Private Offers, Dispatcher Role
+# TuEntrega Dispatcher Features — Full Build Plan
 
-This is a large multi-part change touching the database schema, three major flows, and a brand-new role with its own dashboard. I'll break it into 3 phases so you can review and approve the DB migration before code work begins.
-
----
-
-### Phase 1 — Database migration (single migration call)
-
-**New `app_role` enum value:** `dispatcher`
-
-**Update `ofertas` table:**
-- `tipo` text — `'public'` | `'private'` (default `'public'`)
-- `dispatcher_id` uuid (nullable)
-
-**New tables (all with GRANTs + RLS):**
-
-```text
-dispatchers
-  id, entregador_id, empresa_id, valor_por_pacote (numeric),
-  plataformas (text[]), status (text, default 'ativo'), created_at
-  UNIQUE (entregador_id, empresa_id)
-
-dispatcher_alocacoes
-  id, operacao_id, dispatcher_id,
-  pacotes_alocados (int), paradas_alocadas (int), created_at
-
-ofertas_privadas_config
-  id, oferta_id, entregador_id, valor_por_pacote (numeric),
-  status (text: invited/accepted/refused),
-  notificado_em, aceito_em, created_at
-```
-
-**RLS summary (plain language):**
-- Companies manage their own dispatchers / alocações / private-offer configs.
-- A dispatcher (entregador with that role) reads only rows where `entregador_id = auth.uid()` (their own dispatcher record, their own alocações, their own team's private offers).
-- An invited entregador sees only their own row in `ofertas_privadas_config` and the corresponding `ofertas` row.
-- Update `ofertas` SELECT policy for entregadores: only see public offers OR private offers where they are invited.
+Scope is large (7 feature blocks). I'll ship in 4 phases, each independently testable. **No mock data** — every screen reads from Supabase with realtime subscriptions and skeleton loaders.
 
 ---
 
-### Phase 2 — Frontend: Operation form + Public/Private offers
+## Phase 1 — Database Foundation (single migration)
 
-**`/pacotes` Step 1 simplification:**
-- Remove: physical count, ML pays/pkg, you pay/pkg, margin box.
-- Keep: date, ML system packages, total stops, observations, "Iniciar auditoria →".
-- Physical count stays in Step 2 (audit). Financial values read from `empresas.tms_valor_padrao_pacote` / `operacoes.valor_ml_por_pacote` defaults (already exist).
+**New tables:**
+- `dispatcher_team` — dispatcher ↔ entregador relationship + per-member default rate + two-sided exclusivity flags (`exclusivo`, `exclusivo_aceito_dispatcher`, `exclusivo_aceito_entregador`)
+- `dispatcher_schedule` — date + estimated packages + status
+- `dispatcher_schedule_members` — multi-member assignments with per-member rate + confirmation state
 
-**Offer creation form (`/ofertas`):**
-- Top: two large selectable cards — 🌍 Pública / 🔒 Privada (orange border when selected).
-- If Private:
-  - Search entregadores by name (RLS already lets empresa see related entregadores; we'll broaden search via a server fn using `supabaseAdmin` scoped to active entregadores).
-  - Invite list — each invited entregador has their own `valor_por_pacote` input + remove button.
-  - Summary line.
-- On submit:
-  - Insert `ofertas` row with `tipo='private'`, no broadcast.
-  - Insert one `ofertas_privadas_config` row per invited entregador with their specific value.
-  - Trigger WhatsApp notification (via existing pattern — same as new-offer template in `admin_settings`).
+**Updates:**
+- `dispatcher_alocacoes`: add `status` (pending/distributed), `distributed_at`, `valor_por_pacote`
+- (Optional) confiabilidade tracking note — score table already covers dispatchers
+
+**RLS:** Dispatchers see only their team/allocations/schedule; entregadores see only their own rows; empresa sees their own dispatcher records; admin full access. GRANTs to `authenticated` + `service_role` for every new public table.
+
+**Realtime:** Enable on the 3 new tables + `dispatcher_alocacoes`.
 
 ---
 
-### Phase 3 — Dispatcher role + dashboard
+## Phase 2 — Dispatcher Shell + Dashboard
 
-**`/entregadores` (empresa view):**
-- Each card gets a "Tornar Dispatcher" button.
-- Modal: `valor_por_pacote` + platform checkboxes (ML Flex / iFood / Shopee / Lalamove / Todas).
-- On confirm:
-  1. Insert into `user_roles` (role `dispatcher`) for that entregador.
-  2. Insert into `dispatchers` table.
+- **`use-auth.ts`**: precedence becomes `admin > dispatcher > empresa > entregador`
+- **`BottomNav.tsx`**: dispatcher tabs → Home / Pacotes / Time / Agenda / Perfil
+- **`TopAppBar.tsx`**: greeting + "Dispatcher" badge
+- **`_authenticated.tsx`**: route gating includes dispatcher branch
+- **`dashboard.tsx`**: new `DispatcherDashboard` block with 2×2 stats, active-allocation card (urgent if undistributed), team status list, optional own-route card
 
-**Operation flow — new step after audit, before publishing:**
-- "Alocar entre dispatchers" step.
-- List active dispatchers with `pacotes` + `paradas` inputs.
-- Validation: sum must equal operation totals, "Faltam X pacotes" indicator, cannot proceed if unallocated.
-- Writes to `dispatcher_alocacoes`.
-
-**New dispatcher dashboard (`/dashboard` route, branch by role):**
-- Top cards: Pacotes alocados hoje · Meus entregadores ativos · Entregas concluídas hoje · Meus ganhos hoje.
-- Sections:
-  1. **Meus Pacotes** — rows from `dispatcher_alocacoes` for today.
-  2. **Meu Time** — entregadores the dispatcher has previously assigned, with today's status.
-  3. **Minha Agenda** — calendar of allocations; can create private offers for team.
-  4. **Meus Ganhos** — own deliveries + commission from team (delta between empresa→dispatcher value and dispatcher→team value).
-
-**Dispatcher → team allocation:**
-- After receiving allocation, dispatcher sees distribute UI (per-team-member packages/stops/value, including themselves at full value).
-- "Publicar rotas do meu time" creates one private `ofertas` row per team member with their specific value (reuses Phase 2 private-offer logic, with `dispatcher_id` set).
-
-**Bottom nav + routing:**
-- Add `dispatcher` branch in `BottomNav.tsx`, `TopAppBar.tsx` greeting, and `_authenticated.tsx` role gating.
+All queries against `dispatcher_alocacoes`, `dispatcher_team`, `ofertas`, `entregas`. Realtime subscription per channel.
 
 ---
 
-### Technical notes
+## Phase 3 — Allocation, Team, Schedule, Earnings Pages
 
-- **Role detection**: extend `use-auth.ts` so `role` can resolve to `dispatcher` (highest-precedence role for dashboard routing: admin > dispatcher > empresa > entregador). Dispatcher is an *additional* role on top of entregador; the user keeps both.
-- **WhatsApp notifications**: reuse the existing `admin_settings.whatsapp_template_new_offer` pattern — no new infra; add a `whatsapp_template_private_invite` column with a default template.
-- **No new edge functions** — all server logic stays in TanStack `createServerFn` per project rules.
-- **No mock data** — every screen reads from Supabase with skeleton loaders (existing `PageSkeleton` pattern).
+- **`/pacotes` (dispatcher view)**: distribution UI — list team members with packages/stops/value inputs, running totals, financial preview (own earnings + margin commissions), "Publicar rotas do time" → creates private `ofertas` + `ofertas_privadas_config` per member, marks `dispatcher_alocacoes.status='distributed'`, WhatsApp template per invitee
+- **`/time` (new route)**: team CRUD, search entregador to add, inline edit `valor_padrao_por_pacote`, exclusivity toggle with two-sided accept flow + notification, team stats header
+- **`/agenda` (dispatcher view)**: weekly calendar, "+ Agendar dia" form (date, members, est. packages, rate), team members see pending confirmations
+- **`/ganhos` (new route, dispatcher only)**: 4 summary cards, 3 tabs (Minhas entregas / Comissões / Extrato), monthly statement, PDF export via browser print
 
 ---
 
-### Order of execution
+## Phase 4 — Company-Side Allocation Step
 
-1. Submit DB migration → wait for your approval.
-2. Implement Phase 2 (operation form simplification + public/private offers).
-3. Implement Phase 3 (dispatcher promotion, allocation step, dispatcher dashboard, team distribution).
-4. Smoke-test via build, fix any TS errors, deliver.
+- **`/pacotes` (empresa flow)**: insert new step "Alocar entre dispatchers" between audit and publish. Lists active dispatchers with package/stop inputs, validates sum = operation totals, writes to `dispatcher_alocacoes`, sends WhatsApp notifications. "Gerenciar sem dispatchers" skip button preserves current direct-publish flow.
 
-Approve to proceed and I'll start with the migration.
+---
+
+## Technical Notes
+
+- All new routes follow `_authenticated/{name}.tsx` convention; routeTree auto-regenerates
+- WhatsApp notifications reuse the existing `admin_settings.whatsapp_template_private_invite` pattern
+- Skeleton loaders + framer-motion transitions already in place from prior loop
+- PDF export uses `window.print()` with a print-only stylesheet (no new dep)
+- Exclusivity enforcement: a row is "active exclusive" only when both `exclusivo_aceito_dispatcher` and `exclusivo_aceito_entregador` are true; ofertas RLS will check this for filtering marketplace visibility
+
+---
+
+## Order of execution
+
+1. Migration (Phase 1) — requires approval
+2. Auth/nav/dashboard shell (Phase 2)
+3. Distribution + Team + Agenda + Ganhos pages (Phase 3)
+4. Company allocation step (Phase 4)
+
+I'll start Phase 1 (migration) once you approve this plan.
