@@ -331,10 +331,98 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
 
   return (
     <form onSubmit={submit} className="space-y-4">
+      {/* Public vs Private selector */}
+      <div className="grid grid-cols-2 gap-3">
+        {([
+          { v: "public", icon: "🌍", title: "Oferta Pública", desc: "Qualquer entregador pode ver e aceitar" },
+          { v: "private", icon: "🔒", title: "Oferta Privada", desc: "Apenas entregadores que você convidar" },
+        ] as const).map((o) => (
+          <button
+            type="button"
+            key={o.v}
+            onClick={() => setTipo(o.v)}
+            className={`rounded-xl border-2 p-3 text-left transition ${tipo === o.v ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+          >
+            <div className="text-2xl">{o.icon}</div>
+            <div className="mt-1 text-sm font-semibold">{o.title}</div>
+            <div className="text-xs text-muted-foreground">{o.desc}</div>
+          </button>
+        ))}
+      </div>
+
+      {tipo === "private" && (
+        <div className="space-y-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3">
+          <Label className="text-sm font-semibold">Convidar entregadores</Label>
+          <div className="relative">
+            <Input
+              placeholder="Buscar entregador pelo nome..."
+              value={inviteSearch}
+              onChange={(e) => setInviteSearch(e.target.value)}
+            />
+            {(searching || inviteResults.length > 0) && (
+              <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-md border bg-background shadow-lg">
+                {searching && <div className="p-2 text-xs text-muted-foreground">Buscando…</div>}
+                {!searching && inviteResults.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => addInvitee(r)}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
+                  >
+                    <div>
+                      <div className="font-medium">{r.nome}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {r.veiculo ?? "—"} {r.score != null && <>· ⭐ {r.score}</>}
+                      </div>
+                    </div>
+                    <Plus className="h-4 w-4 text-primary" />
+                  </button>
+                ))}
+                {!searching && inviteResults.length === 0 && inviteSearch.trim().length >= 2 && (
+                  <div className="p-2 text-xs text-muted-foreground">Nenhum entregador encontrado.</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {invitees.length > 0 && (
+            <div className="space-y-2">
+              {invitees.map((i) => (
+                <div key={i.id} className="flex items-center gap-2 rounded-md border bg-background p-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate text-sm font-medium">{i.nome}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {i.veiculo ?? "—"} {i.score != null && <>· ⭐ {i.score}</>}
+                    </div>
+                  </div>
+                  <div className="w-24">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="ex: 1,80"
+                      value={i.valor}
+                      onChange={(e) => setInviteeValor(i.id, e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeInvitee(i.id)} className="h-8 w-8">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">
+                {invitees.length} entregador(es) convidado(s) · Valores: {invitees.map((i) => `R$${i.valor || "0"}`).join(" / ")}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label>Título da oferta</Label>
         <Input placeholder="Ex: Gonzaga - Sábado pela manhã" value={f.titulo} onChange={(e) => setF((p) => ({ ...p, titulo: e.target.value }))} />
       </div>
+
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
