@@ -342,29 +342,148 @@ export type Database = {
         Row: {
           created_at: string
           dispatcher_id: string
+          distributed_at: string | null
           empresa_id: string
           id: string
           operacao_id: string
           pacotes_alocados: number
           paradas_alocadas: number
+          status: string
+          valor_por_pacote: number
         }
         Insert: {
           created_at?: string
           dispatcher_id: string
+          distributed_at?: string | null
           empresa_id: string
           id?: string
           operacao_id: string
           pacotes_alocados?: number
           paradas_alocadas?: number
+          status?: string
+          valor_por_pacote?: number
         }
         Update: {
           created_at?: string
           dispatcher_id?: string
+          distributed_at?: string | null
           empresa_id?: string
           id?: string
           operacao_id?: string
           pacotes_alocados?: number
           paradas_alocadas?: number
+          status?: string
+          valor_por_pacote?: number
+        }
+        Relationships: []
+      }
+      dispatcher_schedule: {
+        Row: {
+          created_at: string
+          data_agendada: string
+          dispatcher_id: string
+          empresa_id: string
+          id: string
+          observacao: string | null
+          pacotes_estimados: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          data_agendada: string
+          dispatcher_id: string
+          empresa_id: string
+          id?: string
+          observacao?: string | null
+          pacotes_estimados?: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          data_agendada?: string
+          dispatcher_id?: string
+          empresa_id?: string
+          id?: string
+          observacao?: string | null
+          pacotes_estimados?: number
+          status?: string
+        }
+        Relationships: []
+      }
+      dispatcher_schedule_members: {
+        Row: {
+          confirmado: string
+          confirmed_at: string | null
+          created_at: string
+          entregador_id: string
+          id: string
+          schedule_id: string
+          valor_por_pacote: number
+        }
+        Insert: {
+          confirmado?: string
+          confirmed_at?: string | null
+          created_at?: string
+          entregador_id: string
+          id?: string
+          schedule_id: string
+          valor_por_pacote?: number
+        }
+        Update: {
+          confirmado?: string
+          confirmed_at?: string | null
+          created_at?: string
+          entregador_id?: string
+          id?: string
+          schedule_id?: string
+          valor_por_pacote?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispatcher_schedule_members_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "dispatcher_schedule"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dispatcher_team: {
+        Row: {
+          created_at: string
+          dispatcher_id: string
+          empresa_id: string
+          entregador_id: string
+          exclusivo: boolean
+          exclusivo_aceito_dispatcher: boolean
+          exclusivo_aceito_entregador: boolean
+          id: string
+          status: string
+          valor_padrao_por_pacote: number
+        }
+        Insert: {
+          created_at?: string
+          dispatcher_id: string
+          empresa_id: string
+          entregador_id: string
+          exclusivo?: boolean
+          exclusivo_aceito_dispatcher?: boolean
+          exclusivo_aceito_entregador?: boolean
+          id?: string
+          status?: string
+          valor_padrao_por_pacote?: number
+        }
+        Update: {
+          created_at?: string
+          dispatcher_id?: string
+          empresa_id?: string
+          entregador_id?: string
+          exclusivo?: boolean
+          exclusivo_aceito_dispatcher?: boolean
+          exclusivo_aceito_entregador?: boolean
+          id?: string
+          status?: string
+          valor_padrao_por_pacote?: number
         }
         Relationships: []
       }
