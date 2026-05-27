@@ -190,6 +190,8 @@ function DispatcherDialog({ ent, onClose, onDone }: { ent: Ent | null; onClose: 
   }
 
   async function confirm() {
+    const target = ent;
+    if (!target) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     if (!Number(valor) || Number(valor) <= 0) { toast.error("Defina um valor por pacote válido."); return; }
