@@ -22,7 +22,7 @@ function initials(name?: string | null) {
 }
 
 export function TopAppBar() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [hasNotif] = useState(false);
   const [now, setNow] = useState(() => greeting());
   useEffect(() => {
@@ -40,8 +40,13 @@ export function TopAppBar() {
     <header className="sticky top-0 z-30 h-[60px] border-b border-border bg-background/95 backdrop-blur elev-1">
       <div className="mx-auto flex h-full max-w-2xl items-center gap-3 px-4">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold text-foreground">
-            {now}, {first} <span className="ml-0.5">👋</span>
+          <p className="flex items-center gap-2 truncate text-[15px] font-semibold text-foreground">
+            <span className="truncate">{now}, {first} <span className="ml-0.5">👋</span></span>
+            {role === "dispatcher" && (
+              <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                Dispatcher
+              </span>
+            )}
           </p>
           <p className="truncate text-[11px] capitalize text-muted-foreground">{todayLong()}</p>
         </div>
