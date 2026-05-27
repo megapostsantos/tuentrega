@@ -199,7 +199,14 @@ function EmpresaView({
   );
 }
 
+type Invitee = { id: string; nome: string; veiculo: string | null; score: number | null; valor: string };
+
 function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
+  const [tipo, setTipo] = useState<"public" | "private">("public");
+  const [inviteSearch, setInviteSearch] = useState("");
+  const [inviteResults, setInviteResults] = useState<Invitee[]>([]);
+  const [invitees, setInvitees] = useState<Invitee[]>([]);
+  const [searching, setSearching] = useState(false);
   const [f, setF] = useState({
     titulo: "", tipo_entrega: "pacotes", veiculo_necessario: "moto",
     bairro: "", quantidade_pacotes: "", descricao: "", endereco_coleta: "",
@@ -217,12 +224,63 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
     return v / q;
   }, [f.valor, f.quantidade_pacotes, f.tipo_entrega]);
 
+  // Search entregadores by name (debounced)
+  useEffect(() => {
+    if (tipo !== "private" || inviteSearch.trim().length < 2) {
+      setInviteResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      const { data } = await (supabase as any)
+        .from("entregadores")
+        .select("id, nome_completo, tipo_veiculo, reliability_score, status")
+        .ilike("nome_completo", `%${inviteSearch.trim()}%`)
+        .eq("status", "ativo")
+        .limit(15);
+      setSearching(false);
+      const ids = new Set(invitees.map((i) => i.id));
+      setInviteResults(
+        (data ?? [])
+          .filter((r: any) => !ids.has(r.id))
+          .map((r: any) => ({
+            id: r.id,
+            nome: r.nome_completo ?? "(sem nome)",
+            veiculo: r.tipo_veiculo,
+            score: r.reliability_score,
+            valor: "",
+          })),
+      );
+    }, 250);
+    return () => clearTimeout(t);
+  }, [inviteSearch, tipo, invitees]);
+
+  function addInvitee(r: Invitee) {
+    setInvitees((prev) => [...prev, r]);
+    setInviteSearch("");
+    setInviteResults([]);
+  }
+  function removeInvitee(id: string) {
+    setInvitees((prev) => prev.filter((i) => i.id !== id));
+  }
+  function setInviteeValor(id: string, valor: string) {
+    setInvitees((prev) => prev.map((i) => (i.id === id ? { ...i, valor } : i)));
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (tipo === "private" && invitees.length === 0) {
+      toast.error("Convide pelo menos um entregador para uma oferta privada.");
+      return;
+    }
+    if (tipo === "private" && invitees.some((i) => !i.valor || Number(i.valor) <= 0)) {
+      toast.error("Defina um valor por pacote para cada entregador convidado.");
+      return;
+    }
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
-    const { error } = await supabase.from("ofertas").insert({
+    const { data: inserted, error } = await (supabase as any).from("ofertas").insert({
       empresa_id: user.id,
       titulo: f.titulo || "Oferta sem título",
       descricao: f.descricao || null,
@@ -230,6 +288,7 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
       valor: Number(f.valor) || 0,
       valor_por_pacote: perPkg,
       exige_nota_fiscal: f.exige_nota_fiscal,
+      tipo: tipo,
       tipo_entrega: f.tipo_entrega,
       veiculo_necessario: f.veiculo_necessario,
       quantidade_pacotes: f.tipo_entrega === "pacotes" ? Number(f.quantidade_pacotes) || null : null,
@@ -241,12 +300,34 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
       hora_fim: f.hora_fim || null,
       expira_em: f.expira_em ? new Date(f.expira_em).toISOString() : null,
       status: "open",
-    });
+    }).select("id").single();
+
+    if (error || !inserted) {
+      setLoading(false);
+      return toast.error(error?.message ?? "Falha ao criar oferta");
+    }
+
+    if (tipo === "private") {
+      const rows = invitees.map((i) => ({
+        oferta_id: inserted.id,
+        entregador_id: i.id,
+        empresa_id: user.id,
+        valor_por_pacote: Number(i.valor) || 0,
+        status: "invited",
+        notificado_em: new Date().toISOString(),
+      }));
+      const { error: cfgErr } = await (supabase as any).from("ofertas_privadas_config").insert(rows);
+      if (cfgErr) {
+        setLoading(false);
+        return toast.error("Oferta criada, mas falhou ao salvar convites: " + cfgErr.message);
+      }
+    }
+
     setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Oferta publicada com sucesso!");
+    toast.success(tipo === "private" ? `Oferta privada enviada para ${invitees.length} entregador(es)!` : "Oferta publicada com sucesso!");
     onCreated();
   }
+
 
   return (
     <form onSubmit={submit} className="space-y-4">
