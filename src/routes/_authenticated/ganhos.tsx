@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/ganhos")({
   component: GanhosPage,
 });
 
-function brl(n: number) { return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function GanhosPage() {
   const { user, role, loading } = useAuth();
@@ -27,23 +27,51 @@ function GanhosPage() {
 function GanhosView({ userId }: { userId: string }) {
   const sb = supabase as any;
   const [own, setOwn] = useState<any[]>([]);
-  const [stats, setStats] = useState({ proprios: 0, comissoes: 0, total: 0, aReceber: 0 });
+  const [comms, setComms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
+    (async () => {
       setLoading(true);
       const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
-      const { data: ownDel } = await sb.from("ofertas").select("id, titulo, valor, status, closed_at, payment_status, quantidade_pacotes, valor_por_pacote")
-        .eq("entregador_id", userId).gte("closed_at", monthStart.toISOString()).order("closed_at", { ascending: false });
-      const proprios = (ownDel ?? []).reduce((s: number, o: any) => s + Number(o.valor || 0), 0);
-      const aReceber = (ownDel ?? []).filter((o: any) => o.payment_status !== "paid").reduce((s: number, o: any) => s + Number(o.valor || 0), 0);
+
+      const [{ data: ownDel }, { data: commData }] = await Promise.all([
+        sb.from("ofertas").select("id, titulo, valor, status, closed_at, payment_status, quantidade_pacotes, valor_por_pacote")
+          .eq("entregador_id", userId).gte("closed_at", monthStart.toISOString()).order("closed_at", { ascending: false }),
+        sb.from("dispatcher_commissions").select("*").eq("dispatcher_user_id", userId)
+          .gte("closed_at", monthStart.toISOString()).order("closed_at", { ascending: false }),
+      ]);
+
       setOwn(ownDel ?? []);
-      setStats({ proprios, comissoes: 0, total: proprios, aReceber });
+      // resolve member names
+      const memIds = Array.from(new Set((commData ?? []).map((c: any) => c.member_user_id).filter(Boolean)));
+      const { data: ents } = memIds.length ? await sb.from("entregadores").select("id, nome_completo").in("id", memIds) : { data: [] };
+      const nameMap: Record<string,string> = {};
+      (ents ?? []).forEach((e: any) => { nameMap[e.id] = e.nome_completo; });
+      setComms((commData ?? []).map((c: any) => ({ ...c, member_nome: nameMap[c.member_user_id] || "—" })));
       setLoading(false);
-    }
-    load();
+    })();
   }, [userId]);
+
+  const stats = useMemo(() => {
+    const proprios = own.reduce((s, o) => s + Number(o.valor || 0), 0);
+    const comissoes = comms.reduce((s, c) => s + Number(c.comissao_total || 0), 0);
+    const aReceber = own.filter((o) => o.payment_status !== "paid").reduce((s, o) => s + Number(o.valor || 0), 0)
+      + comms.filter((c) => c.payment_status !== "paid").reduce((s, c) => s + Number(c.comissao_total || 0), 0);
+    return { proprios, comissoes, total: proprios + comissoes, aReceber };
+  }, [own, comms]);
+
+  const commsByMember = useMemo(() => {
+    const map: Record<string, { nome: string; items: any[]; total: number; pacotes: number }> = {};
+    comms.forEach((c) => {
+      const k = c.member_user_id;
+      if (!map[k]) map[k] = { nome: c.member_nome, items: [], total: 0, pacotes: 0 };
+      map[k].items.push(c);
+      map[k].total += Number(c.comissao_total || 0);
+      map[k].pacotes += Number(c.pacotes_entregues || 0);
+    });
+    return Object.values(map);
+  }, [comms]);
 
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
@@ -63,6 +91,7 @@ function GanhosView({ userId }: { userId: string }) {
           <TabsTrigger value="comissoes">Comissões</TabsTrigger>
           <TabsTrigger value="extrato">Extrato</TabsTrigger>
         </TabsList>
+
         <TabsContent value="proprias" className="space-y-2">
           {own.length === 0 ? <EmptyModule icon={Wallet} title="Sem entregas" description="Você ainda não concluiu entregas neste mês." /> :
             own.map((o) => (
@@ -79,9 +108,35 @@ function GanhosView({ userId }: { userId: string }) {
             ))
           }
         </TabsContent>
-        <TabsContent value="comissoes">
-          <EmptyModule icon={Wallet} title="Comissões" description="As comissões aparecem aqui após as entregas do time serem concluídas." />
+
+        <TabsContent value="comissoes" className="space-y-3">
+          {commsByMember.length === 0 ? <EmptyModule icon={Wallet} title="Sem comissões" description="As comissões aparecem aqui após as entregas do time serem concluídas." /> :
+            commsByMember.map((grp) => (
+              <div key={grp.nome} className="rounded-xl border border-border bg-card p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">{grp.nome}</p>
+                    <p className="text-[11px] text-muted-foreground">{grp.pacotes} pacotes</p>
+                  </div>
+                  <p className="font-bold">{brl(grp.total)}</p>
+                </div>
+                {grp.items.map((c: any) => (
+                  <div key={c.oferta_id} className="rounded border p-2 text-xs space-y-0.5">
+                    <div className="flex justify-between"><span>{c.titulo}</span><span className="text-muted-foreground">{c.closed_at?.slice(0,10)}</span></div>
+                    <div>Pacotes: {c.pacotes_entregues} · Empresa: {brl(Number(c.valor_empresa))}/pct · Membro: {brl(Number(c.valor_membro))}/pct</div>
+                    <div>Comissão: {c.pacotes_entregues}×{brl(Number(c.comissao_por_pacote))} = <strong>{brl(Number(c.comissao_total))}</strong> · <span className={c.payment_status === "paid" ? "text-emerald-600" : "text-amber-600"}>{c.payment_status === "paid" ? "🟢 Pago" : "🟡 Pendente"}</span></div>
+                  </div>
+                ))}
+              </div>
+            ))
+          }
+          {commsByMember.length > 0 && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+              <strong>Total comissões do mês: {brl(stats.comissoes)}</strong>
+            </div>
+          )}
         </TabsContent>
+
         <TabsContent value="extrato">
           <Button variant="outline" className="w-full" onClick={() => window.print()}>📄 Exportar PDF (imprimir)</Button>
         </TabsContent>
