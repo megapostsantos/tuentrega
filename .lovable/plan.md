@@ -1,36 +1,109 @@
-## Plano: Criar 3 usuários de teste + desativar HIBP
+## Plan: TuEntrega - Operations Form, Public/Private Offers, Dispatcher Role
 
-### 1. Desativar checagem de senha fraca (HIBP)
-Chamar `configure_auth` com `password_hibp_enabled: false` para permitir a senha `123456`.
+This is a large multi-part change touching the database schema, three major flows, and a brand-new role with its own dashboard. I'll break it into 3 phases so you can review and approve the DB migration before code work begins.
 
-### 2. Criar os 3 usuários via Auth Admin API
-Não dá pra criar usuários do `auth.users` por SQL puro de forma segura. Vou usar uma função server-side temporária (`createServerFn`) que chama `supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata })` — o trigger `handle_new_user` já popula `profiles`, `user_roles`, `empresas` e `entregadores` a partir do `raw_user_meta_data`.
+---
 
-**Usuários:**
+### Phase 1 — Database migration (single migration call)
 
-| Email | Senha | Role | Metadata principal |
-|---|---|---|---|
-| lgramirodecampos@gmail.com | 123456 | admin | full_name: "Luis Gustavo" |
-| empresa@tuentrega.com | 123456 | empresa | razao_social: "Logística Santos", cnpj, responsavel: "João Silva", whatsapp |
-| entregador@tuentrega.com | 123456 | entregador | full_name: "Carlos Souza", cpf, whatsapp, tipo_veiculo: "moto", placa, pix_tipo: "telefone", pix_chave, banco: "Nubank", turnos: ["manha","tarde"] |
+**New `app_role` enum value:** `dispatcher`
 
-Detalhes:
-- Admin: o trigger insere role `entregador` por padrão se `role` não estiver no metadata. Vou passar `role: "admin"` no metadata para o trigger criar `user_roles` corretamente (e como admin não cria linha em `empresas`/`entregadores`, ok).
-- Empresa: passar `role: "empresa"` + campos da empresa → trigger insere em `empresas`.
-- Entregador: passar `role: "entregador"` + campos → trigger insere em `entregadores`.
-- Empresa "Logística Santos" plano `pro`: o trigger cria com `plano='free'` default, então faço UPDATE em `empresas` depois.
+**Update `ofertas` table:**
+- `tipo` text — `'public'` | `'private'` (default `'public'`)
+- `dispatcher_id` uuid (nullable)
 
-### 3. Executar
-Rodar a server fn uma vez (idempotente: se email já existe, ignora o erro `email_exists`).
+**New tables (all with GRANTs + RLS):**
 
-### 4. Saída no chat
-Exibir a mensagem de confirmação solicitada.
+```text
+dispatchers
+  id, entregador_id, empresa_id, valor_por_pacote (numeric),
+  plataformas (text[]), status (text, default 'ativo'), created_at
+  UNIQUE (entregador_id, empresa_id)
 
-### Arquivos
-- `src/lib/seed-users.functions.ts` (novo) — server fn com `supabaseAdmin`
-- chamar via `stack_modern--invoke-server-function` ou um endpoint temporário `/api/public/seed-users` protegido por token simples (mais simples: usar route pública POST one-shot e depois deletar)
+dispatcher_alocacoes
+  id, operacao_id, dispatcher_id,
+  pacotes_alocados (int), paradas_alocadas (int), created_at
 
-Prefiro: criar `src/routes/api/public/seed-test-users.ts` que executa o seed e responde JSON. Eu mesmo invoco via `stack_modern--invoke-server-function` e depois removo o arquivo.
+ofertas_privadas_config
+  id, oferta_id, entregador_id, valor_por_pacote (numeric),
+  status (text: invited/accepted/refused),
+  notificado_em, aceito_em, created_at
+```
 
-### Aviso de segurança
-Desativar HIBP + permitir `123456` deixa o app vulnerável. Recomendo reativar antes de produção.
+**RLS summary (plain language):**
+- Companies manage their own dispatchers / alocações / private-offer configs.
+- A dispatcher (entregador with that role) reads only rows where `entregador_id = auth.uid()` (their own dispatcher record, their own alocações, their own team's private offers).
+- An invited entregador sees only their own row in `ofertas_privadas_config` and the corresponding `ofertas` row.
+- Update `ofertas` SELECT policy for entregadores: only see public offers OR private offers where they are invited.
+
+---
+
+### Phase 2 — Frontend: Operation form + Public/Private offers
+
+**`/pacotes` Step 1 simplification:**
+- Remove: physical count, ML pays/pkg, you pay/pkg, margin box.
+- Keep: date, ML system packages, total stops, observations, "Iniciar auditoria →".
+- Physical count stays in Step 2 (audit). Financial values read from `empresas.tms_valor_padrao_pacote` / `operacoes.valor_ml_por_pacote` defaults (already exist).
+
+**Offer creation form (`/ofertas`):**
+- Top: two large selectable cards — 🌍 Pública / 🔒 Privada (orange border when selected).
+- If Private:
+  - Search entregadores by name (RLS already lets empresa see related entregadores; we'll broaden search via a server fn using `supabaseAdmin` scoped to active entregadores).
+  - Invite list — each invited entregador has their own `valor_por_pacote` input + remove button.
+  - Summary line.
+- On submit:
+  - Insert `ofertas` row with `tipo='private'`, no broadcast.
+  - Insert one `ofertas_privadas_config` row per invited entregador with their specific value.
+  - Trigger WhatsApp notification (via existing pattern — same as new-offer template in `admin_settings`).
+
+---
+
+### Phase 3 — Dispatcher role + dashboard
+
+**`/entregadores` (empresa view):**
+- Each card gets a "Tornar Dispatcher" button.
+- Modal: `valor_por_pacote` + platform checkboxes (ML Flex / iFood / Shopee / Lalamove / Todas).
+- On confirm:
+  1. Insert into `user_roles` (role `dispatcher`) for that entregador.
+  2. Insert into `dispatchers` table.
+
+**Operation flow — new step after audit, before publishing:**
+- "Alocar entre dispatchers" step.
+- List active dispatchers with `pacotes` + `paradas` inputs.
+- Validation: sum must equal operation totals, "Faltam X pacotes" indicator, cannot proceed if unallocated.
+- Writes to `dispatcher_alocacoes`.
+
+**New dispatcher dashboard (`/dashboard` route, branch by role):**
+- Top cards: Pacotes alocados hoje · Meus entregadores ativos · Entregas concluídas hoje · Meus ganhos hoje.
+- Sections:
+  1. **Meus Pacotes** — rows from `dispatcher_alocacoes` for today.
+  2. **Meu Time** — entregadores the dispatcher has previously assigned, with today's status.
+  3. **Minha Agenda** — calendar of allocations; can create private offers for team.
+  4. **Meus Ganhos** — own deliveries + commission from team (delta between empresa→dispatcher value and dispatcher→team value).
+
+**Dispatcher → team allocation:**
+- After receiving allocation, dispatcher sees distribute UI (per-team-member packages/stops/value, including themselves at full value).
+- "Publicar rotas do meu time" creates one private `ofertas` row per team member with their specific value (reuses Phase 2 private-offer logic, with `dispatcher_id` set).
+
+**Bottom nav + routing:**
+- Add `dispatcher` branch in `BottomNav.tsx`, `TopAppBar.tsx` greeting, and `_authenticated.tsx` role gating.
+
+---
+
+### Technical notes
+
+- **Role detection**: extend `use-auth.ts` so `role` can resolve to `dispatcher` (highest-precedence role for dashboard routing: admin > dispatcher > empresa > entregador). Dispatcher is an *additional* role on top of entregador; the user keeps both.
+- **WhatsApp notifications**: reuse the existing `admin_settings.whatsapp_template_new_offer` pattern — no new infra; add a `whatsapp_template_private_invite` column with a default template.
+- **No new edge functions** — all server logic stays in TanStack `createServerFn` per project rules.
+- **No mock data** — every screen reads from Supabase with skeleton loaders (existing `PageSkeleton` pattern).
+
+---
+
+### Order of execution
+
+1. Submit DB migration → wait for your approval.
+2. Implement Phase 2 (operation form simplification + public/private offers).
+3. Implement Phase 3 (dispatcher promotion, allocation step, dispatcher dashboard, team distribution).
+4. Smoke-test via build, fix any TS errors, deliver.
+
+Approve to proceed and I'll start with the migration.
