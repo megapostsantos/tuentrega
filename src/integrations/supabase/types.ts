@@ -345,6 +345,7 @@ export type Database = {
           distributed_at: string | null
           empresa_id: string
           id: string
+          notes: string | null
           operacao_id: string
           pacotes_alocados: number
           paradas_alocadas: number
@@ -357,6 +358,7 @@ export type Database = {
           distributed_at?: string | null
           empresa_id: string
           id?: string
+          notes?: string | null
           operacao_id: string
           pacotes_alocados?: number
           paradas_alocadas?: number
@@ -369,6 +371,7 @@ export type Database = {
           distributed_at?: string | null
           empresa_id?: string
           id?: string
+          notes?: string | null
           operacao_id?: string
           pacotes_alocados?: number
           paradas_alocadas?: number
@@ -417,6 +420,8 @@ export type Database = {
           created_at: string
           entregador_id: string
           id: string
+          recusa_motivo: string | null
+          recusado_at: string | null
           schedule_id: string
           valor_por_pacote: number
         }
@@ -426,6 +431,8 @@ export type Database = {
           created_at?: string
           entregador_id: string
           id?: string
+          recusa_motivo?: string | null
+          recusado_at?: string | null
           schedule_id: string
           valor_por_pacote?: number
         }
@@ -435,6 +442,8 @@ export type Database = {
           created_at?: string
           entregador_id?: string
           id?: string
+          recusa_motivo?: string | null
+          recusado_at?: string | null
           schedule_id?: string
           valor_por_pacote?: number
         }
@@ -756,6 +765,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "entregadores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_oferta_id_fkey"
+            columns: ["oferta_id"]
+            isOneToOne: false
+            referencedRelation: "dispatcher_commissions"
+            referencedColumns: ["oferta_id"]
           },
           {
             foreignKeyName: "entregas_oferta_id_fkey"
@@ -1264,7 +1280,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      dispatcher_commissions: {
+        Row: {
+          closed_at: string | null
+          comissao_por_pacote: number | null
+          comissao_total: number | null
+          data_trabalho: string | null
+          dispatcher_id: string | null
+          dispatcher_user_id: string | null
+          member_user_id: string | null
+          oferta_id: string | null
+          pacotes_entregues: number | null
+          payment_status: string | null
+          quantidade_pacotes: number | null
+          titulo: string | null
+          valor_empresa: number | null
+          valor_membro: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       apply_reliability_event: {
