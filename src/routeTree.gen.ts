@@ -34,6 +34,8 @@ import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
+import { Route as AuthenticatedPacotesDistribuirAlocacaoIdRouteImport } from './routes/_authenticated/pacotes.distribuir.$alocacaoId'
+import { Route as AuthenticatedPacotesAlocarOperacaoIdRouteImport } from './routes/_authenticated/pacotes.alocar.$operacaoId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -161,6 +163,18 @@ const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPacotesDistribuirAlocacaoIdRoute =
+  AuthenticatedPacotesDistribuirAlocacaoIdRouteImport.update({
+    id: '/distribuir/$alocacaoId',
+    path: '/distribuir/$alocacaoId',
+    getParentRoute: () => AuthenticatedPacotesRoute,
+  } as any)
+const AuthenticatedPacotesAlocarOperacaoIdRoute =
+  AuthenticatedPacotesAlocarOperacaoIdRouteImport.update({
+    id: '/alocar/$operacaoId',
+    path: '/alocar/$operacaoId',
+    getParentRoute: () => AuthenticatedPacotesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -175,7 +189,7 @@ export interface FileRoutesByFullPath {
   '/metricas': typeof AuthenticatedMetricasRoute
   '/notas': typeof AuthenticatedNotasRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
-  '/pacotes': typeof AuthenticatedPacotesRoute
+  '/pacotes': typeof AuthenticatedPacotesRouteWithChildren
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/rotas': typeof AuthenticatedRotasRoute
   '/time': typeof AuthenticatedTimeRoute
@@ -187,6 +201,8 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
+  '/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -201,7 +217,7 @@ export interface FileRoutesByTo {
   '/metricas': typeof AuthenticatedMetricasRoute
   '/notas': typeof AuthenticatedNotasRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
-  '/pacotes': typeof AuthenticatedPacotesRoute
+  '/pacotes': typeof AuthenticatedPacotesRouteWithChildren
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/rotas': typeof AuthenticatedRotasRoute
   '/time': typeof AuthenticatedTimeRoute
@@ -213,6 +229,8 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
+  '/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -229,7 +247,7 @@ export interface FileRoutesById {
   '/_authenticated/metricas': typeof AuthenticatedMetricasRoute
   '/_authenticated/notas': typeof AuthenticatedNotasRoute
   '/_authenticated/ofertas': typeof AuthenticatedOfertasRoute
-  '/_authenticated/pacotes': typeof AuthenticatedPacotesRoute
+  '/_authenticated/pacotes': typeof AuthenticatedPacotesRouteWithChildren
   '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
   '/_authenticated/rotas': typeof AuthenticatedRotasRoute
   '/_authenticated/time': typeof AuthenticatedTimeRoute
@@ -241,6 +259,8 @@ export interface FileRoutesById {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/_authenticated/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
+  '/_authenticated/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -269,6 +289,8 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
+    | '/pacotes/alocar/$operacaoId'
+    | '/pacotes/distribuir/$alocacaoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -295,6 +317,8 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
+    | '/pacotes/alocar/$operacaoId'
+    | '/pacotes/distribuir/$alocacaoId'
   id:
     | '__root__'
     | '/'
@@ -322,6 +346,8 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
+    | '/_authenticated/pacotes/alocar/$operacaoId'
+    | '/_authenticated/pacotes/distribuir/$alocacaoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -508,8 +534,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAgendaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/pacotes/distribuir/$alocacaoId': {
+      id: '/_authenticated/pacotes/distribuir/$alocacaoId'
+      path: '/distribuir/$alocacaoId'
+      fullPath: '/pacotes/distribuir/$alocacaoId'
+      preLoaderRoute: typeof AuthenticatedPacotesDistribuirAlocacaoIdRouteImport
+      parentRoute: typeof AuthenticatedPacotesRoute
+    }
+    '/_authenticated/pacotes/alocar/$operacaoId': {
+      id: '/_authenticated/pacotes/alocar/$operacaoId'
+      path: '/alocar/$operacaoId'
+      fullPath: '/pacotes/alocar/$operacaoId'
+      preLoaderRoute: typeof AuthenticatedPacotesAlocarOperacaoIdRouteImport
+      parentRoute: typeof AuthenticatedPacotesRoute
+    }
   }
 }
+
+interface AuthenticatedPacotesRouteChildren {
+  AuthenticatedPacotesAlocarOperacaoIdRoute: typeof AuthenticatedPacotesAlocarOperacaoIdRoute
+  AuthenticatedPacotesDistribuirAlocacaoIdRoute: typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
+}
+
+const AuthenticatedPacotesRouteChildren: AuthenticatedPacotesRouteChildren = {
+  AuthenticatedPacotesAlocarOperacaoIdRoute:
+    AuthenticatedPacotesAlocarOperacaoIdRoute,
+  AuthenticatedPacotesDistribuirAlocacaoIdRoute:
+    AuthenticatedPacotesDistribuirAlocacaoIdRoute,
+}
+
+const AuthenticatedPacotesRouteWithChildren =
+  AuthenticatedPacotesRoute._addFileChildren(AuthenticatedPacotesRouteChildren)
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
@@ -521,7 +576,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMetricasRoute: typeof AuthenticatedMetricasRoute
   AuthenticatedNotasRoute: typeof AuthenticatedNotasRoute
   AuthenticatedOfertasRoute: typeof AuthenticatedOfertasRoute
-  AuthenticatedPacotesRoute: typeof AuthenticatedPacotesRoute
+  AuthenticatedPacotesRoute: typeof AuthenticatedPacotesRouteWithChildren
   AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
   AuthenticatedRotasRoute: typeof AuthenticatedRotasRoute
   AuthenticatedTimeRoute: typeof AuthenticatedTimeRoute
@@ -537,7 +592,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMetricasRoute: AuthenticatedMetricasRoute,
   AuthenticatedNotasRoute: AuthenticatedNotasRoute,
   AuthenticatedOfertasRoute: AuthenticatedOfertasRoute,
-  AuthenticatedPacotesRoute: AuthenticatedPacotesRoute,
+  AuthenticatedPacotesRoute: AuthenticatedPacotesRouteWithChildren,
   AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,
   AuthenticatedRotasRoute: AuthenticatedRotasRoute,
   AuthenticatedTimeRoute: AuthenticatedTimeRoute,
