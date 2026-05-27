@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  Package, Truck, Wallet, BarChart3, Building2, CalendarDays, Store, Star, Plus, ChevronRight, Users,
+  Package, Truck, Wallet, BarChart3, Building2, CalendarDays, Store, Star, Plus, ChevronRight, Users, UserCog,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { StatCard } from "@/components/StatCard";
@@ -15,8 +15,205 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function Dashboard() {
   const { role, user } = useAuth();
   if (role === "admin") return <AdminDashboard />;
+  if (role === "dispatcher") return <DispatcherDashboard userId={user?.id} />;
   if (role === "empresa") return <EmpresaDashboard userId={user?.id} />;
   return <EntregadorDashboard userId={user?.id} />;
+}
+
+/* ----------------- DISPATCHER ----------------- */
+
+type DispStats = { pacotesAlocados: number; timeHoje: number; entregasConcluidas: number; ganhosHoje: number };
+
+function DispatcherDashboard({ userId }: { userId?: string }) {
+  const [stats, setStats] = useState<DispStats>({ pacotesAlocados: 0, timeHoje: 0, entregasConcluidas: 0, ganhosHoje: 0 });
+  const [alloc, setAlloc] = useState<{ id: string; pacotes: number; paradas: number; status: string; valor: number } | null>(null);
+  const [team, setTeam] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const sb = supabase as any;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todayDate = today.toISOString().slice(0, 10);
+    const todayISO = today.toISOString();
+
+    async function load() {
+      const { data: dispRows } = await sb.from("dispatchers").select("id, empresa_id").eq("entregador_id", userId);
+      if (!dispRows?.length) {
+        setStats({ pacotesAlocados: 0, timeHoje: 0, entregasConcluidas: 0, ganhosHoje: 0 });
+        setAlloc(null);
+        setTeam([]);
+        return;
+      }
+      const dispIds = dispRows.map((d: any) => d.id);
+
+      // Today's allocation
+      const { data: allocRows } = await sb
+        .from("dispatcher_alocacoes")
+        .select("id, pacotes_alocados, paradas_alocadas, status, valor_por_pacote, operacao_id")
+        .in("dispatcher_id", dispIds)
+        .order("created_at", { ascending: false });
+
+      let todayAlloc: any = null;
+      if (allocRows?.length) {
+        const opIds = allocRows.map((a: any) => a.operacao_id);
+        const { data: ops } = await sb.from("operacoes").select("id, data_operacao").in("id", opIds);
+        const opMap = new Map((ops ?? []).map((o: any) => [o.id, o.data_operacao]));
+        todayAlloc = allocRows.find((a: any) => opMap.get(a.operacao_id) === todayDate);
+      }
+
+      // Team
+      const { data: teamRows } = await sb
+        .from("dispatcher_team")
+        .select("id, entregador_id, valor_padrao_por_pacote, exclusivo, exclusivo_aceito_dispatcher, exclusivo_aceito_entregador, status")
+        .in("dispatcher_id", dispIds)
+        .eq("status", "ativo");
+
+      const entregadorIds = (teamRows ?? []).map((t: any) => t.entregador_id);
+      let teamPeople: any[] = [];
+      if (entregadorIds.length) {
+        const { data: ents } = await sb.from("entregadores").select("id, nome_completo, tipo_veiculo, reliability_level").in("id", entregadorIds);
+        const eMap = new Map((ents ?? []).map((e: any) => [e.id, e]));
+
+        // Active offers today per entregador
+        const { data: offersToday } = await sb
+          .from("ofertas")
+          .select("id, entregador_id, status, valor, pacotes_entregues, quantidade_pacotes, valor_por_pacote")
+          .in("entregador_id", entregadorIds)
+          .gte("updated_at", todayISO);
+
+        teamPeople = (teamRows ?? []).map((t: any) => {
+          const e = eMap.get(t.entregador_id) || {};
+          const offers = (offersToday ?? []).filter((o: any) => o.entregador_id === t.entregador_id);
+          const inProgress = offers.find((o: any) => o.status === "in_progress");
+          const completed = offers.find((o: any) => o.status === "completed");
+          const status = completed ? "concluido" : inProgress ? "em_rota" : offers.length ? "aguardando" : "disponivel";
+          const target = offers.reduce((s: number, o: any) => s + (o.quantidade_pacotes || 0), 0);
+          const done = offers.reduce((s: number, o: any) => s + (o.pacotes_entregues || 0), 0);
+          const valor = offers.reduce((s: number, o: any) => s + Number(o.valor || 0), 0);
+          return { id: t.id, entregador_id: t.entregador_id, nome: e.nome_completo, veiculo: e.tipo_veiculo, nivel: e.reliability_level, status, target, done, valor };
+        });
+      }
+
+      // Stats
+      const completedToday = teamPeople.filter((p) => p.status === "concluido").length;
+      const activeToday = teamPeople.filter((p) => p.status !== "disponivel").length;
+
+      // My own deliveries today
+      const { data: myOffers } = await sb
+        .from("ofertas")
+        .select("valor")
+        .eq("entregador_id", userId)
+        .eq("status", "completed")
+        .gte("closed_at", todayISO);
+      const myEarnings = (myOffers ?? []).reduce((s: number, o: any) => s + Number(o.valor || 0), 0);
+
+      // Margin commissions: alloc.valor - team member rate * delivered
+      const commission = teamPeople.reduce((s, p) => {
+        const member = (teamRows ?? []).find((t: any) => t.entregador_id === p.entregador_id);
+        const margin = (todayAlloc?.valor_por_pacote || 0) - Number(member?.valor_padrao_por_pacote || 0);
+        return s + Math.max(0, margin) * p.done;
+      }, 0);
+
+      setStats({
+        pacotesAlocados: todayAlloc?.pacotes_alocados ?? 0,
+        timeHoje: activeToday,
+        entregasConcluidas: completedToday,
+        ganhosHoje: myEarnings + commission,
+      });
+      setAlloc(todayAlloc ? {
+        id: todayAlloc.id,
+        pacotes: todayAlloc.pacotes_alocados,
+        paradas: todayAlloc.paradas_alocadas,
+        status: todayAlloc.status,
+        valor: Number(todayAlloc.valor_por_pacote || 0),
+      } : null);
+      setTeam(teamPeople);
+    }
+
+    load();
+    const ch = sb.channel(`dispatcher-dash-${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "dispatcher_alocacoes" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "dispatcher_team" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "ofertas" }, load)
+      .subscribe();
+    return () => { sb.removeChannel(ch); };
+  }, [userId]);
+
+  const STATUS_LABEL: Record<string, { label: string; emoji: string; tone: string }> = {
+    disponivel: { label: "Disponível", emoji: "⚪", tone: "bg-muted text-muted-foreground" },
+    aguardando: { label: "Aguardando", emoji: "🟡", tone: "bg-amber-100 text-amber-800" },
+    em_rota: { label: "Em rota", emoji: "🔵", tone: "bg-blue-100 text-blue-800" },
+    concluido: { label: "Concluído", emoji: "✅", tone: "bg-green-100 text-green-800" },
+  };
+
+  return (
+    <div className="space-y-5 p-4">
+      {alloc && (
+        <Link
+          to="/pacotes"
+          className={`block rounded-2xl border-l-4 ${alloc.status === "distributed" ? "border-success" : "border-primary"} bg-card p-5 elev-2 press-scale`}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+            📦 {alloc.status === "distributed" ? "Distribuído ao time" : "Você tem pacotes alocados!"}
+          </p>
+          <p className="mt-2 text-xl font-bold">{alloc.pacotes} pacotes · {alloc.paradas} paradas</p>
+          <p className="text-sm text-muted-foreground">R$ {alloc.valor.toFixed(2)}/pacote</p>
+          <span className="mt-3 inline-flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground">
+            {alloc.status === "distributed" ? "Ver distribuição" : "Distribuir pro time"} <ChevronRight className="h-4 w-4" />
+          </span>
+        </Link>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard icon={Package} label="Pacotes alocados" value={String(stats.pacotesAlocados)} to="/pacotes" />
+        <StatCard icon={UserCog} label="Meu time hoje" value={String(stats.timeHoje)} to="/time" />
+        <StatCard icon={Truck} label="Entregas concluídas" value={String(stats.entregasConcluidas)} to="/time" />
+        <StatCard icon={Wallet} label="Meus ganhos hoje" value={brl(stats.ganhosHoje)} to="/ganhos" />
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5 elev-1">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Meu time hoje</h2>
+          <Link to="/time" className="text-xs font-semibold text-primary">Gerenciar →</Link>
+        </div>
+        {team.length === 0 ? (
+          <p className="mt-4 text-sm text-muted-foreground">Nenhum entregador no seu time ainda.</p>
+        ) : (
+          <ul className="mt-3 space-y-3">
+            {team.map((p) => {
+              const s = STATUS_LABEL[p.status];
+              const pct = p.target ? Math.min(100, Math.round((p.done / p.target) * 100)) : 0;
+              return (
+                <li key={p.id} className="rounded-xl border border-border p-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+                      {(p.nome || "?").split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{p.nome || "—"}</p>
+                      <p className="text-[11px] text-muted-foreground">{p.veiculo || "—"} · {p.nivel || "—"}</p>
+                    </div>
+                    <Badge className={`${s.tone} rounded-full px-2 py-0.5 text-[10px] font-semibold`}>{s.emoji} {s.label}</Badge>
+                  </div>
+                  {p.target > 0 && (
+                    <div className="mt-2">
+                      <div className="flex justify-between text-[11px] text-muted-foreground">
+                        <span>{p.done}/{p.target} entregues</span>
+                        <span>R$ {p.valor.toFixed(2)}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function brl(n: number) {
