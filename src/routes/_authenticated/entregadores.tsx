@@ -132,6 +132,13 @@ function ListaEntregadores() {
                           {e.suspended_at ? <Badge variant="destructive">Suspenso</Badge> : <Badge variant="outline">{e.status}</Badge>}
                         </TableCell>
                         <TableCell className="text-right" onClick={(ev) => ev.stopPropagation()}>
+                          {dispatcherIds.has(e.id) ? (
+                            <Badge variant="outline" className="mr-1">Dispatcher</Badge>
+                          ) : (
+                            <Button variant="outline" size="sm" className="mr-1" onClick={() => setDispatcherTarget(e)}>
+                              <UserCog className="h-3.5 w-3.5 mr-1" /> Tornar Dispatcher
+                            </Button>
+                          )}
                           <Button variant="ghost" size="sm" onClick={() => suspendManually(e.id)}>
                             <ShieldOff className="h-4 w-4" />
                           </Button>
@@ -142,6 +149,22 @@ function ListaEntregadores() {
                       </TableRow>
                     );
                   })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <ScoreHistoryDialog ent={detail} onClose={() => setDetail(null)} />
+      <DispatcherDialog
+        ent={dispatcherTarget}
+        onClose={() => setDispatcherTarget(null)}
+        onDone={() => { setDispatcherTarget(null); fetchList(); }}
+      />
+    </div>
+  );
+}
                 </TableBody>
               </Table>
             </div>
