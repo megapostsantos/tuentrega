@@ -82,7 +82,7 @@ function DispatcherDashboard({ userId }: { userId?: string }) {
           .gte("updated_at", todayISO);
 
         teamPeople = (teamRows ?? []).map((t: any) => {
-          const e = eMap.get(t.entregador_id) || {};
+          const e: any = eMap.get(t.entregador_id) || {};
           const offers = (offersToday ?? []).filter((o: any) => o.entregador_id === t.entregador_id);
           const inProgress = offers.find((o: any) => o.status === "in_progress");
           const completed = offers.find((o: any) => o.status === "completed");
