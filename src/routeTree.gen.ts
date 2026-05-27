@@ -21,12 +21,14 @@ import { Route as AdminFinancialRouteImport } from './routes/admin.financial'
 import { Route as AdminDeliverersRouteImport } from './routes/admin.deliverers'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCompaniesRouteImport } from './routes/admin.companies'
+import { Route as AuthenticatedTimeRouteImport } from './routes/_authenticated/time'
 import { Route as AuthenticatedRotasRouteImport } from './routes/_authenticated/rotas'
 import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
 import { Route as AuthenticatedPacotesRouteImport } from './routes/_authenticated/pacotes'
 import { Route as AuthenticatedOfertasRouteImport } from './routes/_authenticated/ofertas'
 import { Route as AuthenticatedNotasRouteImport } from './routes/_authenticated/notas'
 import { Route as AuthenticatedMetricasRouteImport } from './routes/_authenticated/metricas'
+import { Route as AuthenticatedGanhosRouteImport } from './routes/_authenticated/ganhos'
 import { Route as AuthenticatedEntregadoresRouteImport } from './routes/_authenticated/entregadores'
 import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticated/empresas'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -92,6 +94,11 @@ const AdminCompaniesRoute = AdminCompaniesRouteImport.update({
   path: '/companies',
   getParentRoute: () => AdminRoute,
 } as any)
+const AuthenticatedTimeRoute = AuthenticatedTimeRouteImport.update({
+  id: '/time',
+  path: '/time',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedRotasRoute = AuthenticatedRotasRouteImport.update({
   id: '/rotas',
   path: '/rotas',
@@ -120,6 +127,11 @@ const AuthenticatedNotasRoute = AuthenticatedNotasRouteImport.update({
 const AuthenticatedMetricasRoute = AuthenticatedMetricasRouteImport.update({
   id: '/metricas',
   path: '/metricas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedGanhosRoute = AuthenticatedGanhosRouteImport.update({
+  id: '/ganhos',
+  path: '/ganhos',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedEntregadoresRoute =
@@ -159,12 +171,14 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
   '/entregadores': typeof AuthenticatedEntregadoresRoute
+  '/ganhos': typeof AuthenticatedGanhosRoute
   '/metricas': typeof AuthenticatedMetricasRoute
   '/notas': typeof AuthenticatedNotasRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
   '/pacotes': typeof AuthenticatedPacotesRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/rotas': typeof AuthenticatedRotasRoute
+  '/time': typeof AuthenticatedTimeRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/deliverers': typeof AdminDeliverersRoute
@@ -183,12 +197,14 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
   '/entregadores': typeof AuthenticatedEntregadoresRoute
+  '/ganhos': typeof AuthenticatedGanhosRoute
   '/metricas': typeof AuthenticatedMetricasRoute
   '/notas': typeof AuthenticatedNotasRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
   '/pacotes': typeof AuthenticatedPacotesRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/rotas': typeof AuthenticatedRotasRoute
+  '/time': typeof AuthenticatedTimeRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/deliverers': typeof AdminDeliverersRoute
@@ -209,12 +225,14 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/empresas': typeof AuthenticatedEmpresasRoute
   '/_authenticated/entregadores': typeof AuthenticatedEntregadoresRoute
+  '/_authenticated/ganhos': typeof AuthenticatedGanhosRoute
   '/_authenticated/metricas': typeof AuthenticatedMetricasRoute
   '/_authenticated/notas': typeof AuthenticatedNotasRoute
   '/_authenticated/ofertas': typeof AuthenticatedOfertasRoute
   '/_authenticated/pacotes': typeof AuthenticatedPacotesRoute
   '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
   '/_authenticated/rotas': typeof AuthenticatedRotasRoute
+  '/_authenticated/time': typeof AuthenticatedTimeRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/deliverers': typeof AdminDeliverersRoute
@@ -235,12 +253,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/empresas'
     | '/entregadores'
+    | '/ganhos'
     | '/metricas'
     | '/notas'
     | '/ofertas'
     | '/pacotes'
     | '/pagamentos'
     | '/rotas'
+    | '/time'
     | '/admin/companies'
     | '/admin/dashboard'
     | '/admin/deliverers'
@@ -259,12 +279,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/empresas'
     | '/entregadores'
+    | '/ganhos'
     | '/metricas'
     | '/notas'
     | '/ofertas'
     | '/pacotes'
     | '/pagamentos'
     | '/rotas'
+    | '/time'
     | '/admin/companies'
     | '/admin/dashboard'
     | '/admin/deliverers'
@@ -284,12 +306,14 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/empresas'
     | '/_authenticated/entregadores'
+    | '/_authenticated/ganhos'
     | '/_authenticated/metricas'
     | '/_authenticated/notas'
     | '/_authenticated/ofertas'
     | '/_authenticated/pacotes'
     | '/_authenticated/pagamentos'
     | '/_authenticated/rotas'
+    | '/_authenticated/time'
     | '/admin/companies'
     | '/admin/dashboard'
     | '/admin/deliverers'
@@ -393,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCompaniesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_authenticated/time': {
+      id: '/_authenticated/time'
+      path: '/time'
+      fullPath: '/time'
+      preLoaderRoute: typeof AuthenticatedTimeRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/rotas': {
       id: '/_authenticated/rotas'
       path: '/rotas'
@@ -433,6 +464,13 @@ declare module '@tanstack/react-router' {
       path: '/metricas'
       fullPath: '/metricas'
       preLoaderRoute: typeof AuthenticatedMetricasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/ganhos': {
+      id: '/_authenticated/ganhos'
+      path: '/ganhos'
+      fullPath: '/ganhos'
+      preLoaderRoute: typeof AuthenticatedGanhosRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/entregadores': {
@@ -479,12 +517,14 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmpresasRoute: typeof AuthenticatedEmpresasRoute
   AuthenticatedEntregadoresRoute: typeof AuthenticatedEntregadoresRoute
+  AuthenticatedGanhosRoute: typeof AuthenticatedGanhosRoute
   AuthenticatedMetricasRoute: typeof AuthenticatedMetricasRoute
   AuthenticatedNotasRoute: typeof AuthenticatedNotasRoute
   AuthenticatedOfertasRoute: typeof AuthenticatedOfertasRoute
   AuthenticatedPacotesRoute: typeof AuthenticatedPacotesRoute
   AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
   AuthenticatedRotasRoute: typeof AuthenticatedRotasRoute
+  AuthenticatedTimeRoute: typeof AuthenticatedTimeRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -493,12 +533,14 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmpresasRoute: AuthenticatedEmpresasRoute,
   AuthenticatedEntregadoresRoute: AuthenticatedEntregadoresRoute,
+  AuthenticatedGanhosRoute: AuthenticatedGanhosRoute,
   AuthenticatedMetricasRoute: AuthenticatedMetricasRoute,
   AuthenticatedNotasRoute: AuthenticatedNotasRoute,
   AuthenticatedOfertasRoute: AuthenticatedOfertasRoute,
   AuthenticatedPacotesRoute: AuthenticatedPacotesRoute,
   AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,
   AuthenticatedRotasRoute: AuthenticatedRotasRoute,
+  AuthenticatedTimeRoute: AuthenticatedTimeRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -538,3 +580,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
