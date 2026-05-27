@@ -1,0 +1,1 @@
+ALTER VIEW public.dispatcher_commissions SET (security_invoker = true);
