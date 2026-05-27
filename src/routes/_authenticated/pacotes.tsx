@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Package, Plus, Trash2, ArrowLeft, CheckCircle2, AlertTriangle, Eye, Users } from "lucide-react";
@@ -311,6 +311,41 @@ function CreateOperation({
   const margemPct = receitaML > 0 ? (margemFinal / receitaML) * 100 : 0;
 
   const [publishing, setPublishing] = useState(false);
+  const [hasDispatchers, setHasDispatchers] = useState(false);
+  const nav = useNavigate();
+  useEffect(() => {
+    (async () => {
+      const { count } = await (supabase as any).from("dispatchers")
+        .select("id", { count: "exact", head: true })
+        .eq("empresa_id", userId).eq("status", "ativo");
+      setHasDispatchers((count || 0) > 0);
+    })();
+  }, [userId]);
+
+  async function saveOpDraft() {
+    const { data: opRow, error } = await supabase.from("operacoes").insert({
+      empresa_id: userId,
+      data_operacao: data.data_operacao,
+      total_pacotes_sistema: data.total_pacotes_sistema,
+      total_pacotes_contados: data.total_pacotes_contados,
+      total_paradas: data.total_paradas,
+      pacotes_faltando: faltando,
+      pacotes_a_mais: aMais,
+      valor_por_pacote: data.valor_por_pacote,
+      valor_ml_por_pacote: data.valor_ml_por_pacote,
+      metodo_divisao: metodo,
+      status: "allocating",
+      observacoes: data.observacoes || null,
+    }).select("id").single();
+    if (error) throw error;
+    return (opRow as any).id as string;
+  }
+  async function goAlocar() {
+    try {
+      const id = await saveOpDraft();
+      nav({ to: "/pacotes/alocar/$operacaoId", params: { operacaoId: id } });
+    } catch (e: any) { toast.error(e.message ?? "Erro."); }
+  }
 
   async function publishAll() {
     if (rotas.length === 0) {
@@ -567,11 +602,18 @@ function CreateOperation({
               <div>Margem da empresa: <strong>R$ {margemFinal.toFixed(2)} ({margemPct.toFixed(1)}%)</strong></div>
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex flex-wrap justify-between gap-2">
               <Button variant="outline" onClick={() => setStep(2)}>Editar</Button>
-              <Button size="lg" onClick={publishAll} disabled={publishing} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                {publishing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Publicando...</> : "Publicar todas as ofertas"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {hasDispatchers && (
+                  <Button variant="outline" onClick={goAlocar} disabled={publishing}>
+                    <Users className="mr-2 h-4 w-4" />Alocar entre dispatchers
+                  </Button>
+                )}
+                <Button size="lg" onClick={publishAll} disabled={publishing} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  {publishing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Publicando...</> : "Publicar todas as ofertas"}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
