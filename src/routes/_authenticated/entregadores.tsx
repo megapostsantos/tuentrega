@@ -52,11 +52,19 @@ function ListaEntregadores() {
   const [list, setList] = useState<Ent[]>([]);
   const [load, setLoad] = useState(true);
   const [detail, setDetail] = useState<Ent | null>(null);
+  const [dispatcherTarget, setDispatcherTarget] = useState<Ent | null>(null);
+  const [dispatcherIds, setDispatcherIds] = useState<Set<string>>(new Set());
 
   async function fetchList() {
     setLoad(true);
     const { data } = await (supabase as any).from("entregadores").select("*").order("nome_completo");
     setList((data as Ent[]) ?? []);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: dispData } = await (supabase as any)
+        .from("dispatchers").select("entregador_id").eq("empresa_id", user.id).eq("status", "ativo");
+      setDispatcherIds(new Set((dispData ?? []).map((d: any) => d.entregador_id)));
+    }
     setLoad(false);
   }
   useEffect(() => { fetchList(); }, []);
