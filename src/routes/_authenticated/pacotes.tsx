@@ -602,11 +602,18 @@ function CreateOperation({
               <div>Margem da empresa: <strong>R$ {margemFinal.toFixed(2)} ({margemPct.toFixed(1)}%)</strong></div>
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex flex-wrap justify-between gap-2">
               <Button variant="outline" onClick={() => setStep(2)}>Editar</Button>
-              <Button size="lg" onClick={publishAll} disabled={publishing} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                {publishing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Publicando...</> : "Publicar todas as ofertas"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {hasDispatchers && (
+                  <Button variant="outline" onClick={goAlocar} disabled={publishing}>
+                    <Users className="mr-2 h-4 w-4" />Alocar entre dispatchers
+                  </Button>
+                )}
+                <Button size="lg" onClick={publishAll} disabled={publishing} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  {publishing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Publicando...</> : "Publicar todas as ofertas"}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
