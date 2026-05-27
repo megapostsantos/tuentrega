@@ -201,14 +201,13 @@ function DispatcherDialog({ ent, onClose, onDone }: { ent: Ent | null; onClose: 
 
     // 1. Add dispatcher role
     const { error: roleErr } = await sb.from("user_roles")
-      .upsert({ user_id: ent.id, role: "dispatcher" }, { onConflict: "user_id,role", ignoreDuplicates: true });
+      .upsert({ user_id: target.id, role: "dispatcher" }, { onConflict: "user_id,role", ignoreDuplicates: true });
     if (roleErr && !roleErr.message?.includes("duplicate")) {
       setSaving(false); toast.error("Falha ao adicionar role: " + roleErr.message); return;
     }
 
-    // 2. Create dispatcher record
     const { error: dErr } = await sb.from("dispatchers").upsert({
-      entregador_id: ent.id,
+      entregador_id: target.id,
       empresa_id: user.id,
       valor_por_pacote: Number(valor),
       plataformas: Array.from(plataformas),
@@ -216,7 +215,7 @@ function DispatcherDialog({ ent, onClose, onDone }: { ent: Ent | null; onClose: 
     }, { onConflict: "entregador_id,empresa_id" });
     setSaving(false);
     if (dErr) { toast.error(dErr.message); return; }
-    toast.success(`${ent.nome_completo} agora é Dispatcher!`);
+    toast.success(`${target.nome_completo} agora é Dispatcher!`);
     onDone();
   }
 
