@@ -36,6 +36,8 @@ type Previsao = {
 function AgendaPage() {
   const { user, role, loading } = useAuth();
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  if (role === "dispatcher") return <DispatcherAgenda userId={user!.id} />;
+  if (role === "entregador") return <EntregadorAgenda userId={user!.id} />;
   if (role !== "empresa") {
     return (
       <div className="p-6">
