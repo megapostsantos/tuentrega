@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Package, Store, Wallet, User, Map, CalendarDays, Building2, Users, BarChart3 } from "lucide-react";
+import { Home, Package, Store, Wallet, User, Map, CalendarDays, Building2, Users, BarChart3, UserCog } from "lucide-react";
 import type { AppRole } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,14 @@ const entregador: Item[] = [
   { label: "Perfil", to: "/configuracoes", icon: User },
 ];
 
+const dispatcher: Item[] = [
+  { label: "Home", to: "/dashboard", icon: Home },
+  { label: "Pacotes", to: "/pacotes", icon: Package },
+  { label: "Time", to: "/time", icon: UserCog },
+  { label: "Agenda", to: "/agenda", icon: CalendarDays },
+  { label: "Perfil", to: "/configuracoes", icon: User },
+];
+
 const admin: Item[] = [
   { label: "Home", to: "/dashboard", icon: Home },
   { label: "Empresas", to: "/empresas", icon: Building2 },
@@ -31,7 +39,11 @@ const admin: Item[] = [
 
 export function BottomNav({ role }: { role: AppRole | null }) {
   const current = useRouterState({ select: (r) => r.location.pathname });
-  const items = role === "admin" ? admin : role === "empresa" ? empresa : entregador;
+  const items =
+    role === "admin" ? admin :
+    role === "empresa" ? empresa :
+    role === "dispatcher" ? dispatcher :
+    entregador;
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background safe-bottom">
