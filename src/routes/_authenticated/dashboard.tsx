@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { StatCard } from "@/components/StatCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { PendingAllocationBanner } from "@/components/PendingAllocationBanner";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -148,6 +149,7 @@ function DispatcherDashboard({ userId }: { userId?: string }) {
 
   return (
     <div className="space-y-5 p-4">
+      {userId && <PendingAllocationBanner userId={userId} />}
       {alloc && (
         <Link
           to="/pacotes"
