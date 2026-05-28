@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { notifyWhatsAppBatch, WA_TEMPLATES } from "@/lib/whatsapp-notify";
 
 export const Route = createFileRoute("/_authenticated/pacotes/alocar/$operacaoId")({
   component: AllocPage,
@@ -85,8 +86,36 @@ function AllocPage() {
           valor_por_pacote: allocs[d.id].valor,
           status: "pending",
         }));
-      const { error } = await sb.from("dispatcher_alocacoes").insert(rows);
+      const { data: inserted, error } = await sb.from("dispatcher_alocacoes").insert(rows).select("id, dispatcher_id, pacotes_alocados, paradas_alocadas, valor_por_pacote");
       if (error) throw error;
+
+      // Notify each dispatcher via WhatsApp (logged)
+      try {
+        const { data: empresa } = await sb.from("empresas").select("nome_fantasia, razao_social").eq("id", user!.id).maybeSingle();
+        const companyName = empresa?.nome_fantasia || empresa?.razao_social || "Empresa";
+        const notifs = (inserted ?? []).map((a: any) => {
+          const d = dispatchers.find((x) => x.id === a.dispatcher_id);
+          if (!d?.entregador) return null;
+          const total = Number(a.pacotes_alocados) * Number(a.valor_por_pacote);
+          return {
+            recipientId: d.entregador.id,
+            destinatarioTipo: "dispatcher" as const,
+            tipo: "alocacao" as const,
+            telefone: d.entregador.whatsapp ?? null,
+            mensagem: WA_TEMPLATES.alocacao({
+              dispatcherName: d.entregador.nome_completo,
+              companyName,
+              packages: a.pacotes_alocados,
+              stops: a.paradas_alocadas,
+              price: Number(a.valor_por_pacote),
+              total,
+              allocId: a.id,
+            }),
+          };
+        }).filter(Boolean) as any[];
+        if (notifs.length) await notifyWhatsAppBatch(notifs);
+      } catch (e) { console.warn("notify failed", e); }
+
       toast.success("Alocação confirmada! Dispatchers notificados.");
       nav({ to: "/pacotes" });
     } catch (e: any) {
