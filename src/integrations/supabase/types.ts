@@ -893,6 +893,51 @@ export type Database = {
         }
         Relationships: []
       }
+      notificacoes_whatsapp: {
+        Row: {
+          created_at: string
+          destinatario_tipo: string
+          enviado_em: string | null
+          erro_msg: string | null
+          id: string
+          lido_em: string | null
+          mensagem: string
+          message_id: string | null
+          recipient_id: string
+          status: string
+          telefone: string | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          destinatario_tipo: string
+          enviado_em?: string | null
+          erro_msg?: string | null
+          id?: string
+          lido_em?: string | null
+          mensagem: string
+          message_id?: string | null
+          recipient_id: string
+          status?: string
+          telefone?: string | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          destinatario_tipo?: string
+          enviado_em?: string | null
+          erro_msg?: string | null
+          id?: string
+          lido_em?: string | null
+          mensagem?: string
+          message_id?: string | null
+          recipient_id?: string
+          status?: string
+          telefone?: string | null
+          tipo?: string
+        }
+        Relationships: []
+      }
       ofertas: {
         Row: {
           bairro: string | null
