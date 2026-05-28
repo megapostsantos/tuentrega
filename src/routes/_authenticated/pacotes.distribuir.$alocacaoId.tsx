@@ -134,7 +134,7 @@ function DistribPage() {
       try {
         const { data: meEnt } = await sb.from("entregadores").select("nome_completo, whatsapp").eq("id", user!.id).maybeSingle();
         const dispatcherName = meEnt?.nome_completo || "Dispatcher";
-        const notifs = results
+        const memberNotifs = results
           .filter((r) => !r.isSelf)
           .map((r) => ({
             recipientId: r.entregadorId,
@@ -151,8 +151,7 @@ function DistribPage() {
               offerId: r.offerId,
             }),
           }));
-        // Summary to dispatcher
-        notifs.push({
+        const summaryNotif = {
           recipientId: user!.id,
           destinatarioTipo: "dispatcher" as const,
           tipo: "publicacao" as const,
@@ -161,8 +160,8 @@ function DistribPage() {
             dispatcherName,
             lines: results.map((r) => `✅ ${r.nome}${r.isSelf ? " (você)" : ""} - ${r.pacotes} pct`),
           }),
-        });
-        await notifyWhatsAppBatch(notifs);
+        };
+        await notifyWhatsAppBatch([...memberNotifs, summaryNotif]);
       } catch (e) { console.warn("notify failed", e); }
 
       setDone(results);
