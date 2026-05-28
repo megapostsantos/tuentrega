@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { notifyWhatsAppBatch, WA_TEMPLATES } from "@/lib/whatsapp-notify";
 
 export const Route = createFileRoute("/_authenticated/pacotes/distribuir/$alocacaoId")({
   component: DistribPage,
@@ -46,7 +47,7 @@ function DistribPage() {
       const memIds = (team ?? []).map((t: any) => t.entregador_id);
       const allIds = Array.from(new Set([user.id, ...memIds]));
       const { data: ents } = allIds.length
-        ? await sb.from("entregadores").select("id, nome_completo, reliability_level, tipo_veiculo").in("id", allIds)
+        ? await sb.from("entregadores").select("id, nome_completo, reliability_level, tipo_veiculo, whatsapp").in("id", allIds)
         : { data: [] };
 
       const selfEnt = (ents ?? []).find((e: any) => e.id === user.id);
@@ -125,9 +126,45 @@ function DistribPage() {
           status: a.isSelf ? "accepted" : "invited",
           notificado_em: new Date().toISOString(),
         });
-        results.push({ nome: m.entregador?.nome_completo, pacotes: a.pacotes });
+        results.push({ nome: m.entregador?.nome_completo, pacotes: a.pacotes, offerId: of.id, entregadorId: m.entregador_id, whatsapp: m.entregador?.whatsapp, isSelf: a.isSelf, valor: a.isSelf ? Number(aloc.valor_por_pacote) : a.valor, paradas: a.paradas });
       }
       await sb.from("dispatcher_alocacoes").update({ status: "distributed", distributed_at: new Date().toISOString() }).eq("id", alocacaoId);
+
+      // Notify team members + dispatcher
+      try {
+        const { data: meEnt } = await sb.from("entregadores").select("nome_completo, whatsapp").eq("id", user!.id).maybeSingle();
+        const dispatcherName = meEnt?.nome_completo || "Dispatcher";
+        const notifs = results
+          .filter((r) => !r.isSelf)
+          .map((r) => ({
+            recipientId: r.entregadorId,
+            destinatarioTipo: "entregador" as const,
+            tipo: "distribuicao" as const,
+            telefone: r.whatsapp ?? null,
+            mensagem: WA_TEMPLATES.distribuicao({
+              memberName: r.nome,
+              dispatcherName,
+              packages: r.pacotes,
+              stops: r.paradas,
+              price: r.valor,
+              total: r.pacotes * r.valor,
+              offerId: r.offerId,
+            }),
+          }));
+        // Summary to dispatcher
+        notifs.push({
+          recipientId: user!.id,
+          destinatarioTipo: "dispatcher" as const,
+          tipo: "publicacao" as const,
+          telefone: meEnt?.whatsapp ?? null,
+          mensagem: WA_TEMPLATES.publicacao({
+            dispatcherName,
+            lines: results.map((r) => `✅ ${r.nome}${r.isSelf ? " (você)" : ""} - ${r.pacotes} pct`),
+          }),
+        });
+        await notifyWhatsAppBatch(notifs);
+      } catch (e) { console.warn("notify failed", e); }
+
       setDone(results);
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao publicar.");
