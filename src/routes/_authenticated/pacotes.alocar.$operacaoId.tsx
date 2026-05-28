@@ -42,7 +42,7 @@ function AllocPage() {
       setOp(opData);
       const ids = (disp ?? []).map((d: any) => d.entregador_id);
       const { data: ents } = ids.length
-        ? await sb.from("entregadores").select("id, nome_completo, reliability_level").in("id", ids)
+        ? await sb.from("entregadores").select("id, nome_completo, reliability_level, whatsapp").in("id", ids)
         : { data: [] };
       const merged = (disp ?? []).map((d: any) => ({
         ...d,
