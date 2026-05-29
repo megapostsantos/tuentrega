@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Upload, KeyRound, Camera } from "lucide-react";
+import { Loader2, Upload, KeyRound, Camera, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -22,6 +22,13 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 
 function Settings() {
   const { user, role, loading } = useAuth();
+  const navigate = useNavigate();
+
+  async function logout() {
+    await supabase.auth.signOut();
+    toast.success("Você saiu da sua conta");
+    navigate({ to: "/auth" });
+  }
 
   if (loading) {
     return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -35,6 +42,14 @@ function Settings() {
       {role === "entregador" && <EntregadorProfile />}
       {role === "admin" && <AdminBasic />}
       <PasswordChange />
+      <Button
+        variant="outline"
+        onClick={logout}
+        className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+      >
+        <LogOut className="mr-2 h-4 w-4" />
+        Sair da conta
+      </Button>
     </div>
   );
 }
