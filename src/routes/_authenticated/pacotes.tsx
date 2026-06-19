@@ -779,7 +779,10 @@ function AuditByRanges({
   onConfirm: (faixas: Faixa[], rotas: Rota[]) => void;
 }) {
   const [phase, setPhase] = useState<"define" | "count" | "group">("define");
+  const [mode, setMode] = useState<"faixas" | "zonas">("faixas");
   const [stopsPerRange, setStopsPerRange] = useState(10);
+  const [numZonas, setNumZonas] = useState(3);
+  const [zonas, setZonas] = useState<{ pacotes: number; paradas: number }[]>([]);
   const [faixas, setFaixas] = useState<Faixa[]>(initialFaixas.length ? initialFaixas : []);
   const [targetPerRoute, setTargetPerRoute] = useState(50);
   const [groups, setGroups] = useState<number[][]>([]); // each group is list of faixa indices
@@ -795,6 +798,31 @@ function AuditByRanges({
     setFaixas(out);
     setPhase("count");
   }
+
+  function generateZonas() {
+    const n = Math.max(1, numZonas);
+    setZonas(Array.from({ length: n }, (_, i) => zonas[i] ?? { pacotes: 0, paradas: 0 }));
+  }
+
+  function updateZona(i: number, patch: Partial<{ pacotes: number; paradas: number }>) {
+    setZonas((prev) => prev.map((z, idx) => idx === i ? { ...z, ...patch } : z));
+  }
+
+  function confirmZonas() {
+    const out: Faixa[] = [];
+    let s = 1;
+    zonas.forEach((z) => {
+      const stops = Math.max(0, Number(z.paradas) || 0);
+      const e = s + stops - 1;
+      out.push({ inicio: s, fim: e, pacotes: Number(z.pacotes) || 0 });
+      s = e + 1;
+    });
+    setFaixas(out);
+    setPhase("group");
+  }
+
+  const zonasTotPkg = zonas.reduce((s, z) => s + (Number(z.pacotes) || 0), 0);
+  const zonasTotStops = zonas.reduce((s, z) => s + (Number(z.paradas) || 0), 0);
 
   function updateFaixa(i: number, patch: Partial<Faixa>) {
     setFaixas(faixas.map((f, idx) => idx === i ? { ...f, ...patch } : f));
