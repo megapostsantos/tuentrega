@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
   head: () => ({
-    meta: [
-      { title: "TuEntrega — Gestão de entregas para Mercado Livre Flex" },
-      { name: "description", content: "Plataforma TMS para operadores Flex. Distribua rotas, pague via PIX e acompanhe entregadores PJ em tempo real." },
-      { property: "og:title", content: "TuEntrega — Gestão de entregas para Mercado Livre Flex" },
-      { property: "og:description", content: "Plataforma TMS para operadores Flex. Distribua rotas, pague via PIX e acompanhe entregadores PJ em tempo real." },
-    ],
+      meta: [
+        { title: "TuEntrega — Gestão de entregas Last Mile" },
+        { name: "description", content: "Plataforma TMS para operações de entrega urbana. Distribua rotas, pague via PIX e acompanhe entregadores PJ em tempo real." },
+        { property: "og:title", content: "TuEntrega — Gestão de entregas Last Mile" },
+        { property: "og:description", content: "Plataforma TMS para operações de entrega urbana. Distribua rotas, pague via PIX e acompanhe entregadores PJ em tempo real." },
+      ],
   }),
   component: Landing,
 });
@@ -76,7 +76,7 @@ function Landing() {
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
                 <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                  Plataforma para Mercado Livre Flex
+                  Plataforma para entregas Last Mile
                 </span>
               </div>
               <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight lg:text-7xl">
@@ -287,7 +287,7 @@ function Landing() {
             {[
               { name: "Logística Santos", city: "São Paulo, SP", quote: "Reduzimos o tempo de distribuição de rotas em 70%. Os entregadores aceitam em segundos." },
               { name: "Flex Express", city: "Campinas, SP", quote: "A transparência nos pagamentos via PIX trouxe muito mais segurança para nossa frota PJ.", featured: true },
-              { name: "Rapidão MEI", city: "Rio de Janeiro, RJ", quote: "Melhor TMS do mercado para quem trabalha com volume pesado de Mercado Livre." },
+              { name: "Rapidão MEI", city: "Rio de Janeiro, RJ", quote: "Melhor TMS do mercado para quem trabalha com volume pesado de entregas." },
             ].map((t, i) => (
               <div
                 key={t.name}

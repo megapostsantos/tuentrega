@@ -177,7 +177,7 @@ function DispatcherDialog({ ent, onClose, onDone }: { ent: Ent | null; onClose: 
 
   if (!ent) return null;
 
-  const ALL_PLATS = ["Mercado Livre Flex", "iFood", "Shopee", "Lalamove", "Todas"];
+  const ALL_PLATS = ["Last Mile", "iFood", "Shopee", "Lalamove", "Todas"];
 
   function togglePlat(p: string) {
     setPlataformas((prev) => {

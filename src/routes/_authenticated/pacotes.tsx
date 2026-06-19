@@ -123,7 +123,7 @@ function EmpresaTms({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <PageHeader title="Pacotes (TMS)" description="Gerencie suas operações Mercado Livre Flex" />
+      <PageHeader title="Pacotes (TMS)" description="Gerencie suas operações de entrega" />
 
       <Button
         size="lg"
@@ -437,7 +437,7 @@ function CreateOperation({
               <Field label="Data da operação">
                 <Input type="date" value={data.data_operacao} onChange={(e) => setData({ ...data, data_operacao: e.target.value })} />
               </Field>
-              <Field label="Pacotes recebidos (sistema ML)">
+              <Field label="Pacotes recebidos (sistema)">
                 <Input type="number" min={0} value={data.total_pacotes_sistema || ""} onChange={(e) => setData({ ...data, total_pacotes_sistema: Number(e.target.value) || 0 })} />
               </Field>
               <Field label="Total de paradas (Logísticos)">
