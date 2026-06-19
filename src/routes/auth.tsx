@@ -33,7 +33,7 @@ function translateAuthError(msg: string): string {
   return msg;
 }
 
-const SEGMENTOS = ["Mercado Livre Flex", "E-commerce", "Transportadora", "Distribuidora", "Loja própria", "Outro"];
+const SEGMENTOS = ["Last Mile", "E-commerce", "Transportadora", "Distribuidora", "Loja própria", "Outro"];
 const VEICULOS = [
   { value: "walker", label: "A pé" },
   { value: "biker", label: "Bicicleta" },
