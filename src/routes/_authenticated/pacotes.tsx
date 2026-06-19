@@ -779,7 +779,10 @@ function AuditByRanges({
   onConfirm: (faixas: Faixa[], rotas: Rota[]) => void;
 }) {
   const [phase, setPhase] = useState<"define" | "count" | "group">("define");
+  const [mode, setMode] = useState<"faixas" | "zonas">("faixas");
   const [stopsPerRange, setStopsPerRange] = useState(10);
+  const [numZonas, setNumZonas] = useState(3);
+  const [zonas, setZonas] = useState<{ pacotes: number; paradas: number }[]>([]);
   const [faixas, setFaixas] = useState<Faixa[]>(initialFaixas.length ? initialFaixas : []);
   const [targetPerRoute, setTargetPerRoute] = useState(50);
   const [groups, setGroups] = useState<number[][]>([]); // each group is list of faixa indices
@@ -795,6 +798,31 @@ function AuditByRanges({
     setFaixas(out);
     setPhase("count");
   }
+
+  function generateZonas() {
+    const n = Math.max(1, numZonas);
+    setZonas(Array.from({ length: n }, (_, i) => zonas[i] ?? { pacotes: 0, paradas: 0 }));
+  }
+
+  function updateZona(i: number, patch: Partial<{ pacotes: number; paradas: number }>) {
+    setZonas((prev) => prev.map((z, idx) => idx === i ? { ...z, ...patch } : z));
+  }
+
+  function confirmZonas() {
+    const out: Faixa[] = [];
+    let s = 1;
+    zonas.forEach((z) => {
+      const stops = Math.max(0, Number(z.paradas) || 0);
+      const e = s + stops - 1;
+      out.push({ inicio: s, fim: e, pacotes: Number(z.pacotes) || 0 });
+      s = e + 1;
+    });
+    setFaixas(out);
+    setPhase("group");
+  }
+
+  const zonasTotPkg = zonas.reduce((s, z) => s + (Number(z.pacotes) || 0), 0);
+  const zonasTotStops = zonas.reduce((s, z) => s + (Number(z.paradas) || 0), 0);
 
   function updateFaixa(i: number, patch: Partial<Faixa>) {
     setFaixas(faixas.map((f, idx) => idx === i ? { ...f, ...patch } : f));
@@ -850,33 +878,85 @@ function AuditByRanges({
       <CardContent className="space-y-5">
         {phase === "define" && (
           <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Separar a cada X paradas</Label>
-                <Input type="number" min={1} value={stopsPerRange} onChange={(e) => setStopsPerRange(Math.max(1, Number(e.target.value) || 1))} />
-              </div>
-              <div className="text-sm text-muted-foreground self-end">Total de paradas: <strong>{totalStops}</strong></div>
+            <div className="flex gap-2">
+              <Button type="button" variant={mode === "faixas" ? "default" : "outline"} size="sm" onClick={() => setMode("faixas")}>Por faixas de paradas</Button>
+              <Button type="button" variant={mode === "zonas" ? "default" : "outline"} size="sm" onClick={() => setMode("zonas")}>Por zonas</Button>
             </div>
-            <Button onClick={generate}>Gerar faixas</Button>
-            {faixas.length > 0 && (
-              <div className="space-y-2">
-                {faixas.map((f, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Input className="w-20" type="number" value={f.inicio} onChange={(e) => updateFaixa(i, { inicio: Number(e.target.value) || 0 })} />
-                    <span>até</span>
-                    <Input className="w-20" type="number" value={f.fim} onChange={(e) => updateFaixa(i, { fim: Number(e.target.value) || 0 })} />
-                    <Button variant="ghost" size="icon" onClick={() => removeFaixa(i)}><Trash2 className="h-4 w-4" /></Button>
+
+            {mode === "faixas" && (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Separar a cada X paradas</Label>
+                    <Input type="number" min={1} value={stopsPerRange} onChange={(e) => setStopsPerRange(Math.max(1, Number(e.target.value) || 1))} />
                   </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={addFaixa}><Plus className="mr-1 h-4 w-4" />Adicionar faixa</Button>
-              </div>
+                  <div className="text-sm text-muted-foreground self-end">Total de paradas: <strong>{totalStops}</strong></div>
+                </div>
+                <Button onClick={generate}>Gerar faixas</Button>
+                {faixas.length > 0 && (
+                  <div className="space-y-2">
+                    {faixas.map((f, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input className="w-20" type="number" value={f.inicio} onChange={(e) => updateFaixa(i, { inicio: Number(e.target.value) || 0 })} />
+                        <span>até</span>
+                        <Input className="w-20" type="number" value={f.fim} onChange={(e) => updateFaixa(i, { fim: Number(e.target.value) || 0 })} />
+                        <Button variant="ghost" size="icon" onClick={() => removeFaixa(i)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" onClick={addFaixa}><Plus className="mr-1 h-4 w-4" />Adicionar faixa</Button>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <Button variant="outline" onClick={onBack}>Voltar</Button>
+                  <Button onClick={() => setPhase("count")} disabled={faixas.length === 0}>Próximo: contar</Button>
+                </div>
+              </>
             )}
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={onBack}>Voltar</Button>
-              <Button onClick={() => setPhase("count")} disabled={faixas.length === 0}>Próximo: contar</Button>
-            </div>
+
+            {mode === "zonas" && (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Quantas zonas?</Label>
+                    <Input type="number" min={1} value={numZonas} onChange={(e) => setNumZonas(Math.max(1, Number(e.target.value) || 1))} />
+                  </div>
+                  <div className="text-sm text-muted-foreground self-end">Total esperado: <strong>{totalPackages}</strong> pacotes / <strong>{totalStops}</strong> paradas</div>
+                </div>
+                <Button onClick={generateZonas}>Gerar zonas</Button>
+                {zonas.length > 0 && (
+                  <div className="space-y-2">
+                    {zonas.map((z, i) => (
+                      <div key={i} className="rounded border p-3 space-y-2">
+                        <div className="text-sm font-medium">Zona {i + 1}</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs">Pacotes</Label>
+                            <Input type="number" min={0} value={z.pacotes || ""} onChange={(e) => updateZona(i, { pacotes: Number(e.target.value) || 0 })} />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Paradas</Label>
+                            <Input type="number" min={0} value={z.paradas || ""} onChange={(e) => updateZona(i, { paradas: Number(e.target.value) || 0 })} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="rounded border p-2 text-sm">
+                      Totais: <strong>{zonasTotPkg}</strong>/{totalPackages} pacotes · <strong>{zonasTotStops}</strong>/{totalStops} paradas
+                      {(zonasTotPkg !== totalPackages || zonasTotStops !== totalStops) && (
+                        <span className="ml-2 text-amber-700">⚠️ Totais não batem</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <Button variant="outline" onClick={onBack}>Voltar</Button>
+                  <Button onClick={confirmZonas} disabled={zonas.length === 0 || zonasTotPkg === 0}>Próximo: agrupar</Button>
+                </div>
+              </>
+            )}
           </>
         )}
+
 
         {phase === "count" && (
           <>
