@@ -356,8 +356,9 @@ function EmpresaForm({ onSuccess }: { onSuccess: (email: string) => void }) {
     });
     setLoading(false);
     if (error) return toast.error(translateAuthError(error.message));
-    toast.success("Conta criada! Trial de 14 dias ativo.");
-    onSuccess();
+    toast.success("Conta criada! Confirme seu e-mail.");
+    onSuccess(f.email);
+
   }
 
   return (
