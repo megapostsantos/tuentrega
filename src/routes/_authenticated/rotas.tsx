@@ -55,6 +55,7 @@ function RotasPage() {
   const [oferta, setOferta] = useState<Oferta | null>(null);
   const [pacotes, setPacotes] = useState<Pacote[]>([]);
   const [problemPacote, setProblemPacote] = useState<Pacote | null>(null);
+  const [podPacote, setPodPacote] = useState<Pacote | null>(null);
 
   async function load() {
     if (!user) return;
