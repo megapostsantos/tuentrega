@@ -1298,3 +1298,180 @@ function RouteMapButton({ ofertaIds }: { ofertaIds: string[] }) {
     </>
   );
 }
+
+/* ============ Optimize Route ============ */
+
+type OptStop = Stop & { status?: string; numero?: number };
+
+function OptimizeRouteButton({ operacaoId, ofertaIds }: { operacaoId: string; ofertaIds: string[] }) {
+  const [open, setOpen] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "geocoding" | "ready" | "saving">("idle");
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [stops, setStops] = useState<OptStop[]>([]);
+  const [totalKm, setTotalKm] = useState(0);
+  const [minutes, setMinutes] = useState(0);
+  const [skipped, setSkipped] = useState(0);
+
+  async function handleOpen() {
+    if (ofertaIds.length === 0) {
+      toast.error("Nenhuma rota publicada nesta operação.");
+      return;
+    }
+    setOpen(true);
+    setPhase("geocoding");
+    setStops([]);
+    setTotalKm(0);
+    setMinutes(0);
+    setSkipped(0);
+
+    try {
+      const { data: pacotes } = await supabase
+        .from("entregas_pacotes")
+        .select("id, endereco_entrega, lat, lng, status, numero_pacote")
+        .in("oferta_id", ofertaIds)
+        .order("numero_pacote");
+
+      const withAddr = (pacotes ?? []).filter((p: any) => p.endereco_entrega);
+      setProgress({ done: 0, total: withAddr.length });
+
+      const geocoded: OptStop[] = [];
+      let skipCount = 0;
+
+      for (let i = 0; i < withAddr.length; i++) {
+        const p: any = withAddr[i];
+        let coords: { lat: number; lng: number } | null = null;
+        if (p.lat != null && p.lng != null) {
+          coords = { lat: Number(p.lat), lng: Number(p.lng) };
+        } else {
+          if (i > 0) await new Promise((r) => setTimeout(r, 1100));
+          coords = await geocodeAddress(p.endereco_entrega);
+        }
+        if (coords) {
+          geocoded.push({
+            id: p.id,
+            lat: coords.lat,
+            lng: coords.lng,
+            address: p.endereco_entrega,
+            status: p.status,
+            numero: p.numero_pacote,
+          });
+        } else {
+          skipCount++;
+        }
+        setProgress({ done: i + 1, total: withAddr.length });
+      }
+
+      if (geocoded.length === 0) {
+        toast.error("Nenhum endereço pôde ser geocodificado.");
+        setPhase("idle");
+        setOpen(false);
+        return;
+      }
+
+      const origin = { lat: geocoded[0].lat, lng: geocoded[0].lng };
+      const optimized = optimizeRoute(origin, geocoded);
+      const orderedStops = optimized.stops.map((s) => {
+        const src = geocoded.find((g) => g.id === s.id)!;
+        return { ...s, status: src.status, numero: src.numero };
+      });
+      setStops(orderedStops);
+      setTotalKm(optimized.totalDistanceKm);
+      setMinutes(optimized.estimatedMinutes);
+      setSkipped(skipCount);
+      setPhase("ready");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao otimizar rota.");
+      setPhase("idle");
+      setOpen(false);
+    }
+  }
+
+  async function handleSave() {
+    setPhase("saving");
+    try {
+      for (let i = 0; i < stops.length; i++) {
+        const { error } = await supabase
+          .from("entregas_pacotes")
+          .update({ ordem_otimizada: i + 1, lat: stops[i].lat, lng: stops[i].lng } as any)
+          .eq("id", stops[i].id);
+        if (error) throw error;
+      }
+      toast.success("Ordem otimizada salva.");
+      setOpen(false);
+      setPhase("idle");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao salvar ordem.");
+      setPhase("ready");
+    }
+  }
+
+  const mapStops = stops.map((s) => ({ id: s.id, lat: s.lat, lng: s.lng, label: s.address, status: s.status }));
+
+  return (
+    <>
+      <Button variant="default" onClick={handleOpen} className="w-full">
+        <Sparkles className="mr-2 h-4 w-4" /> Otimizar rota
+      </Button>
+      <Dialog open={open} onOpenChange={(v) => { if (phase !== "geocoding" && phase !== "saving") setOpen(v); }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Otimizar rota</DialogTitle>
+          </DialogHeader>
+
+          {phase === "geocoding" && (
+            <div className="space-y-3 py-6">
+              <div className="flex items-center gap-2 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Geocodificando {progress.done}/{progress.total} endereços...</span>
+              </div>
+              <Progress value={progress.total ? (progress.done / progress.total) * 100 : 0} />
+            </div>
+          )}
+
+          {phase === "ready" || phase === "saving" ? (
+            <div className="space-y-4">
+              <Suspense fallback={<div className="flex h-72 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>}>
+                <RouteMap stops={mapStops} origin={stops[0] ? { lat: stops[0].lat, lng: stops[0].lng } : undefined} height={360} />
+              </Suspense>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Card><CardContent className="p-3">
+                  <div className="text-xs text-muted-foreground">Distância total</div>
+                  <div className="text-lg font-semibold">{totalKm.toFixed(1)} km</div>
+                </CardContent></Card>
+                <Card><CardContent className="p-3">
+                  <div className="text-xs text-muted-foreground">Tempo estimado</div>
+                  <div className="text-lg font-semibold">{formatDuration(minutes)}</div>
+                </CardContent></Card>
+              </div>
+
+              {skipped > 0 && (
+                <div className="text-xs text-amber-600">{skipped} endereço(s) ignorado(s) por falha na geocodificação.</div>
+              )}
+
+              <div className="space-y-1">
+                <div className="text-sm font-medium">Ordem otimizada</div>
+                <ol className="space-y-1 text-sm">
+                  {stops.map((s, i) => (
+                    <li key={s.id} className="flex gap-2 rounded border p-2">
+                      <span className="font-semibold w-6">{i + 1}.</span>
+                      <span className="flex-1">{s.address}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setOpen(false)} disabled={phase === "saving"}>Cancelar</Button>
+                <Button onClick={handleSave} disabled={phase === "saving"}>
+                  {phase === "saving" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Salvar ordem
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
