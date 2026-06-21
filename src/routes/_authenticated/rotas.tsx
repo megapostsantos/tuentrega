@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from "@/components/ui/sheet";
+import { ProofOfDeliverySheet } from "@/components/ProofOfDeliverySheet";
 
 export const Route = createFileRoute("/_authenticated/rotas")({
   component: RotasPage,
@@ -54,6 +55,7 @@ function RotasPage() {
   const [oferta, setOferta] = useState<Oferta | null>(null);
   const [pacotes, setPacotes] = useState<Pacote[]>([]);
   const [problemPacote, setProblemPacote] = useState<Pacote | null>(null);
+  const [podPacote, setPodPacote] = useState<Pacote | null>(null);
 
   async function load() {
     if (!user) return;
@@ -172,7 +174,7 @@ function RotasPage() {
             key={p.id}
             index={i + 1}
             pacote={p}
-            onDelivered={() => markDelivered(p)}
+            onDelivered={() => setPodPacote(p)}
             onProblem={() => setProblemPacote(p)}
           />
         ))}
@@ -196,6 +198,17 @@ function RotasPage() {
         onSaved={(updated) => {
           setPacotes((prev) => prev.map((x) => x.id === updated.id ? { ...x, status: "not_delivered" } : x));
           setProblemPacote(null);
+        }}
+      />
+
+      <ProofOfDeliverySheet
+        open={!!podPacote}
+        onClose={() => setPodPacote(null)}
+        pacote={podPacote}
+        entregadorId={user?.id}
+        onConfirmed={(id) => {
+          setPacotes((prev) => prev.map((x) => x.id === id ? { ...x, status: "delivered" } : x));
+          setPodPacote(null);
         }}
       />
     </div>
