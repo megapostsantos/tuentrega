@@ -162,6 +162,22 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
     onError: (e: any) => toast.error(e.message ?? "Erro ao excluir"),
   });
 
+  function handleExport() {
+    const headers = ["Data", "Tipo", "Categoria", "Descrição", "Valor"];
+    const rows: (string | number)[][] = lancamentos.map((l) => [
+      format(new Date(l.data_lancamento + "T00:00"), "dd/MM/yyyy"),
+      l.tipo === "entrada" ? "Entrada" : "Saída",
+      l.categoria,
+      l.descricao ?? "",
+      Number(l.valor),
+    ]);
+    rows.push(["", "", "", "", ""]);
+    rows.push(["", "", "", "Total Entradas", totalEntradas]);
+    rows.push(["", "", "", "Total Saídas", totalSaidas]);
+    rows.push(["", "", "", "Saldo", saldo]);
+    exportToExcel(`financeiro-${format(range.from, "yyyy-MM-dd")}_${format(range.to, "yyyy-MM-dd")}`, headers, rows);
+  }
+
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <PageHeader
