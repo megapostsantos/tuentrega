@@ -1553,6 +1553,36 @@ export type Database = {
           },
         ]
       }
+      user_notifications: {
+        Row: {
+          corpo: string | null
+          created_at: string
+          id: string
+          lida: boolean
+          link: string | null
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          corpo?: string | null
+          created_at?: string
+          id?: string
+          lida?: boolean
+          link?: string | null
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          corpo?: string | null
+          created_at?: string
+          id?: string
+          lida?: boolean
+          link?: string | null
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
