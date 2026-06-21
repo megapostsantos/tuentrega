@@ -155,6 +155,7 @@ function RotasPage() {
     <div className="pb-24">
       {/* Sticky header */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
+        <LocationIndicator state={trackerState} />
         <div className="px-4 py-3 space-y-2">
           <div className="flex items-baseline justify-between">
             <div>
