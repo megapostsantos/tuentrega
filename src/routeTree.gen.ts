@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RastrearTokenRouteImport } from './routes/rastrear.$token'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminPlansRouteImport } from './routes/admin.plans'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
@@ -54,6 +55,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RastrearTokenRoute = RastrearTokenRouteImport.update({
+  id: '/rastrear/$token',
+  path: '/rastrear/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
@@ -201,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/rastrear/$token': typeof RastrearTokenRoute
   '/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
 }
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/rastrear/$token': typeof RastrearTokenRoute
   '/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
 }
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/rastrear/$token': typeof RastrearTokenRoute
   '/_authenticated/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/_authenticated/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
 }
@@ -289,6 +298,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
+    | '/rastrear/$token'
     | '/pacotes/alocar/$operacaoId'
     | '/pacotes/distribuir/$alocacaoId'
   fileRoutesByTo: FileRoutesByTo
@@ -317,6 +327,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
+    | '/rastrear/$token'
     | '/pacotes/alocar/$operacaoId'
     | '/pacotes/distribuir/$alocacaoId'
   id:
@@ -346,6 +357,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
+    | '/rastrear/$token'
     | '/_authenticated/pacotes/alocar/$operacaoId'
     | '/_authenticated/pacotes/distribuir/$alocacaoId'
   fileRoutesById: FileRoutesById
@@ -355,6 +367,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
+  RastrearTokenRoute: typeof RastrearTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -385,6 +398,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rastrear/$token': {
+      id: '/rastrear/$token'
+      path: '/rastrear/$token'
+      fullPath: '/rastrear/$token'
+      preLoaderRoute: typeof RastrearTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/settings': {
@@ -631,6 +651,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
+  RastrearTokenRoute: RastrearTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
