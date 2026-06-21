@@ -432,7 +432,7 @@ function EmpresaForm({ onSuccess }: { onSuccess: (email: string) => void }) {
 
 /* ---------------- Entregador ---------------- */
 
-function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
+function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
   const [step, setStep] = useState(0);
   const STEPS = ["Pessoal", "Veículo & Endereço", "Plataformas & PIX"];
   const [f, setF] = useState({
