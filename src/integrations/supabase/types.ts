@@ -829,57 +829,78 @@ export type Database = {
       }
       entregas_pacotes: {
         Row: {
+          assinatura_url: string | null
           codigo_pacote: string | null
           created_at: string
           distancia_anterior_metros: number | null
           endereco_entrega: string | null
+          entregue_em: string | null
+          foto_pod_url: string | null
           id: string
           instrucoes_especiais: string | null
           janela_fim: string | null
           janela_inicio: string | null
           lat: number | null
           lng: number | null
+          motivo_nao_entrega: string | null
+          nome_recebedor: string | null
           numero_pacote: number
+          observacao_entrega: string | null
           oferta_id: string
           ordem_otimizada: number | null
           status: string
           tempo_estimado_minutos: number | null
+          tentativas: number
           updated_at: string
         }
         Insert: {
+          assinatura_url?: string | null
           codigo_pacote?: string | null
           created_at?: string
           distancia_anterior_metros?: number | null
           endereco_entrega?: string | null
+          entregue_em?: string | null
+          foto_pod_url?: string | null
           id?: string
           instrucoes_especiais?: string | null
           janela_fim?: string | null
           janela_inicio?: string | null
           lat?: number | null
           lng?: number | null
+          motivo_nao_entrega?: string | null
+          nome_recebedor?: string | null
           numero_pacote: number
+          observacao_entrega?: string | null
           oferta_id: string
           ordem_otimizada?: number | null
           status?: string
           tempo_estimado_minutos?: number | null
+          tentativas?: number
           updated_at?: string
         }
         Update: {
+          assinatura_url?: string | null
           codigo_pacote?: string | null
           created_at?: string
           distancia_anterior_metros?: number | null
           endereco_entrega?: string | null
+          entregue_em?: string | null
+          foto_pod_url?: string | null
           id?: string
           instrucoes_especiais?: string | null
           janela_fim?: string | null
           janela_inicio?: string | null
           lat?: number | null
           lng?: number | null
+          motivo_nao_entrega?: string | null
+          nome_recebedor?: string | null
           numero_pacote?: number
+          observacao_entrega?: string | null
           oferta_id?: string
           ordem_otimizada?: number | null
           status?: string
           tempo_estimado_minutos?: number | null
+          tentativas?: number
           updated_at?: string
         }
         Relationships: []
