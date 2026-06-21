@@ -30,6 +30,7 @@ import { Route as AuthenticatedOfertasRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedNotasRouteImport } from './routes/_authenticated/notas'
 import { Route as AuthenticatedMetricasRouteImport } from './routes/_authenticated/metricas'
 import { Route as AuthenticatedGanhosRouteImport } from './routes/_authenticated/ganhos'
+import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedEntregadoresRouteImport } from './routes/_authenticated/entregadores'
 import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticated/empresas'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -142,6 +143,11 @@ const AuthenticatedGanhosRoute = AuthenticatedGanhosRouteImport.update({
   path: '/ganhos',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedEntregadoresRoute =
   AuthenticatedEntregadoresRouteImport.update({
     id: '/entregadores',
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
   '/entregadores': typeof AuthenticatedEntregadoresRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ganhos': typeof AuthenticatedGanhosRoute
   '/metricas': typeof AuthenticatedMetricasRoute
   '/notas': typeof AuthenticatedNotasRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
   '/entregadores': typeof AuthenticatedEntregadoresRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ganhos': typeof AuthenticatedGanhosRoute
   '/metricas': typeof AuthenticatedMetricasRoute
   '/notas': typeof AuthenticatedNotasRoute
@@ -251,6 +259,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/empresas': typeof AuthenticatedEmpresasRoute
   '/_authenticated/entregadores': typeof AuthenticatedEntregadoresRoute
+  '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/ganhos': typeof AuthenticatedGanhosRoute
   '/_authenticated/metricas': typeof AuthenticatedMetricasRoute
   '/_authenticated/notas': typeof AuthenticatedNotasRoute
@@ -282,6 +291,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/empresas'
     | '/entregadores'
+    | '/financeiro'
     | '/ganhos'
     | '/metricas'
     | '/notas'
@@ -311,6 +321,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/empresas'
     | '/entregadores'
+    | '/financeiro'
     | '/ganhos'
     | '/metricas'
     | '/notas'
@@ -341,6 +352,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/empresas'
     | '/_authenticated/entregadores'
+    | '/_authenticated/financeiro'
     | '/_authenticated/ganhos'
     | '/_authenticated/metricas'
     | '/_authenticated/notas'
@@ -519,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGanhosRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/financeiro': {
+      id: '/_authenticated/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/entregadores': {
       id: '/_authenticated/entregadores'
       path: '/entregadores'
@@ -592,6 +611,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmpresasRoute: typeof AuthenticatedEmpresasRoute
   AuthenticatedEntregadoresRoute: typeof AuthenticatedEntregadoresRoute
+  AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedGanhosRoute: typeof AuthenticatedGanhosRoute
   AuthenticatedMetricasRoute: typeof AuthenticatedMetricasRoute
   AuthenticatedNotasRoute: typeof AuthenticatedNotasRoute
@@ -608,6 +628,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmpresasRoute: AuthenticatedEmpresasRoute,
   AuthenticatedEntregadoresRoute: AuthenticatedEntregadoresRoute,
+  AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedGanhosRoute: AuthenticatedGanhosRoute,
   AuthenticatedMetricasRoute: AuthenticatedMetricasRoute,
   AuthenticatedNotasRoute: AuthenticatedNotasRoute,
