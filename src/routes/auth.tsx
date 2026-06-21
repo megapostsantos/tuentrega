@@ -479,7 +479,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: f.email, password: f.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: {
           role: "entregador",
           full_name: f.nome_completo,
