@@ -247,6 +247,7 @@ type EmpresaStats = { pacotesHoje: number; ofertasAtivas: number; emRota: number
 
 function EmpresaDashboard({ userId }: { userId?: string }) {
   const [stats, setStats] = useState<EmpresaStats>({ pacotesHoje: 0, ofertasAtivas: 0, emRota: 0, pixPagar: 0 });
+  const [devolucoes, setDevolucoes] = useState(0);
   const [opActive, setOpActive] = useState<{ id: string; pacotes: number; paradas: number; rotas: number } | null>(null);
 
   useEffect(() => {
