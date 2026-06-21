@@ -8,8 +8,9 @@ import { format, startOfMonth, endOfMonth, subMonths, startOfDay } from "date-fn
 import { ptBR } from "date-fns/locale";
 import {
   TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2, Upload, Loader2,
-  CalendarIcon, FileText, ArrowDownCircle, ArrowUpCircle,
+  CalendarIcon, FileText, ArrowDownCircle, ArrowUpCircle, Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -161,15 +162,36 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
     onError: (e: any) => toast.error(e.message ?? "Erro ao excluir"),
   });
 
+  function handleExport() {
+    const headers = ["Data", "Tipo", "Categoria", "Descrição", "Valor"];
+    const rows: (string | number)[][] = lancamentos.map((l) => [
+      format(new Date(l.data_lancamento + "T00:00"), "dd/MM/yyyy"),
+      l.tipo === "entrada" ? "Entrada" : "Saída",
+      l.categoria,
+      l.descricao ?? "",
+      Number(l.valor),
+    ]);
+    rows.push(["", "", "", "", ""]);
+    rows.push(["", "", "", "Total Entradas", totalEntradas]);
+    rows.push(["", "", "", "Total Saídas", totalSaidas]);
+    rows.push(["", "", "", "Saldo", saldo]);
+    exportToExcel(`financeiro-${format(range.from, "yyyy-MM-dd")}_${format(range.to, "yyyy-MM-dd")}`, headers, rows);
+  }
+
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <PageHeader
         title="Financeiro"
         description="Controle suas entradas e saídas"
         action={
-          <Button onClick={() => { setEditing(null); setOpenDialog(true); }}>
-            <Plus className="h-4 w-4 mr-2" /> Novo lançamento
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={lancamentos.length === 0}>
+              <Download className="h-4 w-4 mr-2" /> Exportar
+            </Button>
+            <Button onClick={() => { setEditing(null); setOpenDialog(true); }}>
+              <Plus className="h-4 w-4 mr-2" /> Novo lançamento
+            </Button>
+          </div>
         }
       />
 
