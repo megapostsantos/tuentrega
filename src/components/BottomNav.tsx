@@ -9,7 +9,8 @@ const empresa: Item[] = [
   { label: "Home", to: "/dashboard", icon: Home },
   { label: "Pacotes", to: "/pacotes", icon: Package },
   { label: "Ofertas", to: "/ofertas", icon: Store },
-  { label: "Pagam.", to: "/pagamentos", icon: Wallet },
+  { label: "Pagamentos", to: "/pagamentos", icon: Wallet },
+  { label: "Financ.", to: "/financeiro", icon: TrendingUp },
   { label: "Perfil", to: "/configuracoes", icon: User },
 ];
 
