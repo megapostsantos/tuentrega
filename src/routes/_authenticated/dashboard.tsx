@@ -247,6 +247,7 @@ type EmpresaStats = { pacotesHoje: number; ofertasAtivas: number; emRota: number
 
 function EmpresaDashboard({ userId }: { userId?: string }) {
   const [stats, setStats] = useState<EmpresaStats>({ pacotesHoje: 0, ofertasAtivas: 0, emRota: 0, pixPagar: 0 });
+  const [devolucoes, setDevolucoes] = useState(0);
   const [opActive, setOpActive] = useState<{ id: string; pacotes: number; paradas: number; rotas: number } | null>(null);
 
   useEffect(() => {
@@ -286,6 +287,16 @@ function EmpresaDashboard({ userId }: { userId?: string }) {
         });
       } else {
         setOpActive(null);
+      }
+
+      if (ids.length) {
+        const { count: devCount } = await sb.from("entregas_pacotes")
+          .select("id", { count: "exact", head: true })
+          .in("oferta_id", ids)
+          .in("status", ["devolvido", "problema"]);
+        setDevolucoes(devCount ?? 0);
+      } else {
+        setDevolucoes(0);
       }
     }
 
@@ -337,6 +348,27 @@ function EmpresaDashboard({ userId }: { userId?: string }) {
         <StatCard icon={Truck} label="Em rota" value={String(stats.emRota)} to="/ofertas" />
         <StatCard icon={Wallet} label="PIX a pagar" value={brl(stats.pixPagar)} to="/pagamentos" />
       </div>
+
+      {/* Devoluções pendentes */}
+      <Link
+        to="/devolucoes"
+        className={`block rounded-2xl border-l-4 p-4 elev-1 press-scale ${devolucoes > 0 ? "border-orange-500 bg-orange-500/5" : "border-border bg-card"}`}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${devolucoes > 0 ? "bg-orange-500/15 text-orange-600" : "bg-muted text-muted-foreground"}`}>
+              <RotateCcw className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Devoluções pendentes</p>
+              <p className="text-xs text-muted-foreground">
+                {devolucoes > 0 ? `${devolucoes} pacote(s) aguardando reagendamento` : "Nenhuma devolução pendente"}
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </Link>
 
       {/* Quick actions */}
       <div>
