@@ -513,8 +513,9 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
       }
     }
     setLoading(false);
-    toast.success("Conta criada com sucesso!");
-    onSuccess();
+    toast.success("Conta criada! Confirme seu e-mail.");
+    onSuccess(f.email);
+
   }
 
   return (
