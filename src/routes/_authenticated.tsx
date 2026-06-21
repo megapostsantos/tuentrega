@@ -18,10 +18,16 @@ function AuthenticatedLayout() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
+    if (loading) return;
+    if (!user) {
+      navigate({ to: "/auth" });
+    } else if (user.email && !user.email_confirmed_at) {
+      navigate({ to: "/auth", search: { verify: user.email } as never });
+    }
   }, [loading, user, navigate]);
 
-  if (loading || !user) return <SplashScreen />;
+  if (loading || !user || (user.email && !user.email_confirmed_at)) return <SplashScreen />;
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">

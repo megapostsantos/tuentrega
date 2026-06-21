@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RastrearTokenRouteImport } from './routes/rastrear.$token'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminPlansRouteImport } from './routes/admin.plans'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
@@ -63,6 +64,11 @@ const RastrearTokenRoute = RastrearTokenRouteImport.update({
   id: '/rastrear/$token',
   path: '/rastrear/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
@@ -197,7 +203,7 @@ const AuthenticatedPacotesAlocarOperacaoIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/agenda': typeof AuthenticatedAgendaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/rastrear/$token': typeof RastrearTokenRoute
   '/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
@@ -228,7 +235,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/agenda': typeof AuthenticatedAgendaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -252,6 +259,7 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/rastrear/$token': typeof RastrearTokenRoute
   '/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
@@ -261,7 +269,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -285,6 +293,7 @@ export interface FileRoutesById {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/rastrear/$token': typeof RastrearTokenRoute
   '/_authenticated/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/_authenticated/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
@@ -318,6 +327,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
+    | '/auth/callback'
     | '/rastrear/$token'
     | '/pacotes/alocar/$operacaoId'
     | '/pacotes/distribuir/$alocacaoId'
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
+    | '/auth/callback'
     | '/rastrear/$token'
     | '/pacotes/alocar/$operacaoId'
     | '/pacotes/distribuir/$alocacaoId'
@@ -381,6 +392,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/plans'
     | '/admin/settings'
+    | '/auth/callback'
     | '/rastrear/$token'
     | '/_authenticated/pacotes/alocar/$operacaoId'
     | '/_authenticated/pacotes/distribuir/$alocacaoId'
@@ -390,7 +402,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
-  AuthRoute: typeof AuthRoute
+  AuthRoute: typeof AuthRouteWithChildren
   RastrearTokenRoute: typeof RastrearTokenRoute
 }
 
@@ -430,6 +442,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/rastrear/$token'
       preLoaderRoute: typeof RastrearTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/admin/settings': {
       id: '/admin/settings'
@@ -688,11 +707,21 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface AuthRouteChildren {
+  AuthCallbackRoute: typeof AuthCallbackRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthCallbackRoute: AuthCallbackRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
   RastrearTokenRoute: RastrearTokenRoute,
 }
 export const routeTree = rootRouteImport
