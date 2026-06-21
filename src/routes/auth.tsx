@@ -311,7 +311,7 @@ function StepNav({ step, total, onBack, onNext, onSubmit, loading }: {
 
 /* ---------------- Empresa ---------------- */
 
-function EmpresaForm({ onSuccess }: { onSuccess: () => void }) {
+function EmpresaForm({ onSuccess }: { onSuccess: (email: string) => void }) {
   const [step, setStep] = useState(0);
   const STEPS = ["Empresa", "Endereço", "Acesso"];
   const [f, setF] = useState({
