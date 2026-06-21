@@ -892,6 +892,19 @@ function DetailsDialog({
                   </div>
                 </div>
               )}
+              {o.status === "in_progress" && (
+                <Button
+                  variant="outline"
+                  className="w-full border-red-300 text-red-700 hover:bg-red-50"
+                  onClick={() => setTracking(true)}
+                >
+                  <span className="relative mr-2 flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                  </span>
+                  Rastrear ao vivo
+                </Button>
+              )}
               {o.exige_nota_fiscal && o.status !== "completed" && (
                 <p className="rounded-md bg-muted px-3 py-2 text-xs">⏳ Aguardando nota fiscal</p>
               )}
