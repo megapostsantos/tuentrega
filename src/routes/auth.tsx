@@ -145,19 +145,10 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
 function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
   const [role, setRole] = useState<Role>("empresa");
-  const [done, setDone] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
-  if (done) {
-    return (
-      <div className="mt-6 flex flex-col items-center text-center">
-        <div className="grid h-16 w-16 place-content-center rounded-full bg-primary/10 text-primary text-3xl">✓</div>
-        <h1 className="mt-4 text-2xl font-bold">Conta criada com sucesso!</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Tudo pronto. Você já pode acessar a plataforma.</p>
-        <Button onClick={onSuccess} className="mt-6 w-full bg-primary text-primary-foreground hover:opacity-90">
-          Entrar no painel <ArrowRight className="ml-1 h-4 w-4" />
-        </Button>
-      </div>
-    );
+  if (pendingEmail) {
+    return <VerifyEmail email={pendingEmail} onConfirmed={onSuccess} />;
   }
 
   return (
@@ -171,11 +162,91 @@ function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       {role === "empresa"
-        ? <EmpresaForm onSuccess={() => setDone(true)} />
-        : <EntregadorForm onSuccess={() => setDone(true)} />}
+        ? <EmpresaForm onSuccess={(email) => setPendingEmail(email)} />
+        : <EntregadorForm onSuccess={(email) => setPendingEmail(email)} />}
     </>
   );
 }
+
+function VerifyEmail({ email, onConfirmed }: { email: string; onConfirmed: () => void }) {
+  const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  async function resend() {
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    setResending(false);
+    if (error) return toast.error(translateAuthError(error.message));
+    toast.success("E-mail reenviado!");
+    setCooldown(30);
+  }
+
+  async function check() {
+    setChecking(true);
+    const { data, error } = await supabase.auth.getUser();
+    setChecking(false);
+    if (error || !data.user) {
+      return toast.error("Ainda não detectamos a confirmação. Cheque seu e-mail.");
+    }
+    if (!data.user.email_confirmed_at) {
+      return toast.error("E-mail ainda não confirmado. Verifique sua caixa de entrada.");
+    }
+    toast.success("E-mail confirmado!");
+    onConfirmed();
+  }
+
+  return (
+    <div className="mt-6 flex flex-col items-center text-center">
+      <div className="relative grid h-20 w-20 place-content-center rounded-full bg-primary/10 text-primary">
+        <Mail className="h-9 w-9 animate-bounce" />
+        <span className="absolute inset-0 rounded-full ring-2 ring-primary/30 animate-ping" />
+      </div>
+      <h1 className="mt-5 text-2xl font-bold">Verifique seu e-mail!</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Enviamos um link de confirmação para <span className="font-medium text-foreground">{email}</span>.
+        Abra a mensagem e clique no link para ativar sua conta.
+      </p>
+
+      <div className="mt-6 w-full space-y-2">
+        <Button
+          onClick={check}
+          disabled={checking}
+          className="w-full bg-primary text-primary-foreground hover:opacity-90"
+        >
+          {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Já confirmei <Check className="ml-1 h-4 w-4" /></>}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={resend}
+          disabled={resending || cooldown > 0}
+          className="w-full"
+        >
+          {resending
+            ? <Loader2 className="h-4 w-4 animate-spin" />
+            : cooldown > 0
+              ? `Reenviar em ${cooldown}s`
+              : "Reenviar e-mail"}
+        </Button>
+      </div>
+
+      <p className="mt-4 text-xs text-muted-foreground">
+        Não recebeu? Verifique a caixa de spam ou tente reenviar.
+      </p>
+    </div>
+  );
+}
+
 
 /* ---------------- Stepper ---------------- */
 
