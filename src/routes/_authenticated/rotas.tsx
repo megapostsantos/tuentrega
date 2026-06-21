@@ -18,6 +18,8 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from "@/components/ui/sheet";
 import { ProofOfDeliverySheet } from "@/components/ProofOfDeliverySheet";
+import { useLocationTracker } from "@/hooks/use-location-tracker";
+import { LocationIndicator } from "@/components/LocationIndicator";
 
 export const Route = createFileRoute("/_authenticated/rotas")({
   component: RotasPage,
@@ -56,6 +58,7 @@ function RotasPage() {
   const [pacotes, setPacotes] = useState<Pacote[]>([]);
   const [problemPacote, setProblemPacote] = useState<Pacote | null>(null);
   const [podPacote, setPodPacote] = useState<Pacote | null>(null);
+  const trackerState = useLocationTracker(oferta?.id ?? null);
 
   async function load() {
     if (!user) return;
@@ -152,6 +155,7 @@ function RotasPage() {
     <div className="pb-24">
       {/* Sticky header */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
+        <LocationIndicator state={trackerState} />
         <div className="px-4 py-3 space-y-2">
           <div className="flex items-baseline justify-between">
             <div>
