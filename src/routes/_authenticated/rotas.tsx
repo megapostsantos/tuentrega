@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  Loader2, MapPin, CheckCircle2, AlertTriangle, Circle, Camera, Flag,
+  Loader2, MapPin, CheckCircle2, AlertTriangle, Camera, Flag,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
