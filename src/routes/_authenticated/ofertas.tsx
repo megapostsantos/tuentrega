@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CloseRouteDialog } from "@/components/CloseRouteDialog";
+import { ProofsTab } from "@/components/ProofsTab";
 
 export const Route = createFileRoute("/_authenticated/ofertas")({
   validateSearch: (s: Record<string, unknown>) => ({ close: typeof s.close === "string" ? s.close : undefined }),
