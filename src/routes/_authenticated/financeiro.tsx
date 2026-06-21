@@ -8,8 +8,9 @@ import { format, startOfMonth, endOfMonth, subMonths, startOfDay } from "date-fn
 import { ptBR } from "date-fns/locale";
 import {
   TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2, Upload, Loader2,
-  CalendarIcon, FileText, ArrowDownCircle, ArrowUpCircle,
+  CalendarIcon, FileText, ArrowDownCircle, ArrowUpCircle, Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
