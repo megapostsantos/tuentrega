@@ -793,6 +793,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
           </div>
           <AllocationPanel operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={rotas} />
           <RouteMapButton ofertaIds={rotas.map((r: any) => r.oferta_id).filter(Boolean)} />
+          <OptimizeRouteButton operacaoId={op.id} ofertaIds={rotas.map((r: any) => r.oferta_id).filter(Boolean)} />
         </div>
       </DialogContent>
     </Dialog>
