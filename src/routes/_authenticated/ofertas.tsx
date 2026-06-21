@@ -766,6 +766,10 @@ function DetailsDialog({
     const { error } = await supabase.from("ofertas").update({ status }).eq("id", o.id);
     setBusy(false);
     if (error) return toast.error(error.message);
+    if (status === "in_progress") {
+      const { notifyDestinatarioOferta } = await import("@/lib/whatsapp-notify");
+      notifyDestinatarioOferta(o.id).catch(() => {});
+    }
     toast.success("Status atualizado");
     reload();
   }
