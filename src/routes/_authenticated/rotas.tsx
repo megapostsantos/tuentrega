@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from "@/components/ui/sheet";
+import { ProofOfDeliverySheet } from "@/components/ProofOfDeliverySheet";
 
 export const Route = createFileRoute("/_authenticated/rotas")({
   component: RotasPage,
