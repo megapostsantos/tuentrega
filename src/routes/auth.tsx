@@ -337,7 +337,8 @@ function EmpresaForm({ onSuccess }: { onSuccess: (email: string) => void }) {
     const { error } = await supabase.auth.signUp({
       email: f.email, password: f.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+
         data: {
           role: "empresa",
           full_name: f.responsavel,
