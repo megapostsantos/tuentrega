@@ -982,6 +982,14 @@ function DetailsDialog({
           <Button variant="ghost" onClick={onClose}>Fechar</Button>
         </DialogFooter>
       </DialogContent>
+      {role === "empresa" && o.entregador_id && tracking && (
+        <LiveTrackingMap
+          open={tracking}
+          onClose={() => setTracking(false)}
+          ofertaId={o.id}
+          entregadorId={o.entregador_id}
+        />
+      )}
     </Dialog>
   );
 }
