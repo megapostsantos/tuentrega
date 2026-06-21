@@ -166,7 +166,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
       <PageHeader
         title="Financeiro"
         description="Controle suas entradas e saídas"
-        actions={
+        action={
           <Button onClick={() => { setEditing(null); setOpenDialog(true); }}>
             <Plus className="h-4 w-4 mr-2" /> Novo lançamento
           </Button>
