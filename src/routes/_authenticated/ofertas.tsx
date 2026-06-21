@@ -952,16 +952,15 @@ function DetailsDialog({
             </div>
           )}
         </div>
-            </TabsContent>
+          </TabsContent>
+          {role === "empresa" && (
             <TabsContent value="provas">
               <ProofsTab ofertaId={o.id} ofertaTitulo={o.titulo} />
             </TabsContent>
-          </Tabs>
-        ) : (
-          <div className="space-y-4 text-sm">
-            {/* entregador view kept above; this branch is unused — empresa wraps with Tabs */}
-          </div>
-        )}
+          )}
+        </Tabs>
+
+
 
 
         <DialogFooter>
