@@ -198,17 +198,16 @@ function EmpresaFinanceiro() {
   }
 
   function exportExcel() {
-    const rows = grupos.flatMap(g => g.ofertas.map(o => ({
-      Entregador: g.nome, "Chave PIX": g.pix_chave ?? "", Banco: g.banco ?? "",
-      Rota: o.titulo, Data: o.data_trabalho ?? "",
-      Pacotes: o.quantidade_pacotes ?? "", "Valor/pacote": Number(o.valor_por_pacote ?? 0),
-      Total: Number(o.valor || 0), Status: o.payment_status === "paid" ? "Pago" : "Pendente",
-      "Data pagamento": o.payment_date ? new Date(o.payment_date).toLocaleDateString("pt-BR") : "",
-    })));
-    const totalRow = { Entregador: "TOTAL", Total: rows.reduce((s,r) => s + Number(r.Total||0), 0) };
-    const ws = XLSX.utils.json_to_sheet([...rows, totalRow]);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Pagamentos");
-    XLSX.writeFile(wb, `pagamentos-${new Date().toISOString().slice(0,10)}.xlsx`);
+    const headers = ["Entregador", "Data", "Valor", "Status"];
+    const rows = grupos.flatMap(g => g.ofertas.map(o => [
+      g.nome,
+      o.data_trabalho ?? "",
+      Number(o.valor || 0),
+      o.payment_status === "paid" ? "Pago" : "Pendente",
+    ] as (string | number)[]));
+    const total = rows.reduce((s, r) => s + Number(r[2] || 0), 0);
+    rows.push(["TOTAL", "", total, ""]);
+    exportToExcel(`pagamentos-${new Date().toISOString().slice(0,10)}`, headers, rows);
   }
 
   function exportPdf() { window.print(); }
