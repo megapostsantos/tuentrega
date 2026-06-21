@@ -288,6 +288,16 @@ function EmpresaDashboard({ userId }: { userId?: string }) {
       } else {
         setOpActive(null);
       }
+
+      if (ids.length) {
+        const { count: devCount } = await sb.from("entregas_pacotes")
+          .select("id", { count: "exact", head: true })
+          .in("oferta_id", ids)
+          .in("status", ["devolvido", "problema"]);
+        setDevolucoes(devCount ?? 0);
+      } else {
+        setDevolucoes(0);
+      }
     }
 
     load();
