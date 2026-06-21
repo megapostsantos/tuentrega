@@ -174,7 +174,7 @@ function RotasPage() {
             key={p.id}
             index={i + 1}
             pacote={p}
-            onDelivered={() => markDelivered(p)}
+            onDelivered={() => setPodPacote(p)}
             onProblem={() => setProblemPacote(p)}
           />
         ))}
