@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Package, Truck, Wallet, BarChart3, Building2, CalendarDays, Store, Star, Plus, ChevronRight, Users, UserCog,
+  TrendingUp, TrendingDown, MapPin, Navigation, Clock, CheckCircle2, RotateCcw,
 } from "lucide-react";
+import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
 import { useAuth } from "@/hooks/use-auth";
 import { StatCard } from "@/components/StatCard";
 import { supabase } from "@/integrations/supabase/client";
