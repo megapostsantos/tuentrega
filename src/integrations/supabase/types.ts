@@ -829,6 +829,7 @@ export type Database = {
       }
       entregas_pacotes: {
         Row: {
+          codigo_pacote: string | null
           created_at: string
           distancia_anterior_metros: number | null
           endereco_entrega: string | null
@@ -846,6 +847,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          codigo_pacote?: string | null
           created_at?: string
           distancia_anterior_metros?: number | null
           endereco_entrega?: string | null
@@ -863,6 +865,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          codigo_pacote?: string | null
           created_at?: string
           distancia_anterior_metros?: number | null
           endereco_entrega?: string | null

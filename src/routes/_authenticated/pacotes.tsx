@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Package, Plus, Trash2, ArrowLeft, CheckCircle2, AlertTriangle, Eye, Users, Map as MapIcon } from "lucide-react";
+import { Loader2, Package, Plus, Trash2, ArrowLeft, CheckCircle2, AlertTriangle, Eye, Users, Map as MapIcon, ScanLine } from "lucide-react";
+import { ScanOperationDialog } from "@/components/ScanOperationDialog";
 import { geocodeMultiple } from "@/lib/geocoding";
 const RouteMap = lazy(() => import("@/components/RouteMap").then((m) => ({ default: m.RouteMap })));
 import { supabase } from "@/integrations/supabase/client";
@@ -82,6 +83,7 @@ function EmpresaTms({ userId }: { userId: string }) {
   const [loadingList, setLoadingList] = useState(true);
   const [empresa, setEmpresa] = useState<EmpresaTms | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
 
   async function load() {
     setLoadingList(true);
@@ -127,14 +129,36 @@ function EmpresaTms({ userId }: { userId: string }) {
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader title="Pacotes (TMS)" description="Gerencie suas operações de entrega" />
 
-      <Button
-        size="lg"
-        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
-        onClick={() => setMode("create")}
-      >
-        <Plus className="mr-2 h-5 w-5" />
-        Iniciar nova operação
-      </Button>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button
+          size="lg"
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
+          onClick={() => setMode("create")}
+        >
+          <Plus className="mr-2 h-5 w-5" />
+          Iniciar nova operação
+        </Button>
+        <Button
+          size="lg"
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={() => setScanOpen(true)}
+        >
+          <ScanLine className="mr-2 h-5 w-5" />
+          Escanear Pacotes
+        </Button>
+      </div>
+
+      <ScanOperationDialog
+        open={scanOpen}
+        empresaId={userId}
+        onClose={() => setScanOpen(false)}
+        onCreated={(id) => {
+          setScanOpen(false);
+          load();
+          setDetailId(id);
+        }}
+      />
 
       <Card>
         <CardHeader>
