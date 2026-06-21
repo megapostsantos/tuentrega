@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CloseRouteDialog } from "@/components/CloseRouteDialog";
+import { ProofsTab } from "@/components/ProofsTab";
 
 export const Route = createFileRoute("/_authenticated/ofertas")({
   validateSearch: (s: Record<string, unknown>) => ({ close: typeof s.close === "string" ? s.close : undefined }),
@@ -815,6 +816,14 @@ function DetailsDialog({
           </DialogTitle>
         </DialogHeader>
 
+        <Tabs defaultValue="detalhes" className="w-full">
+          <TabsList className={`grid w-full ${role === "empresa" ? "grid-cols-2" : "grid-cols-1"}`}>
+            <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+            {role === "empresa" && <TabsTrigger value="provas">Provas de Entrega</TabsTrigger>}
+          </TabsList>
+          <TabsContent value="detalhes">
+
+
         <div className="space-y-4 text-sm">
           <div className="rounded-lg bg-muted/40 p-3">
             <p className="text-2xl font-bold text-primary">{fmtMoney(o.valor)}</p>
@@ -943,6 +952,16 @@ function DetailsDialog({
             </div>
           )}
         </div>
+          </TabsContent>
+          {role === "empresa" && (
+            <TabsContent value="provas">
+              <ProofsTab ofertaId={o.id} ofertaTitulo={o.titulo} />
+            </TabsContent>
+          )}
+        </Tabs>
+
+
+
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Fechar</Button>
