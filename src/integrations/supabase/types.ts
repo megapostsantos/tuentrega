@@ -830,29 +830,53 @@ export type Database = {
       entregas_pacotes: {
         Row: {
           created_at: string
+          distancia_anterior_metros: number | null
           endereco_entrega: string | null
           id: string
+          instrucoes_especiais: string | null
+          janela_fim: string | null
+          janela_inicio: string | null
+          lat: number | null
+          lng: number | null
           numero_pacote: number
           oferta_id: string
+          ordem_otimizada: number | null
           status: string
+          tempo_estimado_minutos: number | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          distancia_anterior_metros?: number | null
           endereco_entrega?: string | null
           id?: string
+          instrucoes_especiais?: string | null
+          janela_fim?: string | null
+          janela_inicio?: string | null
+          lat?: number | null
+          lng?: number | null
           numero_pacote: number
           oferta_id: string
+          ordem_otimizada?: number | null
           status?: string
+          tempo_estimado_minutos?: number | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          distancia_anterior_metros?: number | null
           endereco_entrega?: string | null
           id?: string
+          instrucoes_especiais?: string | null
+          janela_fim?: string | null
+          janela_inicio?: string | null
+          lat?: number | null
+          lng?: number | null
           numero_pacote?: number
           oferta_id?: string
+          ordem_otimizada?: number | null
           status?: string
+          tempo_estimado_minutos?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -1298,6 +1322,57 @@ export type Database = {
             columns: ["operacao_id"]
             isOneToOne: false
             referencedRelation: "operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rotas_otimizadas: {
+        Row: {
+          algoritmo: string
+          created_at: string
+          distancia_total_km: number | null
+          id: string
+          oferta_id: string
+          otimizado_em: string
+          sequencia_otimizada: Json
+          tempo_total_minutos: number | null
+          updated_at: string
+        }
+        Insert: {
+          algoritmo?: string
+          created_at?: string
+          distancia_total_km?: number | null
+          id?: string
+          oferta_id: string
+          otimizado_em?: string
+          sequencia_otimizada?: Json
+          tempo_total_minutos?: number | null
+          updated_at?: string
+        }
+        Update: {
+          algoritmo?: string
+          created_at?: string
+          distancia_total_km?: number | null
+          id?: string
+          oferta_id?: string
+          otimizado_em?: string
+          sequencia_otimizada?: Json
+          tempo_total_minutos?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rotas_otimizadas_oferta_id_fkey"
+            columns: ["oferta_id"]
+            isOneToOne: false
+            referencedRelation: "dispatcher_commissions"
+            referencedColumns: ["oferta_id"]
+          },
+          {
+            foreignKeyName: "rotas_otimizadas_oferta_id_fkey"
+            columns: ["oferta_id"]
+            isOneToOne: false
+            referencedRelation: "ofertas"
             referencedColumns: ["id"]
           },
         ]
