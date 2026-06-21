@@ -349,6 +349,27 @@ function EmpresaDashboard({ userId }: { userId?: string }) {
         <StatCard icon={Wallet} label="PIX a pagar" value={brl(stats.pixPagar)} to="/pagamentos" />
       </div>
 
+      {/* Devoluções pendentes */}
+      <Link
+        to="/devolucoes"
+        className={`block rounded-2xl border-l-4 p-4 elev-1 press-scale ${devolucoes > 0 ? "border-orange-500 bg-orange-500/5" : "border-border bg-card"}`}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${devolucoes > 0 ? "bg-orange-500/15 text-orange-600" : "bg-muted text-muted-foreground"}`}>
+              <RotateCcw className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Devoluções pendentes</p>
+              <p className="text-xs text-muted-foreground">
+                {devolucoes > 0 ? `${devolucoes} pacote(s) aguardando reagendamento` : "Nenhuma devolução pendente"}
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </Link>
+
       {/* Quick actions */}
       <div>
         <h2 className="mb-2 text-sm font-semibold text-foreground">Ações rápidas</h2>
