@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Package, Store, Wallet, User, Map, CalendarDays, Building2, Users, BarChart3, UserCog } from "lucide-react";
+import { Home, Package, Store, Wallet, User, Map, CalendarDays, Building2, Users, BarChart3, UserCog, TrendingUp } from "lucide-react";
 import type { AppRole } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +9,8 @@ const empresa: Item[] = [
   { label: "Home", to: "/dashboard", icon: Home },
   { label: "Pacotes", to: "/pacotes", icon: Package },
   { label: "Ofertas", to: "/ofertas", icon: Store },
-  { label: "Pagam.", to: "/pagamentos", icon: Wallet },
+  { label: "Pagamentos", to: "/pagamentos", icon: Wallet },
+  { label: "Financ.", to: "/financeiro", icon: TrendingUp },
   { label: "Perfil", to: "/configuracoes", icon: User },
 ];
 
@@ -47,7 +48,7 @@ export function BottomNav({ role }: { role: AppRole | null }) {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background safe-bottom">
-      <ul className="mx-auto grid h-16 max-w-2xl grid-cols-5">
+      <ul className={cn("mx-auto grid h-16 max-w-2xl", role === "empresa" ? "grid-cols-6" : "grid-cols-5")}>
         {items.map((it) => {
           const active = current === it.to || (it.to !== "/dashboard" && current.startsWith(it.to));
           return (
