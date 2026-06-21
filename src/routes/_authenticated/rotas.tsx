@@ -39,15 +39,7 @@ type Oferta = {
   quantidade_pacotes: number | null;
 };
 
-const MOTIVO_OPTIONS = [
-  { value: "could_not_deliver", label: "Cliente ausente" },
-  { value: "address_not_visited", label: "Endereço não encontrado" },
-  { value: "could_not_deliver", label: "Cliente recusou", subLabel: "recusou", key: "recusado" },
-  { value: "damaged", label: "Pacote danificado" },
-  { value: "could_not_deliver", label: "Outro", subLabel: "outro", key: "outro" },
-] as const;
-
-// Unique radio options (we map UI choices to motivo+sub_motivo for the constraint)
+// UI choices mapped to motivo + sub_motivo respecting the DB check constraint
 const RADIO_CHOICES: Array<{ key: string; label: string; motivo: string; sub?: string }> = [
   { key: "ausente", label: "Cliente ausente", motivo: "could_not_deliver", sub: "ausente" },
   { key: "endereco", label: "Endereço não encontrado", motivo: "address_not_visited" },
