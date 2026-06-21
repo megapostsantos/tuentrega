@@ -701,7 +701,12 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
   if (!op) {
     return (
       <Dialog open onOpenChange={onClose}>
-        <DialogContent><Loader2 className="h-5 w-5 animate-spin" /></DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Carregando operação...</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin" /></div>
+        </DialogContent>
       </Dialog>
     );
   }
@@ -712,7 +717,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Operação {new Date(op.data_operacao).toLocaleDateString("pt-BR")}</DialogTitle>
         </DialogHeader>
