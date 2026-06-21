@@ -7,6 +7,7 @@ import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { ActiveRouteBanner } from "@/components/ActiveRouteBanner";
 import { TopAppBar } from "@/components/TopAppBar";
 import { BottomNav } from "@/components/BottomNav";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -34,6 +35,7 @@ function AuthenticatedLayout() {
       <ImpersonationBanner />
       <ActiveRouteBanner />
       <TopAppBar />
+      <OfflineBanner />
       <main className="flex-1 pb-24">
         <div className="mx-auto w-full max-w-2xl">
           <AnimatePresence mode="wait" initial={false}>
