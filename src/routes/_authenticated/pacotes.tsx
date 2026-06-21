@@ -23,7 +23,6 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { OptimizeRoutesPanel } from "@/components/OptimizeRoutesPanel";
 
 export const Route = createFileRoute("/_authenticated/pacotes")({
   component: PacotesPage,
