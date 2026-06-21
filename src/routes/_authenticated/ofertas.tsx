@@ -24,6 +24,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CloseRouteDialog } from "@/components/CloseRouteDialog";
 import { ProofsTab } from "@/components/ProofsTab";
+import { LiveTrackingMap } from "@/components/LiveTrackingMap";
 
 export const Route = createFileRoute("/_authenticated/ofertas")({
   validateSearch: (s: Record<string, unknown>) => ({ close: typeof s.close === "string" ? s.close : undefined }),
@@ -732,6 +733,7 @@ function DetailsDialog({
     pix_chave: string | null; pix_tipo: string | null;
   } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [tracking, setTracking] = useState(false);
 
   useEffect(() => {
     if (role === "empresa" && o.entregador_id) {
