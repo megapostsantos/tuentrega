@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Package, Truck, Wallet, BarChart3, Building2, CalendarDays, Store, Star, Plus, ChevronRight, Users, UserCog,
+  TrendingUp, TrendingDown, MapPin, Navigation, Clock, CheckCircle2, RotateCcw,
 } from "lucide-react";
+import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
 import { useAuth } from "@/hooks/use-auth";
 import { StatCard } from "@/components/StatCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -389,37 +392,69 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
   const [stats, setStats] = useState<EntStats>({ disponiveis: 0, minhasHoje: 0, emAndamento: 0, aReceber: 0 });
   const [score, setScore] = useState<{ score: number; nivel: string } | null>(null);
   const [hist, setHist] = useState<any[]>([]);
-  const [active, setActive] = useState<{ id: string; titulo: string; updated_at: string } | null>(null);
+  const [active, setActive] = useState<{ id: string; titulo: string; updated_at: string; quantidade_pacotes: number; pacotes_entregues: number } | null>(null);
+  const [nextStops, setNextStops] = useState<any[]>([]);
   const [todayEarnings, setTodayEarnings] = useState(0);
+  const [weekly, setWeekly] = useState({ entregues: 0, devolvidas: 0, ganhos: 0, tempoMedio: 0 });
 
   useEffect(() => {
     if (!userId) return;
     const sb = supabase as any;
     const today = startOfTodayISO();
+    const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
+    const fourWeeksAgo = new Date(Date.now() - 28 * 86400_000).toISOString();
 
     async function load() {
-      const [disp, hoje, and, pend, sc, hi, act, comp] = await Promise.all([
+      const [disp, hoje, and, pend, sc, hi, act, comp, weekOffers, ocorrencias] = await Promise.all([
         sb.from("ofertas").select("id", { count: "exact", head: true }).eq("status", "open"),
         sb.from("ofertas").select("id", { count: "exact", head: true }).eq("entregador_id", userId).gte("updated_at", today),
         sb.from("ofertas").select("id", { count: "exact", head: true }).eq("entregador_id", userId).eq("status", "in_progress"),
         sb.from("entregas").select("valor").eq("entregador_id", userId).neq("status", "pago"),
         sb.from("confiabilidade_score").select("score, nivel").eq("entregador_id", userId).maybeSingle(),
-        sb.from("confiabilidade_historico").select("*").eq("entregador_id", userId).order("created_at", { ascending: false }).limit(5),
-        sb.from("ofertas").select("id, titulo, updated_at").eq("entregador_id", userId).eq("status", "in_progress").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+        sb.from("confiabilidade_historico").select("*").eq("entregador_id", userId).gte("created_at", fourWeeksAgo).order("created_at", { ascending: true }),
+        sb.from("ofertas").select("id, titulo, updated_at, quantidade_pacotes, pacotes_entregues").eq("entregador_id", userId).eq("status", "in_progress").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
         sb.from("ofertas").select("valor").eq("entregador_id", userId).eq("status", "completed").gte("closed_at", today),
+        sb.from("ofertas").select("valor, pacotes_entregues, pacotes_nao_entregues, created_at, closed_at").eq("entregador_id", userId).eq("status", "completed").gte("closed_at", weekAgo),
+        sb.from("entregas_ocorrencias").select("id").eq("entregador_id", userId).gte("created_at", weekAgo),
       ]);
       const ar = (pend.data ?? []).reduce((s: number, r: any) => s + Number(r.valor || 0), 0);
       const earnings = (comp.data ?? []).reduce((s: number, r: any) => s + Number(r.valor || 0), 0);
-      setStats({
-        disponiveis: disp.count ?? 0,
-        minhasHoje: hoje.count ?? 0,
-        emAndamento: and.count ?? 0,
-        aReceber: ar,
-      });
+
+      // Weekly performance
+      const wo = weekOffers.data ?? [];
+      const wEntregues = wo.reduce((s: number, o: any) => s + Number(o.pacotes_entregues || 0), 0);
+      const wDevolvidas = (ocorrencias.data ?? []).length;
+      const wGanhos = wo.reduce((s: number, o: any) => s + Number(o.valor || 0), 0);
+      let totalMin = 0, totalStops = 0;
+      for (const o of wo) {
+        if (o.closed_at && o.created_at && o.pacotes_entregues) {
+          const min = (new Date(o.closed_at).getTime() - new Date(o.created_at).getTime()) / 60000;
+          if (min > 0 && min < 24 * 60) { totalMin += min; totalStops += o.pacotes_entregues; }
+        }
+      }
+      const tempoMedio = totalStops ? Math.round(totalMin / totalStops) : 0;
+
+      setStats({ disponiveis: disp.count ?? 0, minhasHoje: hoje.count ?? 0, emAndamento: and.count ?? 0, aReceber: ar });
       setScore(sc.data ?? { score: 100, nivel: "gold" });
       setHist(hi.data ?? []);
       setActive(act.data ?? null);
       setTodayEarnings(earnings);
+      setWeekly({ entregues: wEntregues, devolvidas: wDevolvidas, ganhos: wGanhos, tempoMedio });
+
+      // Next stops
+      if (act.data?.id) {
+        const { data: pacotes } = await sb.from("entregas_pacotes")
+          .select("id, numero_pacote, endereco_entrega, status, ordem_otimizada")
+          .eq("oferta_id", act.data.id)
+          .neq("status", "entregue")
+          .neq("status", "delivered")
+          .order("ordem_otimizada", { ascending: true, nullsFirst: false })
+          .order("numero_pacote", { ascending: true })
+          .limit(3);
+        setNextStops(pacotes ?? []);
+      } else {
+        setNextStops([]);
+      }
     }
 
     load();
@@ -427,6 +462,7 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "ofertas" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "entregas", filter: `entregador_id=eq.${userId}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "confiabilidade_score", filter: `entregador_id=eq.${userId}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "entregas_pacotes" }, load)
       .subscribe();
 
     return () => { sb.removeChannel(ch); };
@@ -434,24 +470,47 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
 
   const lvl = LEVELS[score?.nivel || "gold"] || LEVELS.gold;
 
+  // 4-week score chart: walk backward from current
+  const chartData = useMemo(() => {
+    const now = Date.now();
+    const current = score?.score ?? 100;
+    // sum of points at or after each week boundary going back
+    const buckets = [3, 2, 1, 0].map((w) => {
+      const end = now - w * 7 * 86400_000;
+      // score at "end" = current - sum(pontos for events with created_at > end)
+      const after = hist.filter((h) => new Date(h.created_at).getTime() > end)
+        .reduce((s, h) => s + Number(h.pontos || 0), 0);
+      const label = w === 0 ? "Hoje" : `−${w}sem`;
+      return { semana: label, score: current - after };
+    });
+    return buckets;
+  }, [hist, score]);
+
+  const lastEvent = hist.length ? hist[hist.length - 1] : null;
+  const activeProgress = active ? Math.round(((active.pacotes_entregues || 0) / Math.max(1, active.quantidade_pacotes || 1)) * 100) : 0;
+
   return (
     <div className="space-y-5 p-4">
-      {/* Active route */}
+      {/* Rota de hoje */}
       {active && (
-        <Link
-          to="/ofertas"
-          search={{ close: active.id } as never}
-          className="block rounded-2xl bg-gradient-to-br from-primary to-primary-glow p-5 text-primary-foreground elev-3 press-scale"
-        >
-          <p className="text-xs font-semibold uppercase tracking-wide opacity-90">🚚 Rota ativa agora</p>
-          <p className="mt-2 text-xl font-bold">{active.titulo}</p>
-          <p className="text-sm opacity-90">
-            Iniciada às {new Date(active.updated_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-          </p>
-          <span className="mt-3 inline-flex items-center gap-1 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-primary">
-            Fechar rota <ChevronRight className="h-4 w-4" />
-          </span>
-        </Link>
+        <div className="rounded-2xl border border-border bg-card p-5 elev-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">🚚 Rota de hoje</p>
+              <p className="mt-1 text-base font-bold">{active.titulo}</p>
+            </div>
+            <span className="text-2xl font-bold text-primary">
+              {active.pacotes_entregues ?? 0}<span className="text-base text-muted-foreground">/{active.quantidade_pacotes ?? 0}</span>
+            </span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-gradient-to-r from-primary to-primary-glow transition-all" style={{ width: `${activeProgress}%` }} />
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">{activeProgress}% concluído</p>
+          <Link to="/rotas" className="mt-3 inline-flex items-center gap-1 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground elev-1 press-scale">
+            Continuar rota <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
       )}
 
       {/* Earnings today */}
@@ -469,7 +528,61 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
         <StatCard icon={Wallet} label="A receber" value={brl(stats.aReceber)} to="/pagamentos" />
       </div>
 
-      {/* Reliability */}
+      {/* Próximas paradas */}
+      {active && nextStops.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-5 elev-1">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Próximas paradas</h3>
+            <Link to="/rotas" className="text-xs font-semibold text-primary">Ver todas →</Link>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {nextStops.map((p, i) => (
+              <li key={p.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">Pacote #{p.numero_pacote}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">{p.endereco_entrega || "Sem endereço"}</p>
+                </div>
+                {p.endereco_entrega && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco_entrega)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground press-scale"
+                  >
+                    <Navigation className="h-3.5 w-3.5" /> Navegar
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Desempenho da semana */}
+      <div className="rounded-2xl border border-border bg-card p-5 elev-1">
+        <h3 className="text-sm font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> Desempenho da semana</h3>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-muted/40 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><CheckCircle2 className="h-3 w-3 text-success" /> Entregues</div>
+            <p className="mt-1 text-xl font-bold text-success">{weekly.entregues}</p>
+          </div>
+          <div className="rounded-xl bg-muted/40 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><RotateCcw className="h-3 w-3 text-destructive" /> Devolvidas</div>
+            <p className="mt-1 text-xl font-bold text-destructive">{weekly.devolvidas}</p>
+          </div>
+          <div className="rounded-xl bg-muted/40 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><Wallet className="h-3 w-3" /> Ganhos</div>
+            <p className="mt-1 text-xl font-bold">{brl(weekly.ganhos)}</p>
+          </div>
+          <div className="rounded-xl bg-muted/40 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><Clock className="h-3 w-3" /> Tempo/parada</div>
+            <p className="mt-1 text-xl font-bold">{weekly.tempoMedio ? `${weekly.tempoMedio}min` : "—"}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Reliability with chart */}
       <div className="rounded-2xl border border-border bg-card p-5 elev-1">
         <div className="flex items-center gap-2">
           <Star className="h-4 w-4 text-primary" />
@@ -481,22 +594,34 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
             {"★".repeat(lvl.stars)}{"☆".repeat(5 - lvl.stars)} {lvl.label}
           </Badge>
         </div>
-        {hist.length > 0 && (
-          <div className="mt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Últimas mudanças</p>
-            <ul className="mt-2 space-y-1.5 text-sm">
-              {hist.map((h) => (
-                <li key={h.id} className="flex justify-between gap-2">
-                  <span className="truncate text-muted-foreground">{h.descricao || h.evento}</span>
-                  <span className={`shrink-0 font-semibold ${h.pontos >= 0 ? "text-success" : "text-destructive"}`}>
-                    {h.pontos > 0 ? "+" : ""}{h.pontos}
-                  </span>
-                </li>
-              ))}
-            </ul>
+
+        <div className="mt-4 h-32">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <XAxis dataKey="semana" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} domain={["dataMin - 5", "dataMax + 5"]} />
+              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+              <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--primary))" }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {lastEvent && (
+          <div className="mt-2 flex items-center gap-2 rounded-xl bg-muted/40 p-3">
+            {lastEvent.pontos >= 0
+              ? <TrendingUp className="h-4 w-4 shrink-0 text-success" />
+              : <TrendingDown className="h-4 w-4 shrink-0 text-destructive" />}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold">{lastEvent.descricao || lastEvent.evento}</p>
+              <p className="text-[10px] text-muted-foreground">{new Date(lastEvent.created_at).toLocaleDateString("pt-BR")}</p>
+            </div>
+            <span className={`shrink-0 text-sm font-bold ${lastEvent.pontos >= 0 ? "text-success" : "text-destructive"}`}>
+              {lastEvent.pontos > 0 ? "+" : ""}{lastEvent.pontos}
+            </span>
           </div>
         )}
       </div>
     </div>
   );
 }
+
