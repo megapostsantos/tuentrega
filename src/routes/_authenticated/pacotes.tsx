@@ -23,6 +23,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { OptimizeRoutesPanel } from "@/components/OptimizeRoutesPanel";
 
 export const Route = createFileRoute("/_authenticated/pacotes")({
   component: PacotesPage,
@@ -760,6 +761,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
             {showMargem && <div>Margem: <strong>R$ {margem.toFixed(2)}</strong></div>}
           </div>
           <AllocationPanel operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={rotas} />
+          <OptimizeRoutesPanel rotas={rotas.map((r: any) => ({ id: r.id, nome: r.nome, oferta_id: r.oferta_id }))} />
         </div>
       </DialogContent>
     </Dialog>
