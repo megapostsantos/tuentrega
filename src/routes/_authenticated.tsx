@@ -7,6 +7,7 @@ import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { ActiveRouteBanner } from "@/components/ActiveRouteBanner";
 import { TopAppBar } from "@/components/TopAppBar";
 import { BottomNav } from "@/components/BottomNav";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
