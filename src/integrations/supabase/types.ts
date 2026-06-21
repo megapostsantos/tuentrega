@@ -1052,6 +1052,47 @@ export type Database = {
           },
         ]
       }
+      integracoes_ml: {
+        Row: {
+          access_token: string
+          created_at: string
+          empresa_id: string
+          expires_at: string
+          id: string
+          ml_user_id: string
+          refresh_token: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          empresa_id: string
+          expires_at: string
+          id?: string
+          ml_user_id: string
+          refresh_token: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          empresa_id?: string
+          expires_at?: string
+          id?: string
+          ml_user_id?: string
+          refresh_token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integracoes_ml_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notificacoes_destinatario: {
         Row: {
           created_at: string
