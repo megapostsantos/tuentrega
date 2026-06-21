@@ -884,6 +884,9 @@ export type Database = {
           assinatura_url: string | null
           codigo_pacote: string | null
           created_at: string
+          destinatario_email: string | null
+          destinatario_nome: string | null
+          destinatario_telefone: string | null
           distancia_anterior_metros: number | null
           endereco_entrega: string | null
           entregue_em: string | null
@@ -903,12 +906,16 @@ export type Database = {
           status: string
           tempo_estimado_minutos: number | null
           tentativas: number
+          token_rastreamento: string | null
           updated_at: string
         }
         Insert: {
           assinatura_url?: string | null
           codigo_pacote?: string | null
           created_at?: string
+          destinatario_email?: string | null
+          destinatario_nome?: string | null
+          destinatario_telefone?: string | null
           distancia_anterior_metros?: number | null
           endereco_entrega?: string | null
           entregue_em?: string | null
@@ -928,12 +935,16 @@ export type Database = {
           status?: string
           tempo_estimado_minutos?: number | null
           tentativas?: number
+          token_rastreamento?: string | null
           updated_at?: string
         }
         Update: {
           assinatura_url?: string | null
           codigo_pacote?: string | null
           created_at?: string
+          destinatario_email?: string | null
+          destinatario_nome?: string | null
+          destinatario_telefone?: string | null
           distancia_anterior_metros?: number | null
           endereco_entrega?: string | null
           entregue_em?: string | null
@@ -953,6 +964,7 @@ export type Database = {
           status?: string
           tempo_estimado_minutos?: number | null
           tentativas?: number
+          token_rastreamento?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -992,6 +1004,47 @@ export type Database = {
           total_recebido?: number
         }
         Relationships: []
+      }
+      notificacoes_destinatario: {
+        Row: {
+          created_at: string
+          enviado_em: string | null
+          id: string
+          mensagem: string | null
+          pacote_id: string
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enviado_em?: string | null
+          id?: string
+          mensagem?: string | null
+          pacote_id: string
+          status?: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enviado_em?: string | null
+          id?: string
+          mensagem?: string | null
+          pacote_id?: string
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificacoes_destinatario_pacote_id_fkey"
+            columns: ["pacote_id"]
+            isOneToOne: false
+            referencedRelation: "entregas_pacotes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notificacoes_whatsapp: {
         Row: {
