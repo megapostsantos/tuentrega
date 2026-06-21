@@ -83,6 +83,7 @@ function EmpresaTms({ userId }: { userId: string }) {
   const [loadingList, setLoadingList] = useState(true);
   const [empresa, setEmpresa] = useState<EmpresaTms | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
 
   async function load() {
     setLoadingList(true);
