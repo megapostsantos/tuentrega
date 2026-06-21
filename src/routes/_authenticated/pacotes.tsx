@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Package, Plus, Trash2, ArrowLeft, CheckCircle2, AlertTriangle, Eye, Users } from "lucide-react";
+import { Loader2, Package, Plus, Trash2, ArrowLeft, CheckCircle2, AlertTriangle, Eye, Users, Map as MapIcon } from "lucide-react";
+import { geocodeMultiple } from "@/lib/geocoding";
+const RouteMap = lazy(() => import("@/components/RouteMap").then((m) => ({ default: m.RouteMap })));
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -760,6 +762,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
             {showMargem && <div>Margem: <strong>R$ {margem.toFixed(2)}</strong></div>}
           </div>
           <AllocationPanel operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={rotas} />
+          <RouteMapButton ofertaIds={rotas.map((r: any) => r.oferta_id).filter(Boolean)} />
         </div>
       </DialogContent>
     </Dialog>
@@ -1159,3 +1162,108 @@ function AllocationPanel({
   );
 }
 
+
+/* ============ Route map button + dialog ============ */
+
+function RouteMapButton({ ofertaIds }: { ofertaIds: string[] }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [stops, setStops] = useState<Array<{ id: string; lat: number; lng: number; label: string; status?: string }>>([]);
+  const [skipped, setSkipped] = useState(0);
+
+  async function handleOpen() {
+    if (ofertaIds.length === 0) {
+      toast.error("Nenhuma rota publicada nesta operação.");
+      return;
+    }
+    setOpen(true);
+    setLoading(true);
+    setStops([]);
+    setSkipped(0);
+    try {
+      const { data: pacotes } = await supabase
+        .from("entregas_pacotes")
+        .select("id, endereco_entrega, lat, lng, status, numero_pacote, ordem_otimizada")
+        .in("oferta_id", ofertaIds)
+        .order("numero_pacote");
+
+      const all = (pacotes ?? []).filter((p: any) => p.endereco_entrega);
+      const limited = all.slice(0, 20);
+      const skippedCount = Math.max(0, all.length - limited.length);
+
+      // Use cached lat/lng when present, otherwise geocode
+      const needGeo = limited.filter((p: any) => p.lat == null || p.lng == null);
+      const geoResults = needGeo.length
+        ? await geocodeMultiple(needGeo.map((p: any) => p.endereco_entrega))
+        : [];
+      const geoMap = new Map<string, { lat: number; lng: number }>();
+      needGeo.forEach((p: any, i: number) => {
+        const r = geoResults[i];
+        if (r) geoMap.set(p.id, { lat: r.lat, lng: r.lng });
+      });
+
+      const result = limited
+        .map((p: any) => {
+          const coords =
+            p.lat != null && p.lng != null
+              ? { lat: Number(p.lat), lng: Number(p.lng) }
+              : geoMap.get(p.id);
+          if (!coords) return null;
+          return {
+            id: p.id,
+            lat: coords.lat,
+            lng: coords.lng,
+            label: p.endereco_entrega as string,
+            status: p.status as string | undefined,
+          };
+        })
+        .filter(Boolean) as Array<{ id: string; lat: number; lng: number; label: string; status?: string }>;
+
+      // Respect optimized order if all have it
+      const orderMap = new Map(limited.map((p: any) => [p.id, p.ordem_otimizada ?? p.numero_pacote]));
+      result.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+
+      setStops(result);
+      setSkipped(skippedCount + (limited.length - result.length));
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao carregar mapa.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <Button variant="outline" onClick={handleOpen} className="w-full">
+        <MapIcon className="mr-2 h-4 w-4" /> Ver rota no mapa
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Rota no mapa</DialogTitle>
+          </DialogHeader>
+          {loading ? (
+            <div className="flex h-72 items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="ml-2 text-sm text-muted-foreground">Geocodificando endereços...</span>
+            </div>
+          ) : stops.length === 0 ? (
+            <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+              Nenhum endereço pôde ser geocodificado.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground">
+                Mostrando {stops.length} paradas
+                {skipped > 0 && ` (${skipped} ignoradas — limite de 20 por vez)`}
+              </div>
+              <Suspense fallback={<div className="flex h-72 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>}>
+                <RouteMap stops={stops} height={420} />
+              </Suspense>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
