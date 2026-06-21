@@ -816,13 +816,13 @@ function DetailsDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {role === "empresa" ? (
-          <Tabs defaultValue="detalhes" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
-              <TabsTrigger value="provas">Provas de Entrega</TabsTrigger>
-            </TabsList>
-            <TabsContent value="detalhes">
+        <Tabs defaultValue="detalhes" className="w-full">
+          <TabsList className={`grid w-full ${role === "empresa" ? "grid-cols-2" : "grid-cols-1"}`}>
+            <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+            {role === "empresa" && <TabsTrigger value="provas">Provas de Entrega</TabsTrigger>}
+          </TabsList>
+          <TabsContent value="detalhes">
+
 
         <div className="space-y-4 text-sm">
           <div className="rounded-lg bg-muted/40 p-3">
