@@ -48,7 +48,7 @@ export function BottomNav({ role }: { role: AppRole | null }) {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background safe-bottom">
-      <ul className="mx-auto grid h-16 max-w-2xl grid-cols-5">
+      <ul className={cn("mx-auto grid h-16 max-w-2xl", role === "empresa" ? "grid-cols-6" : "grid-cols-5")}>
         {items.map((it) => {
           const active = current === it.to || (it.to !== "/dashboard" && current.startsWith(it.to));
           return (
