@@ -5,6 +5,7 @@ import {
   Loader2, MapPin, CheckCircle2, AlertTriangle, Camera, Flag,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyDestinatarioPacote } from "@/lib/whatsapp-notify";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyModule } from "@/components/EmptyModule";
@@ -327,6 +328,7 @@ function ProblemSheet({
         .eq("id", pacote.id);
       if (upErr) throw upErr;
 
+      notifyDestinatarioPacote(pacote.id, "tentativa_falha").catch(() => {});
       toast.success("Problema registrado.");
       onSaved(pacote);
     } catch (e: any) {

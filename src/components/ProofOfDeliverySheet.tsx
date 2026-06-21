@@ -3,6 +3,7 @@ import SignatureCanvas from "react-signature-canvas";
 import { Loader2, Camera, Eraser, CheckCircle2, ChevronLeft, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyDestinatarioPacote } from "@/lib/whatsapp-notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -125,6 +126,7 @@ export function ProofOfDeliverySheet({ open, onClose, pacote, entregadorId, onCo
         .eq("id", pacote.id);
       if (error) throw error;
 
+      notifyDestinatarioPacote(pacote.id, "entregue").catch(() => {});
       toast.success(`Pacote #${pacote.numero_pacote} entregue.`);
       onConfirmed(pacote.id);
     } catch (e: any) {

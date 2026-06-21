@@ -1151,7 +1151,11 @@ function AllocationPanel({
   async function startOperation() {
     const sb = supabase as any;
     const ofertaIds = rotas.map((r) => r.oferta_id).filter(Boolean);
-    if (ofertaIds.length) await sb.from("ofertas").update({ status: "in_progress" }).in("id", ofertaIds);
+    if (ofertaIds.length) {
+      await sb.from("ofertas").update({ status: "in_progress" }).in("id", ofertaIds);
+      const { notifyDestinatarioOferta } = await import("@/lib/whatsapp-notify");
+      ofertaIds.forEach((id: string) => { notifyDestinatarioOferta(id).catch(() => {}); });
+    }
     await sb.from("alocacoes").update({ status: "started" }).eq("operacao_id", operacaoId);
     toast.success("Operação iniciada!");
     load();
