@@ -1005,6 +1005,53 @@ export type Database = {
         }
         Relationships: []
       }
+      financeiro_lancamentos: {
+        Row: {
+          categoria: string
+          comprovante_url: string | null
+          created_at: string
+          data_lancamento: string
+          descricao: string | null
+          empresa_id: string
+          id: string
+          tipo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          comprovante_url?: string | null
+          created_at?: string
+          data_lancamento?: string
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          tipo: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          comprovante_url?: string | null
+          created_at?: string
+          data_lancamento?: string
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_lancamentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notificacoes_destinatario: {
         Row: {
           created_at: string
