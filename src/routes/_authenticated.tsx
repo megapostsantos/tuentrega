@@ -35,6 +35,7 @@ function AuthenticatedLayout() {
       <ImpersonationBanner />
       <ActiveRouteBanner />
       <TopAppBar />
+      <OfflineBanner />
       <main className="flex-1 pb-24">
         <div className="mx-auto w-full max-w-2xl">
           <AnimatePresence mode="wait" initial={false}>
