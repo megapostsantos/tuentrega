@@ -168,9 +168,14 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
         title="Financeiro"
         description="Controle suas entradas e saídas"
         action={
-          <Button onClick={() => { setEditing(null); setOpenDialog(true); }}>
-            <Plus className="h-4 w-4 mr-2" /> Novo lançamento
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={lancamentos.length === 0}>
+              <Download className="h-4 w-4 mr-2" /> Exportar
+            </Button>
+            <Button onClick={() => { setEditing(null); setOpenDialog(true); }}>
+              <Plus className="h-4 w-4 mr-2" /> Novo lançamento
+            </Button>
+          </div>
         }
       />
 
