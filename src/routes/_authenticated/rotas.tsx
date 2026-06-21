@@ -200,6 +200,17 @@ function RotasPage() {
           setProblemPacote(null);
         }}
       />
+
+      <ProofOfDeliverySheet
+        open={!!podPacote}
+        onClose={() => setPodPacote(null)}
+        pacote={podPacote}
+        entregadorId={user?.id}
+        onConfirmed={(id) => {
+          setPacotes((prev) => prev.map((x) => x.id === id ? { ...x, status: "delivered" } : x));
+          setPodPacote(null);
+        }}
+      />
     </div>
   );
 }
