@@ -612,6 +612,58 @@ export type Database = {
           },
         ]
       }
+      entregador_localizacao: {
+        Row: {
+          entregador_id: string
+          id: string
+          lat: number
+          lng: number
+          oferta_id: string | null
+          registrado_em: string
+          velocidade_kmh: number | null
+        }
+        Insert: {
+          entregador_id: string
+          id?: string
+          lat: number
+          lng: number
+          oferta_id?: string | null
+          registrado_em?: string
+          velocidade_kmh?: number | null
+        }
+        Update: {
+          entregador_id?: string
+          id?: string
+          lat?: number
+          lng?: number
+          oferta_id?: string | null
+          registrado_em?: string
+          velocidade_kmh?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregador_localizacao_entregador_id_fkey"
+            columns: ["entregador_id"]
+            isOneToOne: false
+            referencedRelation: "entregadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregador_localizacao_oferta_id_fkey"
+            columns: ["oferta_id"]
+            isOneToOne: false
+            referencedRelation: "dispatcher_commissions"
+            referencedColumns: ["oferta_id"]
+          },
+          {
+            foreignKeyName: "entregador_localizacao_oferta_id_fkey"
+            columns: ["oferta_id"]
+            isOneToOne: false
+            referencedRelation: "ofertas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entregadores: {
         Row: {
           bairro: string | null
@@ -1442,6 +1494,40 @@ export type Database = {
           valor_membro: number | null
         }
         Relationships: []
+      }
+      entregador_localizacao_atual: {
+        Row: {
+          entregador_id: string | null
+          id: string | null
+          lat: number | null
+          lng: number | null
+          oferta_id: string | null
+          registrado_em: string | null
+          velocidade_kmh: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregador_localizacao_entregador_id_fkey"
+            columns: ["entregador_id"]
+            isOneToOne: false
+            referencedRelation: "entregadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregador_localizacao_oferta_id_fkey"
+            columns: ["oferta_id"]
+            isOneToOne: false
+            referencedRelation: "dispatcher_commissions"
+            referencedColumns: ["oferta_id"]
+          },
+          {
+            foreignKeyName: "entregador_localizacao_oferta_id_fkey"
+            columns: ["oferta_id"]
+            isOneToOne: false
+            referencedRelation: "ofertas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
