@@ -952,6 +952,17 @@ function DetailsDialog({
             </div>
           )}
         </div>
+            </TabsContent>
+            <TabsContent value="provas">
+              <ProofsTab ofertaId={o.id} ofertaTitulo={o.titulo} />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="space-y-4 text-sm">
+            {/* entregador view kept above; this branch is unused — empresa wraps with Tabs */}
+          </div>
+        )}
+
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Fechar</Button>
