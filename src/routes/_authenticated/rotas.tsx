@@ -58,6 +58,7 @@ function RotasPage() {
   const [pacotes, setPacotes] = useState<Pacote[]>([]);
   const [problemPacote, setProblemPacote] = useState<Pacote | null>(null);
   const [podPacote, setPodPacote] = useState<Pacote | null>(null);
+  const trackerState = useLocationTracker(oferta?.id ?? null);
 
   async function load() {
     if (!user) return;
