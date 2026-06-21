@@ -113,3 +113,86 @@ export async function notifyWhatsApp(args: NotifyArgs) {
 export async function notifyWhatsAppBatch(items: NotifyArgs[]) {
   await Promise.all(items.map(notifyWhatsApp));
 }
+
+/* ============================================================
+ * Destinatário (recipient) WhatsApp notifications
+ * ============================================================ */
+
+export type DestinatarioWaTipo = "saiu_para_entrega" | "entregue" | "tentativa_falha";
+
+export const WA_DEST_TEMPLATES = {
+  saiu_para_entrega: (p: { nome: string; numero: number | string; link: string }) =>
+    `Olá ${p.nome}! Seu pedido #${p.numero} saiu para entrega.\nAcompanhe: ${p.link}`,
+  entregue: (p: { nome: string; numero: number | string; horario: string; recebedor: string }) =>
+    `✅ ${p.nome}, seu pedido #${p.numero} foi entregue às ${p.horario}.\nRecebedor: ${p.recebedor}`,
+  tentativa_falha: (p: { nome: string; numero: number | string; motivo: string }) =>
+    `⚠️ ${p.nome}, não conseguimos entregar seu pedido #${p.numero}.\nMotivo: ${p.motivo}. Entraremos em contato.`,
+};
+
+async function logDestNotification(pacoteId: string, tipo: DestinatarioWaTipo, mensagem: string, sent: boolean) {
+  const sb = supabase as any;
+  const { error } = await sb.from("notificacoes_destinatario").insert({
+    pacote_id: pacoteId,
+    tipo,
+    mensagem,
+    enviado_em: sent ? new Date().toISOString() : null,
+    status: sent ? "enviado" : "pendente",
+  });
+  if (error) console.warn("[WA dest] log failed:", error.message);
+}
+
+/** Send a single destinatário notification for a specific package. */
+export async function notifyDestinatarioPacote(pacoteId: string, tipo: DestinatarioWaTipo) {
+  const sb = supabase as any;
+  const { data: p, error } = await sb
+    .from("entregas_pacotes")
+    .select(
+      "id, numero_pacote, destinatario_nome, destinatario_telefone, token_rastreamento, nome_recebedor, entregue_em, motivo_nao_entrega"
+    )
+    .eq("id", pacoteId)
+    .maybeSingle();
+  if (error || !p) return;
+  if (!p.destinatario_telefone) return;
+
+  const nome = (p.destinatario_nome || "cliente").split(" ")[0];
+  let mensagem = "";
+  if (tipo === "saiu_para_entrega") {
+    const link = `${APP_BASE}/rastrear/${p.token_rastreamento}`;
+    mensagem = WA_DEST_TEMPLATES.saiu_para_entrega({ nome, numero: p.numero_pacote, link });
+  } else if (tipo === "entregue") {
+    const horario = p.entregue_em
+      ? new Date(p.entregue_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+      : new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    mensagem = WA_DEST_TEMPLATES.entregue({
+      nome,
+      numero: p.numero_pacote,
+      horario,
+      recebedor: p.nome_recebedor || "—",
+    });
+  } else {
+    mensagem = WA_DEST_TEMPLATES.tentativa_falha({
+      nome,
+      numero: p.numero_pacote,
+      motivo: p.motivo_nao_entrega || "endereço não localizado",
+    });
+  }
+
+  if (import.meta.env.DEV) {
+    console.info("[WA dest]", tipo, "→", p.destinatario_telefone, "\n" + mensagem);
+  }
+  await logDestNotification(p.id, tipo, mensagem, true);
+}
+
+/** Send "saiu para entrega" to every package of an oferta that has a phone. */
+export async function notifyDestinatarioOferta(ofertaId: string) {
+  const sb = supabase as any;
+  const { data: pacotes } = await sb
+    .from("entregas_pacotes")
+    .select("id")
+    .eq("oferta_id", ofertaId)
+    .not("destinatario_telefone", "is", null);
+  if (!pacotes?.length) return;
+  await Promise.all(
+    pacotes.map((p: { id: string }) => notifyDestinatarioPacote(p.id, "saiu_para_entrega")),
+  );
+}
