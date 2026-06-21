@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Package, Store, Wallet, User, Map, CalendarDays, Building2, Users, BarChart3, UserCog } from "lucide-react";
+import { Home, Package, Store, Wallet, User, Map, CalendarDays, Building2, Users, BarChart3, UserCog, TrendingUp } from "lucide-react";
 import type { AppRole } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
