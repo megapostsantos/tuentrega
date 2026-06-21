@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
+import { exportToExcel } from "@/lib/export";
 import {
   Wallet, CheckCircle2, Clock, FileText, Loader2, Copy, ChevronDown, ChevronUp,
   FileDown, FileSpreadsheet, Search, AlertTriangle, MessageSquare, TrendingUp,
