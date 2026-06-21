@@ -18,6 +18,8 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from "@/components/ui/sheet";
 import { ProofOfDeliverySheet } from "@/components/ProofOfDeliverySheet";
+import { useLocationTracker } from "@/hooks/use-location-tracker";
+import { LocationIndicator } from "@/components/LocationIndicator";
 
 export const Route = createFileRoute("/_authenticated/rotas")({
   component: RotasPage,
