@@ -681,14 +681,28 @@ function CreateOperation({
               <div>Data: <strong>{new Date(dataOperacao).toLocaleDateString("pt-BR")}</strong></div>
               <div>Total pacotes: <strong>{totalPacotes}</strong></div>
               <div>Total paradas: <strong>{totalParadas}</strong></div>
-              <div>Valor por pacote: <strong>R$ {valorPorPacote.toFixed(2)}</strong></div>
               <div>Rotas: <strong>{rotas.length}</strong></div>
             </div>
 
+            <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-[1fr_auto] sm:items-end">
+              <Field label="Valor por pacote — R$ (aplicado a todas as rotas)">
+                <Input
+                  type="number" step="0.01" min={0}
+                  value={valorPorPacote || ""}
+                  onChange={(e) => setValorPorPacote(Number(e.target.value) || 0)}
+                  disabled={personalizarPorRota}
+                />
+              </Field>
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={personalizarPorRota} onCheckedChange={setPersonalizarPorRota} />
+                Personalizar por rota
+              </label>
+            </div>
+
             <div className="space-y-2">
-              <div className="text-sm font-medium">Rotas (clique para editar)</div>
+              <div className="text-sm font-medium">Rotas</div>
               {rotas.map((r, i) => (
-                <div key={i} className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_100px_100px_120px] sm:items-end">
+                <div key={i} className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_90px_90px_130px_130px] sm:items-end">
                   <Field label="Nome">
                     <Input value={r.nome} onChange={(e) => updateRota(i, { nome: e.target.value })} />
                   </Field>
@@ -698,7 +712,15 @@ function CreateOperation({
                   <Field label="Paradas">
                     <Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => updateRota(i, { quantidade_paradas: Number(e.target.value) || 0 })} />
                   </Field>
-                  <Field label="Valor">
+                  <Field label="Valor por pacote R$">
+                    <Input
+                      type="number" step="0.01" min={0}
+                      value={personalizarPorRota ? (r.valor_por_pacote ?? valorPorPacote) : valorPorPacote}
+                      disabled={!personalizarPorRota}
+                      onChange={(e) => updateRota(i, { valor_por_pacote: Number(e.target.value) || 0 })}
+                    />
+                  </Field>
+                  <Field label="Total da rota">
                     <Input disabled value={`R$ ${r.valor_total.toFixed(2)}`} />
                   </Field>
                 </div>
@@ -709,9 +731,28 @@ function CreateOperation({
               <Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Notas internas, instruções especiais..." />
             </Field>
 
-            <div className="rounded-md bg-muted p-3 text-sm">
+            <Field label="ML paga à empresa — R$ (opcional, para cálculo de margem)">
+              <Input
+                type="number" step="0.01" min={0}
+                value={valorReceitaEmpresa || ""}
+                onChange={(e) => setValorReceitaEmpresa(Number(e.target.value) || 0)}
+                placeholder="Ex: 2.60 × total de pacotes"
+              />
+            </Field>
+
+            <div className="space-y-1 rounded-md bg-muted p-3 text-sm">
               <div>Pacotes distribuídos: <strong>{totalPkgRotas}</strong> / {totalPacotes}</div>
-              <div>Total geral: <strong className="text-lg">R$ {totalGeral.toFixed(2)}</strong></div>
+              {!personalizarPorRota && (
+                <div>Valor por pacote: <strong>R$ {valorPorPacote.toFixed(2)}</strong></div>
+              )}
+              <div>Total a pagar entregadores: <strong>R$ {totalGeral.toFixed(2)}</strong></div>
+              {valorReceitaEmpresa > 0 && (
+                <>
+                  <div>ML paga à empresa: <strong>R$ {valorReceitaEmpresa.toFixed(2)}</strong></div>
+                  <div>Margem: <strong className={margem >= 0 ? "text-emerald-700" : "text-red-700"}>R$ {margem.toFixed(2)}</strong></div>
+                </>
+              )}
+              <div className="pt-1">Total geral: <strong className="text-lg">R$ {totalGeral.toFixed(2)}</strong></div>
               {totalPkgRotas !== totalPacotes && (
                 <div className="mt-2 text-amber-700">⚠️ Soma das rotas difere do total declarado.</div>
               )}
