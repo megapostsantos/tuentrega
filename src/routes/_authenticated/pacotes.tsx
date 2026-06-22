@@ -418,21 +418,41 @@ function CreateOperation({
   }
 
   // Step 4 actions
+  async function ensureEmpresa(uid: string) {
+    const { data: emp } = await (supabase as any).from("empresas").select("id").eq("id", uid).maybeSingle();
+    if (emp) return;
+    const { data: prof } = await (supabase as any).from("profiles").select("full_name, company_name, phone").eq("id", uid).maybeSingle();
+    const { error: empErr } = await (supabase as any).from("empresas").insert({
+      id: uid,
+      razao_social: prof?.company_name || prof?.full_name || "Minha Empresa",
+      cnpj: "PENDENTE-" + uid.slice(0, 8),
+      nome_fantasia: prof?.company_name || null,
+      responsavel: prof?.full_name || null,
+      whatsapp: prof?.phone || null,
+    });
+    if (empErr) throw new Error("Complete o cadastro da empresa em Configurações. (" + empErr.message + ")");
+  }
+
   async function publishAsOffers() {
     if (!createdOpId) return;
     setSubmitting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sessão expirada. Faça login novamente.");
+      await ensureEmpresa(user.id);
+
       for (let i = 0; i < rotas.length; i++) {
         const r = rotas[i];
         const rotaId = createdRotaIds[i];
+        const vp = vpEfetivo(r);
         const { data: of, error: ofErr } = await supabase.from("ofertas").insert({
-          empresa_id: userId,
+          empresa_id: user.id,
           titulo: `${origemFinal} · ${r.nome} - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`,
           descricao: observacoes || null,
           quantidade_pacotes: r.quantidade_pacotes,
           quantidade_paradas: r.quantidade_paradas,
           valor: r.valor_total,
-          valor_por_pacote: valorPorPacote,
+          valor_por_pacote: vp,
           status: "open",
           tipo_entrega: "package_delivery",
           operacao_id: createdOpId,
