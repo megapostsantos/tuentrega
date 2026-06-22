@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Package, Truck, Wallet, BarChart3, Building2, CalendarDays, Store, Star, Plus, ChevronRight, Users, UserCog,
-  TrendingUp, TrendingDown, MapPin, Navigation, Clock, CheckCircle2, RotateCcw,
+  TrendingUp, MapPin, Navigation, Clock, CheckCircle2, XCircle, RotateCcw, Target,
 } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
