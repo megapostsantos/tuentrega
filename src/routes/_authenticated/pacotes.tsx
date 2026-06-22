@@ -27,6 +27,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/pacotes")({
   component: PacotesPage,
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/_authenticated/pacotes")({
 
 
 type DivMethod = "packages" | "stops" | "manual";
-type Rota = { nome: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number };
+type Rota = { nome: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number; valor_por_pacote?: number };
 type Operacao = {
   id: string;
   empresa_id: string;
@@ -337,16 +338,33 @@ function CreateOperation({
 
   // Step 3 — review (inline edit)
   const [observacoes, setObservacoes] = useState("");
+  const [personalizarPorRota, setPersonalizarPorRota] = useState(false);
+  const [valorReceitaEmpresa, setValorReceitaEmpresa] = useState<number>(0);
+
+  function vpEfetivo(r: Rota): number {
+    return personalizarPorRota && typeof r.valor_por_pacote === "number" ? r.valor_por_pacote : valorPorPacote;
+  }
   function updateRota(i: number, patch: Partial<Rota>) {
     setRotas((prev) => prev.map((r, idx) => {
       if (idx !== i) return r;
       const m = { ...r, ...patch };
-      m.valor_total = m.quantidade_pacotes * valorPorPacote;
+      const vp = personalizarPorRota && typeof m.valor_por_pacote === "number" ? m.valor_por_pacote : valorPorPacote;
+      m.valor_total = m.quantidade_pacotes * vp;
       return m;
     }));
   }
+  // Recalcula valores quando muda o valor base ou toggle
+  useEffect(() => {
+    setRotas((prev) => prev.map((r) => {
+      const vp = personalizarPorRota && typeof r.valor_por_pacote === "number" ? r.valor_por_pacote : valorPorPacote;
+      return { ...r, valor_total: r.quantidade_pacotes * vp };
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valorPorPacote, personalizarPorRota]);
+
   const totalGeral = rotas.reduce((s, r) => s + r.valor_total, 0);
   const totalPkgRotas = rotas.reduce((s, r) => s + r.quantidade_pacotes, 0);
+  const margem = valorReceitaEmpresa > 0 ? valorReceitaEmpresa - totalGeral : 0;
 
   // Submit
   const [submitting, setSubmitting] = useState(false);
@@ -400,21 +418,41 @@ function CreateOperation({
   }
 
   // Step 4 actions
+  async function ensureEmpresa(uid: string) {
+    const { data: emp } = await (supabase as any).from("empresas").select("id").eq("id", uid).maybeSingle();
+    if (emp) return;
+    const { data: prof } = await (supabase as any).from("profiles").select("full_name, company_name, phone").eq("id", uid).maybeSingle();
+    const { error: empErr } = await (supabase as any).from("empresas").insert({
+      id: uid,
+      razao_social: prof?.company_name || prof?.full_name || "Minha Empresa",
+      cnpj: "PENDENTE-" + uid.slice(0, 8),
+      nome_fantasia: prof?.company_name || null,
+      responsavel: prof?.full_name || null,
+      whatsapp: prof?.phone || null,
+    });
+    if (empErr) throw new Error("Complete o cadastro da empresa em Configurações. (" + empErr.message + ")");
+  }
+
   async function publishAsOffers() {
     if (!createdOpId) return;
     setSubmitting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sessão expirada. Faça login novamente.");
+      await ensureEmpresa(user.id);
+
       for (let i = 0; i < rotas.length; i++) {
         const r = rotas[i];
         const rotaId = createdRotaIds[i];
+        const vp = vpEfetivo(r);
         const { data: of, error: ofErr } = await supabase.from("ofertas").insert({
-          empresa_id: userId,
+          empresa_id: user.id,
           titulo: `${origemFinal} · ${r.nome} - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`,
           descricao: observacoes || null,
           quantidade_pacotes: r.quantidade_pacotes,
           quantidade_paradas: r.quantidade_paradas,
           valor: r.valor_total,
-          valor_por_pacote: valorPorPacote,
+          valor_por_pacote: vp,
           status: "open",
           tipo_entrega: "package_delivery",
           operacao_id: createdOpId,
@@ -643,14 +681,28 @@ function CreateOperation({
               <div>Data: <strong>{new Date(dataOperacao).toLocaleDateString("pt-BR")}</strong></div>
               <div>Total pacotes: <strong>{totalPacotes}</strong></div>
               <div>Total paradas: <strong>{totalParadas}</strong></div>
-              <div>Valor por pacote: <strong>R$ {valorPorPacote.toFixed(2)}</strong></div>
               <div>Rotas: <strong>{rotas.length}</strong></div>
             </div>
 
+            <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-[1fr_auto] sm:items-end">
+              <Field label="Valor por pacote — R$ (aplicado a todas as rotas)">
+                <Input
+                  type="number" step="0.01" min={0}
+                  value={valorPorPacote || ""}
+                  onChange={(e) => setValorPorPacote(Number(e.target.value) || 0)}
+                  disabled={personalizarPorRota}
+                />
+              </Field>
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={personalizarPorRota} onCheckedChange={setPersonalizarPorRota} />
+                Personalizar por rota
+              </label>
+            </div>
+
             <div className="space-y-2">
-              <div className="text-sm font-medium">Rotas (clique para editar)</div>
+              <div className="text-sm font-medium">Rotas</div>
               {rotas.map((r, i) => (
-                <div key={i} className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_100px_100px_120px] sm:items-end">
+                <div key={i} className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_90px_90px_130px_130px] sm:items-end">
                   <Field label="Nome">
                     <Input value={r.nome} onChange={(e) => updateRota(i, { nome: e.target.value })} />
                   </Field>
@@ -660,7 +712,15 @@ function CreateOperation({
                   <Field label="Paradas">
                     <Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => updateRota(i, { quantidade_paradas: Number(e.target.value) || 0 })} />
                   </Field>
-                  <Field label="Valor">
+                  <Field label="Valor por pacote R$">
+                    <Input
+                      type="number" step="0.01" min={0}
+                      value={personalizarPorRota ? (r.valor_por_pacote ?? valorPorPacote) : valorPorPacote}
+                      disabled={!personalizarPorRota}
+                      onChange={(e) => updateRota(i, { valor_por_pacote: Number(e.target.value) || 0 })}
+                    />
+                  </Field>
+                  <Field label="Total da rota">
                     <Input disabled value={`R$ ${r.valor_total.toFixed(2)}`} />
                   </Field>
                 </div>
@@ -671,9 +731,28 @@ function CreateOperation({
               <Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Notas internas, instruções especiais..." />
             </Field>
 
-            <div className="rounded-md bg-muted p-3 text-sm">
+            <Field label="ML paga à empresa — R$ (opcional, para cálculo de margem)">
+              <Input
+                type="number" step="0.01" min={0}
+                value={valorReceitaEmpresa || ""}
+                onChange={(e) => setValorReceitaEmpresa(Number(e.target.value) || 0)}
+                placeholder="Ex: 2.60 × total de pacotes"
+              />
+            </Field>
+
+            <div className="space-y-1 rounded-md bg-muted p-3 text-sm">
               <div>Pacotes distribuídos: <strong>{totalPkgRotas}</strong> / {totalPacotes}</div>
-              <div>Total geral: <strong className="text-lg">R$ {totalGeral.toFixed(2)}</strong></div>
+              {!personalizarPorRota && (
+                <div>Valor por pacote: <strong>R$ {valorPorPacote.toFixed(2)}</strong></div>
+              )}
+              <div>Total a pagar entregadores: <strong>R$ {totalGeral.toFixed(2)}</strong></div>
+              {valorReceitaEmpresa > 0 && (
+                <>
+                  <div>ML paga à empresa: <strong>R$ {valorReceitaEmpresa.toFixed(2)}</strong></div>
+                  <div>Margem: <strong className={margem >= 0 ? "text-emerald-700" : "text-red-700"}>R$ {margem.toFixed(2)}</strong></div>
+                </>
+              )}
+              <div className="pt-1">Total geral: <strong className="text-lg">R$ {totalGeral.toFixed(2)}</strong></div>
               {totalPkgRotas !== totalPacotes && (
                 <div className="mt-2 text-amber-700">⚠️ Soma das rotas difere do total declarado.</div>
               )}
