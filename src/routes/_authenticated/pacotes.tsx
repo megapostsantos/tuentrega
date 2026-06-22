@@ -338,16 +338,33 @@ function CreateOperation({
 
   // Step 3 — review (inline edit)
   const [observacoes, setObservacoes] = useState("");
+  const [personalizarPorRota, setPersonalizarPorRota] = useState(false);
+  const [valorReceitaEmpresa, setValorReceitaEmpresa] = useState<number>(0);
+
+  function vpEfetivo(r: Rota): number {
+    return personalizarPorRota && typeof r.valor_por_pacote === "number" ? r.valor_por_pacote : valorPorPacote;
+  }
   function updateRota(i: number, patch: Partial<Rota>) {
     setRotas((prev) => prev.map((r, idx) => {
       if (idx !== i) return r;
       const m = { ...r, ...patch };
-      m.valor_total = m.quantidade_pacotes * valorPorPacote;
+      const vp = personalizarPorRota && typeof m.valor_por_pacote === "number" ? m.valor_por_pacote : valorPorPacote;
+      m.valor_total = m.quantidade_pacotes * vp;
       return m;
     }));
   }
+  // Recalcula valores quando muda o valor base ou toggle
+  useEffect(() => {
+    setRotas((prev) => prev.map((r) => {
+      const vp = personalizarPorRota && typeof r.valor_por_pacote === "number" ? r.valor_por_pacote : valorPorPacote;
+      return { ...r, valor_total: r.quantidade_pacotes * vp };
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valorPorPacote, personalizarPorRota]);
+
   const totalGeral = rotas.reduce((s, r) => s + r.valor_total, 0);
   const totalPkgRotas = rotas.reduce((s, r) => s + r.quantidade_pacotes, 0);
+  const margem = valorReceitaEmpresa > 0 ? valorReceitaEmpresa - totalGeral : 0;
 
   // Submit
   const [submitting, setSubmitting] = useState(false);
