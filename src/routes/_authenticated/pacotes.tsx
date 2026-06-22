@@ -587,10 +587,28 @@ function CreateOperation({
               <div>Data: <strong>{new Date(data.data_operacao).toLocaleDateString("pt-BR")}</strong></div>
               <div>Pacotes totais: <strong>{data.total_pacotes_sistema}</strong></div>
               <div>Paradas: <strong>{data.total_paradas}</strong></div>
-              <div>Valor por pacote: <strong>R$ {Number(data.valor_por_pacote).toFixed(2)}</strong></div>
               {faltando > 0 && <div>Faltando: <strong className="text-amber-700">{faltando}</strong></div>}
               {aMais > 0 && <div>A mais: <strong className="text-amber-700">{aMais}</strong></div>}
               <div>Rotas: <strong>{rotas.length}</strong></div>
+            </div>
+
+            <div className="rounded-md border p-3">
+              <Label htmlFor="vpp-step3" className="text-sm">Valor por pacote (R$) — pago ao entregador</Label>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">R$</span>
+                <Input
+                  id="vpp-step3"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  className="max-w-[160px]"
+                  value={data.valor_por_pacote || ""}
+                  onChange={(e) => setData({ ...data, valor_por_pacote: Number(e.target.value) || 0 })}
+                />
+                <span className="text-xs text-muted-foreground">
+                  Margem por pacote: <strong className={margemPorPacote >= 0 ? "text-emerald-700" : "text-destructive"}>R$ {margemPorPacote.toFixed(2)}</strong>
+                </span>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
