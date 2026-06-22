@@ -1354,6 +1354,7 @@ export type Database = {
           id: string
           metodo_divisao: string
           observacoes: string | null
+          origem: string | null
           pacotes_a_mais: number
           pacotes_faltando: number
           status: string
@@ -1371,6 +1372,7 @@ export type Database = {
           id?: string
           metodo_divisao?: string
           observacoes?: string | null
+          origem?: string | null
           pacotes_a_mais?: number
           pacotes_faltando?: number
           status?: string
@@ -1388,6 +1390,7 @@ export type Database = {
           id?: string
           metodo_divisao?: string
           observacoes?: string | null
+          origem?: string | null
           pacotes_a_mais?: number
           pacotes_faltando?: number
           status?: string
