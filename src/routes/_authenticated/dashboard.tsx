@@ -478,8 +478,7 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
         const { data: pacotes } = await sb.from("entregas_pacotes")
           .select("id, numero_pacote, endereco_entrega, status, ordem_otimizada")
           .eq("oferta_id", act.data.id)
-          .neq("status", "entregue")
-          .neq("status", "delivered")
+          .eq("status", "pendente")
           .order("ordem_otimizada", { ascending: true, nullsFirst: false })
           .order("numero_pacote", { ascending: true })
           .limit(3);
