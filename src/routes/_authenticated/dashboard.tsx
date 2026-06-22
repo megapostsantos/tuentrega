@@ -610,8 +610,8 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
             <p className="mt-1 text-xl font-bold">{brl(weekly.ganhos)}</p>
           </div>
           <div className="rounded-xl bg-muted/40 p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><Clock className="h-3 w-3" /> Tempo/parada</div>
-            <p className="mt-1 text-xl font-bold">{weekly.tempoMedio ? `${weekly.tempoMedio}min` : "—"}</p>
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><Target className="h-3 w-3 text-primary" /> Taxa de sucesso</div>
+            <p className={`mt-1 text-xl font-bold ${successRate >= 90 ? "text-success" : successRate >= 70 ? "text-amber-600" : "text-destructive"}`}>{weeklyTotal ? `${successRate}%` : "—"}</p>
           </div>
         </div>
       </div>
