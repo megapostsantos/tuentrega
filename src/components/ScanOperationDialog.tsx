@@ -259,7 +259,7 @@ function Step1Scanner({
       if (!videoRef.current) return;
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
-      const hints = new Map<DecodeHintType, unknown>();
+      const hints = new Map<DecodeHintTypeT, unknown>();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
         BarcodeFormat.CODE_128, BarcodeFormat.CODE_39,
         BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.QR_CODE,
