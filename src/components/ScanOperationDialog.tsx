@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import zxingPkg from "@zxing/library";
+import type { BrowserMultiFormatReader as BrowserMultiFormatReaderType, DecodeHintType as DecodeHintTypeT } from "@zxing/library";
 const { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } = zxingPkg;
 import { ScanLine, X, Trash2, ArrowLeft, ArrowRight, Loader2, CheckCircle2, ClipboardPaste, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
