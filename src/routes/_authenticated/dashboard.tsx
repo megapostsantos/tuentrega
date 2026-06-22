@@ -519,6 +519,9 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
 
   const lastEvent = hist.length ? hist[hist.length - 1] : null;
   const activeProgress = active ? Math.round(((active.pacotes_entregues || 0) / Math.max(1, active.quantidade_pacotes || 1)) * 100) : 0;
+  const progressColor = activeProgress <= 30 ? "bg-destructive" : activeProgress <= 70 ? "bg-amber-500" : "bg-success";
+  const weeklyTotal = weekly.entregues + weekly.devolvidas;
+  const successRate = weeklyTotal ? Math.round((weekly.entregues / weeklyTotal) * 100) : 0;
 
   return (
     <div className="space-y-5 p-4">
@@ -535,7 +538,7 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
             </span>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-            <div className="h-full bg-gradient-to-r from-primary to-primary-glow transition-all" style={{ width: `${activeProgress}%` }} />
+            <div className={`h-full ${progressColor} transition-all`} style={{ width: `${activeProgress}%` }} />
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">{activeProgress}% concluído</p>
           <Link to="/rotas" className="mt-3 inline-flex items-center gap-1 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground elev-1 press-scale">
