@@ -643,8 +643,8 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
         {lastEvent && (
           <div className="mt-2 flex items-center gap-2 rounded-xl bg-muted/40 p-3">
             {lastEvent.pontos >= 0
-              ? <TrendingUp className="h-4 w-4 shrink-0 text-success" />
-              : <TrendingDown className="h-4 w-4 shrink-0 text-destructive" />}
+              ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+              : <XCircle className="h-4 w-4 shrink-0 text-destructive" />}
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold">{lastEvent.descricao || lastEvent.evento}</p>
               <p className="text-[10px] text-muted-foreground">{new Date(lastEvent.created_at).toLocaleDateString("pt-BR")}</p>
