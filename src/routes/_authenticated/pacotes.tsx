@@ -399,7 +399,7 @@ function CreateOperation({
       for (const r of rotas) {
         const { data: rRow, error: rErr } = await supabase.from("rotas_operacao").insert({
           operacao_id: opId,
-          empresa_id: userId,
+          empresa_id: empresaId,
           nome: r.nome,
           quantidade_pacotes: r.quantidade_pacotes,
           quantidade_paradas: r.quantidade_paradas,
