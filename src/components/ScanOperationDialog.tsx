@@ -244,7 +244,7 @@ function Step1Scanner({
   onNext: () => void; onCancel: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const readerRef = useRef<BrowserMultiFormatReaderType | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const lastCodeRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
   const [active, setActive] = useState(false);
