@@ -376,6 +376,10 @@ function CreateOperation({
     if (rotas.length === 0) { toast.error("Crie ao menos uma rota."); return; }
     setSubmitting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Usuário não autenticado"); setSubmitting(false); return; }
+      await ensureEmpresa(user.id);
+      const empresaId = user.id;
       const { data: opRow, error: opErr } = await supabase.from("operacoes").insert({
         empresa_id: userId,
         data_operacao: dataOperacao,
