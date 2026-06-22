@@ -1,0 +1,1 @@
+ALTER TABLE public.operacoes ADD COLUMN IF NOT EXISTS origem text;
