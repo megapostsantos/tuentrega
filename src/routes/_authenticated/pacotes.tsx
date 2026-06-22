@@ -381,7 +381,7 @@ function CreateOperation({
       await ensureEmpresa(user.id);
       const empresaId = user.id;
       const { data: opRow, error: opErr } = await supabase.from("operacoes").insert({
-        empresa_id: userId,
+        empresa_id: empresaId,
         data_operacao: dataOperacao,
         total_pacotes_sistema: totalPacotes,
         total_pacotes_contados: totalPacotes,
