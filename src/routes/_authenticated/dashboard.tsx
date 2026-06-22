@@ -444,7 +444,7 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
         sb.from("entregas").select("valor").eq("entregador_id", userId).neq("status", "pago"),
         sb.from("confiabilidade_score").select("score, nivel").eq("entregador_id", userId).maybeSingle(),
         sb.from("confiabilidade_historico").select("*").eq("entregador_id", userId).gte("created_at", fourWeeksAgo).order("created_at", { ascending: true }),
-        sb.from("ofertas").select("id, titulo, updated_at, quantidade_pacotes, pacotes_entregues").eq("entregador_id", userId).eq("status", "in_progress").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+        sb.from("ofertas").select("id, titulo, updated_at, quantidade_pacotes, pacotes_entregues, status").eq("entregador_id", userId).in("status", ["in_progress", "accepted"]).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
         sb.from("ofertas").select("valor").eq("entregador_id", userId).eq("status", "completed").gte("closed_at", today),
         sb.from("ofertas").select("valor, pacotes_entregues, pacotes_nao_entregues, created_at, closed_at").eq("entregador_id", userId).eq("status", "completed").gte("closed_at", weekAgo),
         sb.from("entregas_ocorrencias").select("id").eq("entregador_id", userId).gte("created_at", weekAgo),
