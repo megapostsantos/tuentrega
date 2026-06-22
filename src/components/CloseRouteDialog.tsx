@@ -687,7 +687,7 @@ function BarcodeScanner({ onCancel, onDetected }: {
   onCancel: () => void; onDetected: (code: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const readerRef = useRef<BrowserMultiFormatReaderType | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [permDenied, setPermDenied] = useState(false);
