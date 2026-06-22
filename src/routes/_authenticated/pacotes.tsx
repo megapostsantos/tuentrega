@@ -376,8 +376,12 @@ function CreateOperation({
     if (rotas.length === 0) { toast.error("Crie ao menos uma rota."); return; }
     setSubmitting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Usuário não autenticado"); setSubmitting(false); return; }
+      await ensureEmpresa(user.id);
+      const empresaId = user.id;
       const { data: opRow, error: opErr } = await supabase.from("operacoes").insert({
-        empresa_id: userId,
+        empresa_id: empresaId,
         data_operacao: dataOperacao,
         total_pacotes_sistema: totalPacotes,
         total_pacotes_contados: totalPacotes,
@@ -395,7 +399,7 @@ function CreateOperation({
       for (const r of rotas) {
         const { data: rRow, error: rErr } = await supabase.from("rotas_operacao").insert({
           operacao_id: opId,
-          empresa_id: userId,
+          empresa_id: empresaId,
           nome: r.nome,
           quantidade_pacotes: r.quantidade_pacotes,
           quantidade_paradas: r.quantidade_paradas,
