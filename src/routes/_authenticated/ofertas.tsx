@@ -282,6 +282,25 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
+
+    // Garante que a empresa exista (signup sem CNPJ não cria a linha)
+    const { data: emp } = await (supabase as any).from("empresas").select("id").eq("id", user.id).maybeSingle();
+    if (!emp) {
+      const { data: prof } = await (supabase as any).from("profiles").select("full_name, company_name, phone").eq("id", user.id).maybeSingle();
+      const { error: empErr } = await (supabase as any).from("empresas").insert({
+        id: user.id,
+        razao_social: prof?.company_name || prof?.full_name || user.email || "Minha Empresa",
+        cnpj: "PENDENTE-" + user.id.slice(0, 8),
+        nome_fantasia: prof?.company_name || null,
+        responsavel: prof?.full_name || null,
+        whatsapp: prof?.phone || null,
+      });
+      if (empErr) {
+        setLoading(false);
+        return toast.error("Complete o cadastro da empresa em Configurações. (" + empErr.message + ")");
+      }
+    }
+
     const { data: inserted, error } = await (supabase as any).from("ofertas").insert({
       empresa_id: user.id,
       titulo: f.titulo || "Oferta sem título",
