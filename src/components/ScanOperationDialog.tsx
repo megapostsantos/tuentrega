@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import zxingPkg from "@zxing/library";
+import type { BrowserMultiFormatReader as BrowserMultiFormatReaderType, DecodeHintType as DecodeHintTypeT } from "@zxing/library";
 const { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } = zxingPkg;
 import { ScanLine, X, Trash2, ArrowLeft, ArrowRight, Loader2, CheckCircle2, ClipboardPaste, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -243,7 +244,7 @@ function Step1Scanner({
   onNext: () => void; onCancel: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const readerRef = useRef<BrowserMultiFormatReaderType | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const lastCodeRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
   const [active, setActive] = useState(false);
@@ -258,7 +259,7 @@ function Step1Scanner({
       if (!videoRef.current) return;
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
-      const hints = new Map<DecodeHintType, unknown>();
+      const hints = new Map<DecodeHintTypeT, unknown>();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
         BarcodeFormat.CODE_128, BarcodeFormat.CODE_39,
         BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.QR_CODE,

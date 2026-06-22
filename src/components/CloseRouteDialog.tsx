@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, Loader2, X, AlertTriangle, CheckCircle2, ScanLine, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import zxingPkg from "@zxing/library";
+import type { BrowserMultiFormatReader as BrowserMultiFormatReaderType, DecodeHintType as DecodeHintTypeT } from "@zxing/library";
 const { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } = zxingPkg;
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -686,7 +687,7 @@ function BarcodeScanner({ onCancel, onDetected }: {
   onCancel: () => void; onDetected: (code: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const readerRef = useRef<BrowserMultiFormatReaderType | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [permDenied, setPermDenied] = useState(false);
@@ -701,7 +702,7 @@ function BarcodeScanner({ onCancel, onDetected }: {
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
 
-      const hints = new Map<DecodeHintType, unknown>();
+      const hints = new Map<DecodeHintTypeT, unknown>();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
         BarcodeFormat.CODE_128, BarcodeFormat.CODE_39,
         BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.QR_CODE,
