@@ -35,7 +35,7 @@ export const Route = createFileRoute("/_authenticated/pacotes")({
 
 
 type DivMethod = "packages" | "stops" | "manual";
-type Rota = { nome: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number };
+type Rota = { nome: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number; valor_por_pacote?: number };
 type Operacao = {
   id: string;
   empresa_id: string;
