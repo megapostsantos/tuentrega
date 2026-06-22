@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Loader2, X, AlertTriangle, CheckCircle2, ScanLine, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
+import zxingPkg from "@zxing/library";
+const { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } = zxingPkg;
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
