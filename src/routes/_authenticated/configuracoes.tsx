@@ -267,12 +267,6 @@ function TmsSettings({ empresaId }: { empresaId: string }) {
       <CardContent className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label className="text-xs">Valor padrão por pacote (R$)</Label>
-            <Input type="number" step="0.01" value={s.tms_valor_padrao_pacote ?? ""}
-              onChange={(e) => setS({ ...s, tms_valor_padrao_pacote: e.target.value === "" ? null : Number(e.target.value) })} />
-            <p className="text-xs text-muted-foreground">Seu pagamento padrão aos entregadores</p>
-          </div>
-          <div className="space-y-1.5">
             <Label className="text-xs">Pacotes por rota (padrão)</Label>
             <Input type="number" min={1} value={s.tms_pacotes_por_rota ?? ""}
               onChange={(e) => setS({ ...s, tms_pacotes_por_rota: e.target.value === "" ? null : Number(e.target.value) })} />
