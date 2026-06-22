@@ -248,418 +248,499 @@ function OperationCard({ op, onView, showMargem }: { op: Operacao; onView: () =>
   );
 }
 
-/* ============ Create operation flow ============ */
+/* ============ Create operation flow (4-step stepper) ============ */
+
+type DivisionMode = "auto" | "manual" | "single";
+
+const ORIGENS_PRESET = ["Mercado Livre", "Shopee", "Shein", "Amazon", "Magalu", "iFood", "Rappi"];
 
 function CreateOperation({
   userId, empresa, onCancel, onDone,
 }: { userId: string; empresa: EmpresaTms | null; onCancel: () => void; onDone: () => void }) {
-  const [step, setStep] = useState<1 | "audit" | 2 | 3>(1);
-  const [auditFaixas, setAuditFaixas] = useState<{ inicio: number; fim: number; pacotes: number }[]>([]);
-
-  const [data, setData] = useState({
-    data_operacao: new Date().toISOString().slice(0, 10),
-    total_pacotes_sistema: 0,
-    total_pacotes_contados: 0,
-    total_paradas: 0,
-    observacoes: "",
-    valor_por_pacote: empresa?.tms_valor_padrao_pacote ?? 1.8,
-    valor_ml_por_pacote: 2.6,
-  });
-
-  const faltando = Math.max(0, data.total_pacotes_sistema - data.total_pacotes_contados);
-  const aMais = Math.max(0, data.total_pacotes_contados - data.total_pacotes_sistema);
-  const margemPorPacote = Number(data.valor_ml_por_pacote) - Number(data.valor_por_pacote);
-  const margemTotal = margemPorPacote * data.total_pacotes_sistema;
-
-  // step 2: division
-  const [metodo, setMetodo] = useState<DivMethod>((empresa?.tms_metodo_padrao as DivMethod) || "packages");
-  const [perRoute, setPerRoute] = useState<number>(empresa?.tms_pacotes_por_rota ?? 50);
-  const [stopsPerRoute, setStopsPerRoute] = useState<number>(28);
-  const [manualRotas, setManualRotas] = useState<Rota[]>([]);
-
-  const rotas: Rota[] = useMemo(() => {
-    const totalPkg = data.total_pacotes_sistema;
-    const totalStops = data.total_paradas;
-    if (totalPkg <= 0) return [];
-
-    if (metodo === "packages") {
-      const n = Math.max(1, Math.ceil(totalPkg / Math.max(1, perRoute)));
-      const out: Rota[] = [];
-      let rest = totalPkg;
-      let restStops = totalStops;
-      for (let i = 0; i < n; i++) {
-        const left = n - i;
-        const pkg = i === n - 1 ? rest : Math.min(perRoute, rest - (left - 1));
-        const stops = Math.round((pkg / totalPkg) * totalStops);
-        const actualStops = i === n - 1 ? restStops : Math.min(stops, restStops);
-        out.push({
-          nome: `Rota ${i + 1}`,
-          quantidade_pacotes: pkg,
-          quantidade_paradas: actualStops,
-          valor_total: pkg * Number(data.valor_por_pacote),
-        });
-        rest -= pkg;
-        restStops -= actualStops;
-      }
-      return out;
-    }
-    if (metodo === "stops") {
-      if (totalStops <= 0) return [];
-      const n = Math.max(1, Math.ceil(totalStops / Math.max(1, stopsPerRoute)));
-      const out: Rota[] = [];
-      let restPkg = totalPkg;
-      let restStops = totalStops;
-      for (let i = 0; i < n; i++) {
-        const left = n - i;
-        const stops = i === n - 1 ? restStops : Math.min(stopsPerRoute, restStops - (left - 1));
-        const pkg = i === n - 1 ? restPkg : Math.round((stops / totalStops) * totalPkg);
-        const actualPkg = Math.min(pkg, restPkg);
-        out.push({
-          nome: `Rota ${i + 1}`,
-          quantidade_pacotes: actualPkg,
-          quantidade_paradas: stops,
-          valor_total: actualPkg * Number(data.valor_por_pacote),
-        });
-        restPkg -= actualPkg;
-        restStops -= stops;
-      }
-      return out;
-    }
-    return manualRotas.map((r) => ({ ...r, valor_total: r.quantidade_pacotes * Number(data.valor_por_pacote) }));
-  }, [metodo, perRoute, stopsPerRoute, manualRotas, data]);
-
-  const totalPkgRotas = rotas.reduce((s, r) => s + r.quantidade_pacotes, 0);
-  const totalStopsRotas = rotas.reduce((s, r) => s + r.quantidade_paradas, 0);
-  const totalValorRotas = rotas.reduce((s, r) => s + r.valor_total, 0);
-  const remaining = data.total_pacotes_sistema - totalPkgRotas;
-
-  const receitaML = data.total_pacotes_sistema * Number(data.valor_ml_por_pacote);
-  const margemFinal = receitaML - totalValorRotas;
-  const margemPct = receitaML > 0 ? (margemFinal / receitaML) * 100 : 0;
-
-  const [publishing, setPublishing] = useState(false);
-  const [hasDispatchers, setHasDispatchers] = useState(false);
   const nav = useNavigate();
-  useEffect(() => {
-    (async () => {
-      const { count } = await (supabase as any).from("dispatchers")
-        .select("id", { count: "exact", head: true })
-        .eq("empresa_id", userId).eq("status", "ativo");
-      setHasDispatchers((count || 0) > 0);
-    })();
-  }, [userId]);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
-  async function saveOpDraft() {
-    const { data: opRow, error } = await supabase.from("operacoes").insert({
-      empresa_id: userId,
-      data_operacao: data.data_operacao,
-      total_pacotes_sistema: data.total_pacotes_sistema,
-      total_pacotes_contados: data.total_pacotes_contados,
-      total_paradas: data.total_paradas,
-      pacotes_faltando: faltando,
-      pacotes_a_mais: aMais,
-      valor_por_pacote: data.valor_por_pacote,
-      valor_ml_por_pacote: data.valor_ml_por_pacote,
-      metodo_divisao: metodo,
-      status: "allocating",
-      observacoes: data.observacoes || null,
-    }).select("id").single();
-    if (error) throw error;
-    return (opRow as any).id as string;
-  }
-  async function goAlocar() {
-    try {
-      const id = await saveOpDraft();
-      nav({ to: "/pacotes/alocar/$operacaoId", params: { operacaoId: id } });
-    } catch (e: any) { toast.error(e.message ?? "Erro."); }
-  }
+  // Step 1
+  const [origem, setOrigem] = useState<string>("Mercado Livre");
+  const [origemCustom, setOrigemCustom] = useState<string>("");
+  const [dataOperacao, setDataOperacao] = useState(new Date().toISOString().slice(0, 10));
+  const [totalPacotes, setTotalPacotes] = useState<number>(0);
+  const [totalParadas, setTotalParadas] = useState<number>(0);
+  const [valorPorPacote, setValorPorPacote] = useState<number>(empresa?.tms_valor_padrao_pacote ?? 1.8);
+  const [scanOpen, setScanOpen] = useState(false);
 
-  async function publishAll() {
-    if (rotas.length === 0) {
-      toast.error("Crie ao menos uma rota.");
-      return;
+  const origemFinal = origem === "Outro" ? origemCustom.trim() : origem;
+  const mediaPorParada = totalParadas > 0 ? (totalPacotes / totalParadas) : 0;
+  const totalEstimado = totalPacotes * valorPorPacote;
+
+  // Step 2
+  const [divisionMode, setDivisionMode] = useState<DivisionMode>("auto");
+  const [numRotas, setNumRotas] = useState<number>(3);
+  const [manualRotas, setManualRotas] = useState<Rota[]>([]);
+  const [rotas, setRotas] = useState<Rota[]>([]);
+
+  function buildAuto(n: number): Rota[] {
+    const out: Rota[] = [];
+    const N = Math.max(1, n);
+    const baseP = Math.floor(totalPacotes / N);
+    const restP = totalPacotes - baseP * N;
+    const baseS = Math.floor(totalParadas / N);
+    const restS = totalParadas - baseS * N;
+    for (let i = 0; i < N; i++) {
+      const p = baseP + (i < restP ? 1 : 0);
+      const s = baseS + (i < restS ? 1 : 0);
+      out.push({ nome: `Rota ${i + 1}`, quantidade_pacotes: p, quantidade_paradas: s, valor_total: p * valorPorPacote });
     }
-    setPublishing(true);
+    return out;
+  }
+
+  function buildSingle(): Rota[] {
+    return [{ nome: "Rota única", quantidade_pacotes: totalPacotes, quantidade_paradas: totalParadas, valor_total: totalPacotes * valorPorPacote }];
+  }
+
+  function addManual() {
+    setManualRotas([...manualRotas, { nome: `Rota ${manualRotas.length + 1}`, quantidade_pacotes: 0, quantidade_paradas: 0, valor_total: 0 }]);
+  }
+  function updateManual(i: number, patch: Partial<Rota>) {
+    setManualRotas((prev) => prev.map((r, idx) => {
+      if (idx !== i) return r;
+      const m = { ...r, ...patch };
+      m.valor_total = m.quantidade_pacotes * valorPorPacote;
+      return m;
+    }));
+  }
+  function removeManual(i: number) { setManualRotas(manualRotas.filter((_, idx) => idx !== i)); }
+  function distribuirRestante() {
+    const somaP = manualRotas.reduce((s, r) => s + r.quantidade_pacotes, 0);
+    const somaS = manualRotas.reduce((s, r) => s + r.quantidade_paradas, 0);
+    const restP = totalPacotes - somaP;
+    const restS = totalParadas - somaS;
+    if (manualRotas.length === 0) { addManual(); return; }
+    const last = manualRotas.length - 1;
+    updateManual(last, {
+      quantidade_pacotes: manualRotas[last].quantidade_pacotes + Math.max(0, restP),
+      quantidade_paradas: manualRotas[last].quantidade_paradas + Math.max(0, restS),
+    });
+  }
+
+  const manualSomaP = manualRotas.reduce((s, r) => s + r.quantidade_pacotes, 0);
+  const manualSomaS = manualRotas.reduce((s, r) => s + r.quantidade_paradas, 0);
+
+  function confirmDivision() {
+    let r: Rota[] = [];
+    if (divisionMode === "auto") r = buildAuto(numRotas);
+    else if (divisionMode === "single") r = buildSingle();
+    else r = manualRotas.map((x) => ({ ...x, valor_total: x.quantidade_pacotes * valorPorPacote }));
+    setRotas(r);
+    setStep(3);
+  }
+
+  // Step 3 — review (inline edit)
+  const [observacoes, setObservacoes] = useState("");
+  function updateRota(i: number, patch: Partial<Rota>) {
+    setRotas((prev) => prev.map((r, idx) => {
+      if (idx !== i) return r;
+      const m = { ...r, ...patch };
+      m.valor_total = m.quantidade_pacotes * valorPorPacote;
+      return m;
+    }));
+  }
+  const totalGeral = rotas.reduce((s, r) => s + r.valor_total, 0);
+  const totalPkgRotas = rotas.reduce((s, r) => s + r.quantidade_pacotes, 0);
+
+  // Submit
+  const [submitting, setSubmitting] = useState(false);
+  const [createdOpId, setCreatedOpId] = useState<string | null>(null);
+  const [createdRotaIds, setCreatedRotaIds] = useState<string[]>([]);
+
+  async function createOperation() {
+    if (!origemFinal) { toast.error("Informe a origem."); return; }
+    if (rotas.length === 0) { toast.error("Crie ao menos uma rota."); return; }
+    setSubmitting(true);
     try {
-      const { data: opRow, error: opErr } = await supabase
-        .from("operacoes")
-        .insert({
-          empresa_id: userId,
-          data_operacao: data.data_operacao,
-          total_pacotes_sistema: data.total_pacotes_sistema,
-          total_pacotes_contados: data.total_pacotes_contados,
-          total_paradas: data.total_paradas,
-          pacotes_faltando: faltando,
-          pacotes_a_mais: aMais,
-          valor_por_pacote: data.valor_por_pacote,
-          valor_ml_por_pacote: data.valor_ml_por_pacote,
-          metodo_divisao: metodo,
-          status: "published",
-          observacoes: data.observacoes || null,
-        })
-        .select("id")
-        .single();
+      const { data: opRow, error: opErr } = await supabase.from("operacoes").insert({
+        empresa_id: userId,
+        data_operacao: dataOperacao,
+        total_pacotes_sistema: totalPacotes,
+        total_pacotes_contados: totalPacotes,
+        total_paradas: totalParadas,
+        valor_por_pacote: valorPorPacote,
+        metodo_divisao: divisionMode,
+        status: "draft",
+        observacoes: observacoes || null,
+        origem: origemFinal,
+      } as any).select("id").single();
       if (opErr) throw opErr;
-      const operacaoId = (opRow as any).id as string;
+      const opId = (opRow as any).id as string;
 
+      const rotaIds: string[] = [];
       for (const r of rotas) {
-        const { data: rotaRow, error: rotaErr } = await supabase
-          .from("rotas_operacao")
-          .insert({
-            operacao_id: operacaoId,
-            empresa_id: userId,
-            nome: r.nome,
-            quantidade_pacotes: r.quantidade_pacotes,
-            quantidade_paradas: r.quantidade_paradas,
-            valor_total: r.valor_total,
-            status: "open",
-          })
-          .select("id")
-          .single();
-        if (rotaErr) throw rotaErr;
-        const rotaId = (rotaRow as any).id as string;
-
-        const { data: ofRow, error: ofErr } = await supabase
-          .from("ofertas")
-          .insert({
-            empresa_id: userId,
-            titulo: `${r.nome} - ${new Date(data.data_operacao).toLocaleDateString("pt-BR")}`,
-            descricao: data.observacoes || null,
-            quantidade_pacotes: r.quantidade_pacotes,
-            quantidade_paradas: r.quantidade_paradas,
-            valor: r.valor_total,
-            valor_por_pacote: data.valor_por_pacote,
-            status: "open",
-            tipo_entrega: "package_delivery",
-            operacao_id: operacaoId,
-            rota_operacao_id: rotaId,
-          })
-          .select("id")
-          .single();
-        if (ofErr) throw ofErr;
-        await supabase.from("rotas_operacao").update({ oferta_id: (ofRow as any).id }).eq("id", rotaId);
+        const { data: rRow, error: rErr } = await supabase.from("rotas_operacao").insert({
+          operacao_id: opId,
+          empresa_id: userId,
+          nome: r.nome,
+          quantidade_pacotes: r.quantidade_pacotes,
+          quantidade_paradas: r.quantidade_paradas,
+          valor_total: r.valor_total,
+          status: "draft",
+        }).select("id").single();
+        if (rErr) throw rErr;
+        rotaIds.push((rRow as any).id);
       }
 
-      toast.success(`🎉 ${rotas.length} ofertas publicadas!`);
+      setCreatedOpId(opId);
+      setCreatedRotaIds(rotaIds);
+      toast.success("Operação criada!");
+      setStep(4);
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao criar operação.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Step 4 actions
+  async function publishAsOffers() {
+    if (!createdOpId) return;
+    setSubmitting(true);
+    try {
+      for (let i = 0; i < rotas.length; i++) {
+        const r = rotas[i];
+        const rotaId = createdRotaIds[i];
+        const { data: of, error: ofErr } = await supabase.from("ofertas").insert({
+          empresa_id: userId,
+          titulo: `${origemFinal} · ${r.nome} - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`,
+          descricao: observacoes || null,
+          quantidade_pacotes: r.quantidade_pacotes,
+          quantidade_paradas: r.quantidade_paradas,
+          valor: r.valor_total,
+          valor_por_pacote: valorPorPacote,
+          status: "open",
+          tipo_entrega: "package_delivery",
+          operacao_id: createdOpId,
+          rota_operacao_id: rotaId,
+          data_trabalho: dataOperacao,
+        } as any).select("id").single();
+        if (ofErr) throw ofErr;
+        await supabase.from("rotas_operacao").update({ oferta_id: (of as any).id, status: "open" }).eq("id", rotaId);
+      }
+      await supabase.from("operacoes").update({ status: "published" } as any).eq("id", createdOpId);
+      toast.success(`🎉 ${rotas.length} oferta(s) publicada(s)!`);
       onDone();
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao publicar.");
     } finally {
-      setPublishing(false);
+      setSubmitting(false);
     }
   }
+
+  function resetAll() {
+    setStep(1); setOrigem("Mercado Livre"); setOrigemCustom("");
+    setDataOperacao(new Date().toISOString().slice(0, 10));
+    setTotalPacotes(0); setTotalParadas(0);
+    setValorPorPacote(empresa?.tms_valor_padrao_pacote ?? 1.8);
+    setDivisionMode("auto"); setNumRotas(3); setManualRotas([]); setRotas([]);
+    setObservacoes(""); setCreatedOpId(null); setCreatedRotaIds([]);
+  }
+
+  const step1Valid = !!origemFinal && totalPacotes > 0 && totalParadas > 0 && valorPorPacote > 0;
+  const step2Valid =
+    divisionMode === "single" ||
+    (divisionMode === "auto" && numRotas > 0) ||
+    (divisionMode === "manual" && manualRotas.length > 0 && manualSomaP === totalPacotes && manualSomaS === totalParadas);
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onCancel}><ArrowLeft className="mr-1 h-4 w-4" />Voltar</Button>
-        <PageHeader title="Nova operação" description={`Etapa ${step} de 3`} />
+        <PageHeader title="Nova operação" description={`Etapa ${step} de 4`} />
       </div>
 
+      {/* Stepper indicator */}
+      <div className="flex items-center gap-2">
+        {[1, 2, 3, 4].map((n) => (
+          <div key={n} className={`h-2 flex-1 rounded-full transition-colors ${step >= n ? "bg-primary" : "bg-muted"}`} />
+        ))}
+      </div>
+
+      {/* ============ STEP 1 ============ */}
       {step === 1 && (
         <Card>
-          <CardHeader><CardTitle>Dados da operação</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Data da operação">
-                <Input type="date" value={data.data_operacao} onChange={(e) => setData({ ...data, data_operacao: e.target.value })} />
-              </Field>
-              <Field label="Pacotes recebidos (sistema)">
-                <Input type="number" min={0} value={data.total_pacotes_sistema || ""} onChange={(e) => setData({ ...data, total_pacotes_sistema: Number(e.target.value) || 0 })} />
-              </Field>
-              <Field label="Total de paradas (Logísticos)">
-                <Input type="number" min={0} value={data.total_paradas || ""} onChange={(e) => setData({ ...data, total_paradas: Number(e.target.value) || 0 })} />
-              </Field>
-            </div>
-
-            <Field label="Observações (opcional)">
-              <Textarea value={data.observacoes} onChange={(e) => setData({ ...data, observacoes: e.target.value })} placeholder="Pacotes faltando, danos, etc." />
+          <CardHeader>
+            <CardTitle>Origem e volumes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <Field label="Origem / Cliente">
+              <Select value={origem} onValueChange={setOrigem}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ORIGENS_PRESET.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  <SelectItem value="Outro">Outro (digitar)</SelectItem>
+                </SelectContent>
+              </Select>
+              {origem === "Outro" && (
+                <Input
+                  className="mt-2"
+                  placeholder="Digite o nome do cliente"
+                  value={origemCustom}
+                  onChange={(e) => setOrigemCustom(e.target.value)}
+                />
+              )}
             </Field>
 
-            <p className="text-xs text-muted-foreground">
-              A contagem física dos pacotes acontece no Step 2 (auditoria). Valores financeiros padrão ficam em Configurações.
-            </p>
-
-            <div className="flex justify-end">
-              <Button
-                onClick={() => setStep("audit")}
-                disabled={data.total_pacotes_sistema <= 0 || data.total_paradas <= 0}
-              >
-                Iniciar auditoria →
-              </Button>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Data da operação">
+                <Input type="date" value={dataOperacao} onChange={(e) => setDataOperacao(e.target.value)} />
+              </Field>
+              <Field label="Valor por pacote (R$)">
+                <Input
+                  type="number" step="0.01" min={0}
+                  value={valorPorPacote || ""}
+                  onChange={(e) => setValorPorPacote(Number(e.target.value) || 0)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Total estimado: <strong>R$ {totalEstimado.toFixed(2)}</strong>
+                </p>
+              </Field>
+              <Field label="Total de pacotes">
+                <Input
+                  type="number" min={0}
+                  value={totalPacotes || ""}
+                  onChange={(e) => setTotalPacotes(Number(e.target.value) || 0)}
+                />
+              </Field>
+              <Field label="Total de paradas">
+                <Input
+                  type="number" min={0}
+                  value={totalParadas || ""}
+                  onChange={(e) => setTotalParadas(Number(e.target.value) || 0)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Média: <strong>{mediaPorParada > 0 ? mediaPorParada.toFixed(1) : "—"}</strong> pacotes por parada
+                </p>
+              </Field>
             </div>
-
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "audit" && (
-        <AuditByRanges
-          totalStops={data.total_paradas}
-          totalPackages={data.total_pacotes_sistema}
-          valorPorPacote={Number(data.valor_por_pacote)}
-          initialFaixas={auditFaixas}
-          onBack={() => setStep(1)}
-          onConfirm={(faixas, rotasFromAudit) => {
-            setAuditFaixas(faixas);
-            setMetodo("manual");
-            setManualRotas(rotasFromAudit);
-            setStep(3);
-          }}
-        />
-      )}
-
-      {step === 2 && (
-
-        <Card>
-          <CardHeader><CardTitle>Divisão em rotas</CardTitle></CardHeader>
-          <CardContent className="space-y-5">
-            <RadioGroup value={metodo} onValueChange={(v) => setMetodo(v as DivMethod)} className="grid gap-3 sm:grid-cols-3">
-              {[
-                { v: "packages", label: "Por pacotes", d: "Rotas com X pacotes cada" },
-                { v: "stops", label: "Por paradas", d: "Rotas com X paradas cada" },
-                { v: "manual", label: "Manual", d: "Defino rota a rota" },
-              ].map((opt) => (
-                <label key={opt.v} className={`cursor-pointer rounded-lg border p-3 ${metodo === opt.v ? "border-primary bg-primary/5" : ""}`}>
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value={opt.v} />
-                    <span className="font-medium">{opt.label}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{opt.d}</p>
-                </label>
-              ))}
-            </RadioGroup>
-
-            {metodo === "packages" && (
-              <Field label="Pacotes por rota">
-                <Input type="number" min={1} value={perRoute} onChange={(e) => setPerRoute(Math.max(1, Number(e.target.value) || 1))} />
-              </Field>
-            )}
-            {metodo === "stops" && (
-              <Field label="Paradas por rota">
-                <Input type="number" min={1} value={stopsPerRoute} onChange={(e) => setStopsPerRoute(Math.max(1, Number(e.target.value) || 1))} />
-              </Field>
-            )}
-            {metodo === "manual" && (
-              <ManualRoutes
-                rotas={manualRotas}
-                setRotas={setManualRotas}
-                valorPorPacote={Number(data.valor_por_pacote)}
-              />
-            )}
 
             <div className="rounded-md border bg-muted/40 p-3 text-sm">
-              <div className="mb-2 font-medium">Prévia ({rotas.length} rotas)</div>
-              {rotas.length === 0 ? (
-                <p className="text-muted-foreground">Preencha os campos para ver a prévia.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {rotas.map((r, i) => (
-                    <li key={i}>{r.nome}: ~{r.quantidade_pacotes} pacotes · {r.quantidade_paradas} paradas = R$ {r.valor_total.toFixed(2)}</li>
-                  ))}
-                </ul>
-              )}
-              <div className="mt-2 border-t pt-2">
-                <div>Pacotes distribuídos: <strong>{totalPkgRotas}/{data.total_pacotes_sistema}</strong></div>
-                <div>Total a pagar entregadores: <strong>R$ {totalValorRotas.toFixed(2)}</strong></div>
-                <div>Sua margem total: <strong>R$ {margemFinal.toFixed(2)}</strong></div>
-              </div>
-              {remaining > 0 && metodo === "manual" && (
-                <div className="mt-2 rounded border border-amber-300 bg-amber-50 p-2 text-amber-900">
-                  ⚠️ Ainda restam {remaining} pacote(s) sem rota.
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(1)}>Voltar</Button>
-              <Button onClick={() => setStep(3)} disabled={rotas.length === 0}>Revisar</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 3 && (
-        <Card>
-          <CardHeader><CardTitle>Revisão e publicação</CardTitle></CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-2 text-sm sm:grid-cols-2">
-              <div>Data: <strong>{new Date(data.data_operacao).toLocaleDateString("pt-BR")}</strong></div>
-              <div>Pacotes totais: <strong>{data.total_pacotes_sistema}</strong></div>
-              <div>Paradas: <strong>{data.total_paradas}</strong></div>
-              {faltando > 0 && <div>Faltando: <strong className="text-amber-700">{faltando}</strong></div>}
-              {aMais > 0 && <div>A mais: <strong className="text-amber-700">{aMais}</strong></div>}
-              <div>Rotas: <strong>{rotas.length}</strong></div>
-            </div>
-
-            <div className="rounded-md border p-3">
-              <Label htmlFor="vpp-step3" className="text-sm">Valor por pacote (R$) — pago ao entregador</Label>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">R$</span>
-                <Input
-                  id="vpp-step3"
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  className="max-w-[160px]"
-                  value={data.valor_por_pacote || ""}
-                  onChange={(e) => setData({ ...data, valor_por_pacote: Number(e.target.value) || 0 })}
-                />
-                <span className="text-xs text-muted-foreground">
-                  Margem por pacote: <strong className={margemPorPacote >= 0 ? "text-emerald-700" : "text-destructive"}>R$ {margemPorPacote.toFixed(2)}</strong>
-                </span>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Rota</TableHead>
-                    <TableHead className="text-right">Pacotes</TableHead>
-                    <TableHead className="text-right">Paradas</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rotas.map((r, i) => (
-                    <TableRow key={i}>
-                      <TableCell>{r.nome}</TableCell>
-                      <TableCell className="text-right">{r.quantidade_pacotes}</TableCell>
-                      <TableCell className="text-right">{r.quantidade_paradas}</TableCell>
-                      <TableCell className="text-right">R$ {r.valor_total.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="font-medium">
-                    <TableCell>TOTAL</TableCell>
-                    <TableCell className="text-right">{totalPkgRotas}</TableCell>
-                    <TableCell className="text-right">{totalStopsRotas}</TableCell>
-                    <TableCell className="text-right">R$ {totalValorRotas.toFixed(2)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-
-            <div className="rounded-md bg-muted p-3 text-sm">
-              <div>Total pacotes: <strong>{data.total_pacotes_sistema}</strong></div>
-              <div>ML paga à empresa: {data.total_pacotes_sistema} × R$ {Number(data.valor_ml_por_pacote).toFixed(2)} = <strong>R$ {receitaML.toFixed(2)}</strong></div>
-              <div>Empresa paga entregadores: <strong>R$ {totalValorRotas.toFixed(2)}</strong></div>
-              <div>Margem da empresa: <strong>R$ {margemFinal.toFixed(2)} ({margemPct.toFixed(1)}%)</strong></div>
-            </div>
-
-            <div className="flex flex-wrap justify-between gap-2">
-              <Button variant="outline" onClick={() => setStep(2)}>Editar</Button>
+              <div className="font-medium mb-1">Métodos alternativos</div>
               <div className="flex flex-wrap gap-2">
-                {hasDispatchers && (
-                  <Button variant="outline" onClick={goAlocar} disabled={publishing}>
-                    <Users className="mr-2 h-4 w-4" />Alocar entre dispatchers
-                  </Button>
-                )}
-                <Button size="lg" onClick={publishAll} disabled={publishing} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  {publishing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Publicando...</> : "Publicar todas as ofertas"}
+                <Button variant="outline" size="sm" onClick={() => setScanOpen(true)}>
+                  <ScanLine className="mr-1 h-4 w-4" />Escanear pacotes
+                </Button>
+                <Button variant="outline" size="sm" disabled title="Em breve">
+                  <Package className="mr-1 h-4 w-4" />Importar planilha
                 </Button>
               </div>
             </div>
+
+            <div className="flex justify-end">
+              <Button size="lg" onClick={() => setStep(2)} disabled={!step1Valid}>Próximo</Button>
+            </div>
+
+            <ScanOperationDialog
+              open={scanOpen}
+              empresaId={userId}
+              onClose={() => setScanOpen(false)}
+              onCreated={() => { setScanOpen(false); onDone(); }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ============ STEP 2 ============ */}
+      {step === 2 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Como quer dividir as rotas?</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                { v: "auto" as DivisionMode, title: "Divisão automática", d: "Sistema divide igualmente por quantidade de rotas" },
+                { v: "manual" as DivisionMode, title: "Divisão manual", d: "Você define cada rota individualmente" },
+                { v: "single" as DivisionMode, title: "Rota única", d: "Tudo em uma única rota sem divisão" },
+              ].map((opt) => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setDivisionMode(opt.v)}
+                  className={`text-left rounded-lg border-2 p-4 transition-all ${divisionMode === opt.v ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                >
+                  <div className="font-semibold">{opt.title}</div>
+                  <p className="mt-1 text-xs text-muted-foreground">{opt.d}</p>
+                </button>
+              ))}
+            </div>
+
+            {divisionMode === "auto" && (
+              <div className="space-y-3 rounded-md border p-3">
+                <Field label="Quantas rotas?">
+                  <Input type="number" min={1} value={numRotas} onChange={(e) => setNumRotas(Math.max(1, Number(e.target.value) || 1))} />
+                </Field>
+                <div className="rounded bg-muted/40 p-2 text-sm">
+                  Prévia:
+                  <ul className="mt-1 list-disc pl-5">
+                    {buildAuto(numRotas).map((r, i) => (
+                      <li key={i}>{r.nome}: {r.quantidade_pacotes} pacotes · {r.quantidade_paradas} paradas · R$ {r.valor_total.toFixed(2)}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {divisionMode === "manual" && (
+              <div className="space-y-3 rounded-md border p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span><strong>{manualSomaP}</strong> / {totalPacotes} pacotes · <strong>{manualSomaS}</strong> / {totalParadas} paradas</span>
+                  <Button variant="outline" size="sm" onClick={distribuirRestante} disabled={manualRotas.length === 0}>
+                    Distribuir restante
+                  </Button>
+                </div>
+                {manualRotas.map((r, i) => (
+                  <div key={i} className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_110px_110px_auto] sm:items-end">
+                    <Field label="Nome da rota">
+                      <Input value={r.nome} onChange={(e) => updateManual(i, { nome: e.target.value })} />
+                    </Field>
+                    <Field label="Pacotes">
+                      <Input type="number" min={0} value={r.quantidade_pacotes || ""} onChange={(e) => updateManual(i, { quantidade_pacotes: Number(e.target.value) || 0 })} />
+                    </Field>
+                    <Field label="Paradas">
+                      <Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => updateManual(i, { quantidade_paradas: Number(e.target.value) || 0 })} />
+                    </Field>
+                    <Button variant="ghost" size="icon" onClick={() => removeManual(i)}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={addManual}><Plus className="mr-1 h-4 w-4" />Adicionar rota</Button>
+                {(manualSomaP !== totalPacotes || manualSomaS !== totalParadas) && manualRotas.length > 0 && (
+                  <div className="rounded border border-amber-300 bg-amber-50 p-2 text-sm text-amber-900">
+                    ⚠️ Soma deve bater com totais: {totalPacotes} pacotes / {totalParadas} paradas
+                  </div>
+                )}
+              </div>
+            )}
+
+            {divisionMode === "single" && (
+              <div className="rounded-md border p-3 text-sm">
+                Uma única rota com <strong>{totalPacotes}</strong> pacotes · <strong>{totalParadas}</strong> paradas · <strong>R$ {totalEstimado.toFixed(2)}</strong>
+              </div>
+            )}
+
+            <div className="flex justify-between gap-2">
+              <Button variant="outline" onClick={() => setStep(1)}>Voltar</Button>
+              <Button size="lg" onClick={confirmDivision} disabled={!step2Valid}>Próximo</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ============ STEP 3 ============ */}
+      {step === 3 && (
+        <Card>
+          <CardHeader><CardTitle>Revisão e ajustes</CardTitle></CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-2 text-sm sm:grid-cols-2">
+              <div>Origem: <strong>{origemFinal}</strong></div>
+              <div>Data: <strong>{new Date(dataOperacao).toLocaleDateString("pt-BR")}</strong></div>
+              <div>Total pacotes: <strong>{totalPacotes}</strong></div>
+              <div>Total paradas: <strong>{totalParadas}</strong></div>
+              <div>Valor por pacote: <strong>R$ {valorPorPacote.toFixed(2)}</strong></div>
+              <div>Rotas: <strong>{rotas.length}</strong></div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Rotas (clique para editar)</div>
+              {rotas.map((r, i) => (
+                <div key={i} className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_100px_100px_120px] sm:items-end">
+                  <Field label="Nome">
+                    <Input value={r.nome} onChange={(e) => updateRota(i, { nome: e.target.value })} />
+                  </Field>
+                  <Field label="Pacotes">
+                    <Input type="number" min={0} value={r.quantidade_pacotes || ""} onChange={(e) => updateRota(i, { quantidade_pacotes: Number(e.target.value) || 0 })} />
+                  </Field>
+                  <Field label="Paradas">
+                    <Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => updateRota(i, { quantidade_paradas: Number(e.target.value) || 0 })} />
+                  </Field>
+                  <Field label="Valor">
+                    <Input disabled value={`R$ ${r.valor_total.toFixed(2)}`} />
+                  </Field>
+                </div>
+              ))}
+            </div>
+
+            <Field label="Observações gerais (opcional)">
+              <Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Notas internas, instruções especiais..." />
+            </Field>
+
+            <div className="rounded-md bg-muted p-3 text-sm">
+              <div>Pacotes distribuídos: <strong>{totalPkgRotas}</strong> / {totalPacotes}</div>
+              <div>Total geral: <strong className="text-lg">R$ {totalGeral.toFixed(2)}</strong></div>
+              {totalPkgRotas !== totalPacotes && (
+                <div className="mt-2 text-amber-700">⚠️ Soma das rotas difere do total declarado.</div>
+              )}
+            </div>
+
+            <div className="flex justify-between gap-2">
+              <Button variant="outline" onClick={() => setStep(2)} disabled={submitting}>Voltar</Button>
+              <Button size="lg" onClick={createOperation} disabled={submitting}>
+                {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</> : "Criar operação"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ============ STEP 4 — Success ============ */}
+      {step === 4 && createdOpId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+              Operação criada com sucesso!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">O que você deseja fazer agora?</p>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={publishAsOffers}
+                disabled={submitting}
+                className="text-left rounded-lg border-2 border-primary bg-primary/5 p-4 transition-all hover:shadow-md disabled:opacity-50"
+              >
+                <div className="text-2xl">📢</div>
+                <div className="mt-2 font-semibold">Publicar como Oferta</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Publica {rotas.length} oferta(s) já vinculadas a esta operação.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { onDone(); }}
+                className="text-left rounded-lg border-2 border-border p-4 transition-all hover:border-primary/40 hover:shadow-md"
+              >
+                <div className="text-2xl">📋</div>
+                <div className="mt-2 font-semibold">Ver operação</div>
+                <p className="mt-1 text-xs text-muted-foreground">Volta para a lista e abre o detalhe.</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={resetAll}
+                className="text-left rounded-lg border-2 border-border p-4 transition-all hover:border-primary/40 hover:shadow-md"
+              >
+                <div className="text-2xl">➕</div>
+                <div className="mt-2 font-semibold">Nova operação</div>
+                <p className="mt-1 text-xs text-muted-foreground">Reinicia o assistente.</p>
+              </button>
+            </div>
+
+            {submitting && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />Publicando ofertas...
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
