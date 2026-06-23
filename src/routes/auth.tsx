@@ -436,7 +436,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
   const [step, setStep] = useState(0);
   const STEPS = ["Pessoal", "Veículo & Endereço", "Plataformas & PIX"];
   const [f, setF] = useState({
-    nome_completo: "", cpf: "", data_nascimento: "", whatsapp: "", email: "",
+    nome_completo: "", cpf: "", cnpj: "", data_nascimento: "", whatsapp: "", email: "",
     password: "", password2: "",
     tipo_veiculo: "", placa: "",
     cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "",
@@ -485,6 +485,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
           full_name: f.nome_completo,
           phone: onlyDigits(f.whatsapp),
           cpf: onlyDigits(f.cpf),
+          cnpj: onlyDigits(f.cnpj),
           data_nascimento: toISODate(f.data_nascimento),
           whatsapp: onlyDigits(f.whatsapp),
           tipo_veiculo: f.tipo_veiculo || null,
@@ -527,6 +528,8 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
             <Field label="Nome completo" value={f.nome_completo} onChange={(v) => set("nome_completo", v)} />
             <Field label="CPF" value={f.cpf} onChange={(v) => set("cpf", maskCPF(v))}
               valid={f.cpf ? isValidCPF(f.cpf) : undefined} />
+            <Field label="CNPJ (opcional — para emissão de nota fiscal)" value={f.cnpj}
+              onChange={(v) => set("cnpj", maskCNPJ(v))} />
             <Field label="Data de nascimento (DD/MM/AAAA)" value={f.data_nascimento}
               onChange={(v) => set("data_nascimento", maskDate(v))} />
             <Field label="WhatsApp" value={f.whatsapp} onChange={(v) => set("whatsapp", maskPhone(v))} />

@@ -671,6 +671,7 @@ export type Database = {
           banco: string | null
           cep: string | null
           cidade: string | null
+          cnpj: string | null
           complemento: string | null
           cpf: string
           created_at: string
@@ -702,6 +703,7 @@ export type Database = {
           banco?: string | null
           cep?: string | null
           cidade?: string | null
+          cnpj?: string | null
           complemento?: string | null
           cpf: string
           created_at?: string
@@ -733,6 +735,7 @@ export type Database = {
           banco?: string | null
           cep?: string | null
           cidade?: string | null
+          cnpj?: string | null
           complemento?: string | null
           cpf?: string
           created_at?: string
