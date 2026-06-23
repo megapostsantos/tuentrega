@@ -902,6 +902,7 @@ export type Database = {
           numero_pacote: number
           observacao_entrega: string | null
           oferta_id: string
+          operacao_id: string | null
           ordem_otimizada: number | null
           status: string
           tempo_estimado_minutos: number | null
@@ -931,6 +932,7 @@ export type Database = {
           numero_pacote: number
           observacao_entrega?: string | null
           oferta_id: string
+          operacao_id?: string | null
           ordem_otimizada?: number | null
           status?: string
           tempo_estimado_minutos?: number | null
@@ -960,6 +962,7 @@ export type Database = {
           numero_pacote?: number
           observacao_entrega?: string | null
           oferta_id?: string
+          operacao_id?: string | null
           ordem_otimizada?: number | null
           status?: string
           tempo_estimado_minutos?: number | null
@@ -967,7 +970,15 @@ export type Database = {
           token_rastreamento?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "entregas_pacotes_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       extratos_mensais: {
         Row: {
