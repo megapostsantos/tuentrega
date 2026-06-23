@@ -99,49 +99,43 @@ function Landing() {
             <div className="relative">
               <div className="absolute -inset-6 rounded-[2.5rem] bg-primary/15 blur-3xl" />
               <div className="relative rounded-3xl border border-border bg-card p-6 elev-3">
-                <div className="mb-6 flex items-center justify-between border-b border-border pb-4">
-                  <span className="font-bold">Painel de Controle</span>
-                  <div className="flex gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full bg-muted" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-muted" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-primary/60" />
+                <div className="mb-5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 animate-pulse rounded-full bg-success" />
+                    <span className="label-caps text-success">Nova oferta perto de você</span>
                   </div>
+                  <span className="rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">1,2 km</span>
                 </div>
-                <div className="space-y-5">
-                  <div className="rounded-2xl border border-primary/15 bg-primary/8 p-5">
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="label-caps text-primary">Operação ativa</p>
-                        <p className="mt-1 text-3xl font-extrabold">190 pacotes</p>
-                        <p className="mt-1 text-sm text-muted-foreground">3 rotas · 111 paradas</p>
-                      </div>
-                      <div className="flex h-12 w-24 items-end gap-1 rounded-lg bg-card p-1.5">
-                        <div className="h-[40%] flex-1 rounded-sm bg-primary/30" />
-                        <div className="h-[65%] flex-1 rounded-sm bg-primary/50" />
-                        <div className="h-[85%] flex-1 rounded-sm bg-primary/70" />
-                        <div className="h-[70%] flex-1 rounded-sm bg-primary" />
-                      </div>
+
+                <div className="rounded-2xl border border-primary/15 bg-primary/8 p-5">
+                  <p className="label-caps text-primary">Você recebe</p>
+                  <p className="mt-1 text-5xl font-extrabold tracking-tight">R$ 187<span className="text-2xl text-muted-foreground">,50</span></p>
+                  <p className="mt-2 text-sm text-muted-foreground">25 pacotes · ~3h de rota · PIX ao finalizar</p>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  <div className="flex items-center justify-between rounded-xl border border-border bg-secondary/50 px-4 py-3">
+                    <div>
+                      <p className="label-caps text-muted-foreground">Bairro</p>
+                      <p className="text-sm font-bold">Vila Mariana, SP</p>
                     </div>
+                    <MapIcon className="h-5 w-5 text-primary" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-border bg-secondary/50 p-4">
-                      <p className="label-caps text-muted-foreground">Em rota</p>
-                      <p className="mt-1 text-2xl font-bold">2</p>
+                    <div className="rounded-xl border border-border bg-secondary/50 p-3">
+                      <p className="label-caps text-muted-foreground">Por pacote</p>
+                      <p className="mt-0.5 text-lg font-bold">R$ 7,50</p>
                     </div>
-                    <div className="rounded-xl border border-border bg-secondary/50 p-4">
-                      <p className="label-caps text-muted-foreground">A pagar</p>
-                      <p className="mt-1 text-2xl font-bold">R$ 342</p>
-                    </div>
-                    <div className="rounded-xl border border-border bg-secondary/50 p-4">
-                      <p className="label-caps text-muted-foreground">Ofertas</p>
-                      <p className="mt-1 text-2xl font-bold">3</p>
-                    </div>
-                    <div className="rounded-xl border border-border bg-secondary/50 p-4">
-                      <p className="label-caps text-muted-foreground">Score</p>
-                      <p className="mt-1 text-2xl font-bold">120</p>
+                    <div className="rounded-xl border border-border bg-secondary/50 p-3">
+                      <p className="label-caps text-muted-foreground">Hoje</p>
+                      <p className="mt-0.5 text-lg font-bold">14:00</p>
                     </div>
                   </div>
                 </div>
+
+                <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground elev-1">
+                  Aceitar rota <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>
