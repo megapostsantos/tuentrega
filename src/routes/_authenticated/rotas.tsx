@@ -67,7 +67,7 @@ function RotasPage() {
     setLoading(true);
     const { data: ofs } = await supabase
       .from("ofertas")
-      .select("id, empresa_id, titulo, status, quantidade_pacotes")
+      .select("id, empresa_id, titulo, status, quantidade_pacotes, operacao_id")
       .eq("entregador_id", user.id)
       .eq("status", "in_progress")
       .order("data_trabalho", { ascending: false })
@@ -76,6 +76,21 @@ function RotasPage() {
     setOferta(of);
 
     if (of) {
+      // Vincula pacotes da operação que ainda não tenham oferta_id
+      if (of.operacao_id) {
+        const { data: pacotesSemOferta } = await supabase
+          .from("entregas_pacotes")
+          .select("id")
+          .eq("operacao_id", of.operacao_id)
+          .is("oferta_id", null);
+        if (pacotesSemOferta && pacotesSemOferta.length > 0) {
+          await supabase
+            .from("entregas_pacotes")
+            .update({ oferta_id: of.id })
+            .in("id", pacotesSemOferta.map((p) => p.id));
+        }
+      }
+
       const { data: pks } = await supabase
         .from("entregas_pacotes")
         .select("id, oferta_id, numero_pacote, ordem_otimizada, endereco_entrega, status")
