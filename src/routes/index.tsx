@@ -9,38 +9,38 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/")({
   head: () => ({
       meta: [
-        { title: "TuEntrega — Gestão de entregas Last Mile" },
-        { name: "description", content: "Plataforma TMS para operações de entrega urbana. Distribua rotas, pague via PIX e acompanhe entregadores PJ em tempo real." },
-        { property: "og:title", content: "TuEntrega — Gestão de entregas Last Mile" },
-        { property: "og:description", content: "Plataforma TMS para operações de entrega urbana. Distribua rotas, pague via PIX e acompanhe entregadores PJ em tempo real." },
+        { title: "TuEntrega — Ganhe dinheiro extra fazendo entregas" },
+        { name: "description", content: "Aceite rotas próximas, faça entregas no seu tempo e receba via PIX. Empresas encontram entregadores PJ e organizam toda a operação em um só lugar." },
+        { property: "og:title", content: "TuEntrega — Ganhe dinheiro extra fazendo entregas" },
+        { property: "og:description", content: "Aceite rotas próximas, faça entregas no seu tempo e receba via PIX. Empresas encontram entregadores PJ e organizam toda a operação." },
       ],
   }),
   component: Landing,
 });
 
 const features = [
-  { icon: Package, title: "TMS de Pacotes", desc: "Importe, audite e distribua pacotes em segundos com triagem inteligente." },
-  { icon: Store, title: "Marketplace", desc: "Encontre entregadores PJ disponíveis na sua região prontos para rotas." },
-  { icon: Wallet, title: "Pagamento PIX", desc: "Pague entregadores direto pela plataforma com repasses automatizados." },
-  { icon: Star, title: "Score de Confiabilidade", desc: "Identifique seus melhores entregadores com métricas objetivas." },
-  { icon: CalendarDays, title: "Agenda Semanal", desc: "Planeje a semana com previsibilidade e capacidade confirmada." },
-  { icon: MapIcon, title: "Planejador de Rotas", desc: "Rotas otimizadas por bairro para mais entregas por hora." },
+  { icon: Wallet, title: "Receba via PIX na hora", desc: "Sem espera, sem burocracia. O dinheiro cai direto na sua conta ao fechar a rota." },
+  { icon: MapIcon, title: "Rotas perto de você", desc: "Ofertas filtradas pela sua região para você rodar menos e ganhar mais." },
+  { icon: CalendarDays, title: "Você escolhe quando", desc: "Aceite as rotas nos dias e horários que cabem na sua agenda." },
+  { icon: Store, title: "Encontre entregadores PJ", desc: "Empresas publicam ofertas e os entregadores certos aceitam em segundos." },
+  { icon: Package, title: "Organize sua operação", desc: "Importe pacotes, divida por bairro e distribua rotas sem planilha." },
+  { icon: Star, title: "Score de confiabilidade", desc: "Bons entregadores ganham mais ofertas. Boas empresas atraem os melhores." },
 ];
 
 const empresaItems = [
-  "Importação de pacotes via Excel/CSV",
-  "Divisão automática por bairro",
-  "Pagamento PIX integrado",
-  "Controle de nota fiscal mensal",
-  "Acompanhamento em tempo real",
+  "Encontre entregadores PJ disponíveis na sua região",
+  "Importe pacotes e divida rotas em minutos",
+  "Acompanhe cada entrega em tempo real",
+  "Pague via PIX direto pela plataforma",
+  "Controle financeiro e nota fiscal mensal",
 ];
 
 const entregadorItems = [
-  "Ofertas filtradas pela sua região",
-  "Aceite rotas e fretes avulsos",
-  "Planejador de rotas otimizado",
-  "Reserve dias na agenda",
-  "Recebimento direto via PIX",
+  "Ganhe um dinheiro extra fazendo entregas",
+  "Trabalhe quando e onde quiser",
+  "Receba via PIX assim que terminar a rota",
+  "Aceite rotas próximas com poucos cliques",
+  "Construa reputação e ganhe mais ofertas",
 ];
 
 const plans = [
@@ -76,21 +76,21 @@ function Landing() {
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
                 <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                  Plataforma para entregas Last Mile
+                  Renda extra com entregas
                 </span>
               </div>
               <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight lg:text-7xl">
-                Gerencie entregas como um <span className="text-primary">profissional</span>
+                Ganhe <span className="text-primary">dinheiro extra</span> fazendo entregas
               </h1>
               <p className="max-w-lg text-lg leading-relaxed text-muted-foreground">
-                Conecte sua empresa com entregadores PJ. Distribua rotas, pague via PIX e acompanhe tudo em tempo real.
+                Aceite rotas perto de você, trabalhe no seu tempo e receba via PIX na hora. Empresas organizam a operação e encontram entregadores PJ em segundos.
               </p>
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button asChild size="lg" className="h-13 rounded-xl bg-primary px-8 font-bold text-primary-foreground shadow-xl shadow-primary/20 hover:-translate-y-0.5 hover:bg-primary/90 transition-transform">
-                  <Link to="/auth">Sou empresa <ArrowRight className="ml-1 h-5 w-5" /></Link>
+                  <Link to="/auth">Quero fazer entregas <ArrowRight className="ml-1 h-5 w-5" /></Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="h-13 rounded-xl border-2 border-border bg-card px-8 font-bold text-foreground hover:bg-secondary">
-                  <Link to="/auth">Sou entregador</Link>
+                  <Link to="/auth">Sou empresa</Link>
                 </Button>
               </div>
             </div>
@@ -166,9 +166,9 @@ function Landing() {
         {/* FEATURES */}
         <section className="mx-auto max-w-7xl px-6 py-20">
           <div className="mx-auto mb-14 max-w-2xl text-center">
-            <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">Tudo que você precisa</h2>
+            <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">Pra quem entrega e pra quem precisa</h2>
             <p className="mt-4 leading-relaxed text-muted-foreground">
-              Gestão completa para operadores de logística urbana, do carregamento ao pagamento final.
+              Entregadores ganham dinheiro extra com rotas próximas. Empresas organizam tudo e encontram quem vai rodar.
             </p>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -208,10 +208,10 @@ function Landing() {
             <div className="order-1 lg:order-2">
               <p className="label-caps mb-3 text-primary">Para empresas</p>
               <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                Sua operação rodando <span className="text-primary">no automático</span>
+                Organize a operação e <span className="text-primary">encontre entregadores</span>
               </h2>
               <p className="mt-4 max-w-md leading-relaxed text-muted-foreground">
-                Tudo o que você precisa para escalar sem perder controle ou margem.
+                Publique rotas e tenha entregadores PJ prontos para rodar em minutos — sem planilha, sem WhatsApp.
               </p>
               <ul className="mt-8 space-y-4">
                 {empresaItems.map((i) => (
