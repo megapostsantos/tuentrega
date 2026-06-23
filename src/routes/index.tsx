@@ -86,8 +86,8 @@ function Landing() {
               Ganhe <span className="text-[#e85d3a]">dinheiro extra</span> fazendo entregas.
             </h1>
             <p className="text-xl text-gray-400 max-w-xl">
-              Aceite rotas perto de você, trabalhe no seu tempo e receba via PIX conforme o
-              SLA da empresa. Empresas encontram entregadores PJ em minutos.
+              Aceite rotas perto de você, trabalhe no seu tempo e receba pagamento via PIX.
+              Empresas encontram entregadores PJ em minutos.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
