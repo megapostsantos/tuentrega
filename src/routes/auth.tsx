@@ -485,6 +485,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
           full_name: f.nome_completo,
           phone: onlyDigits(f.whatsapp),
           cpf: onlyDigits(f.cpf),
+          cnpj: onlyDigits(f.cnpj),
           data_nascimento: toISODate(f.data_nascimento),
           whatsapp: onlyDigits(f.whatsapp),
           tipo_veiculo: f.tipo_veiculo || null,
