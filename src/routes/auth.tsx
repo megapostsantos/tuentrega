@@ -436,7 +436,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
   const [step, setStep] = useState(0);
   const STEPS = ["Pessoal", "Veículo & Endereço", "Plataformas & PIX"];
   const [f, setF] = useState({
-    nome_completo: "", cpf: "", data_nascimento: "", whatsapp: "", email: "",
+    nome_completo: "", cpf: "", cnpj: "", data_nascimento: "", whatsapp: "", email: "",
     password: "", password2: "",
     tipo_veiculo: "", placa: "",
     cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "",
