@@ -208,10 +208,10 @@ function Landing() {
             <div className="order-1 lg:order-2">
               <p className="label-caps mb-3 text-primary">Para empresas</p>
               <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                Sua operação rodando <span className="text-primary">no automático</span>
+                Organize a operação e <span className="text-primary">encontre entregadores</span>
               </h2>
               <p className="mt-4 max-w-md leading-relaxed text-muted-foreground">
-                Tudo o que você precisa para escalar sem perder controle ou margem.
+                Publique rotas e tenha entregadores PJ prontos para rodar em minutos — sem planilha, sem WhatsApp.
               </p>
               <ul className="mt-8 space-y-4">
                 {empresaItems.map((i) => (
