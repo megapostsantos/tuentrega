@@ -195,6 +195,46 @@ function RotasPage() {
     );
   }
 
+  if (trackerState.permissionDenied) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-6">
+        <Card className="max-w-md w-full border-red-300">
+          <CardContent className="p-6 space-y-4 text-center">
+            <div className="mx-auto h-12 w-12 rounded-full bg-red-100 dark:bg-red-950/40 flex items-center justify-center">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Localização obrigatória</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Para iniciar e operar a rota você precisa compartilhar sua localização em tempo real com a empresa.
+              </p>
+            </div>
+            <ol className="text-left text-sm space-y-1 bg-muted/50 rounded-md p-3 list-decimal pl-5">
+              <li>Toque no cadeado/ícone ao lado do endereço no navegador.</li>
+              <li>Permita o acesso à <strong>Localização</strong> para este site.</li>
+              <li>Volte aqui e toque em <strong>Tentar novamente</strong>.</li>
+            </ol>
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                if (typeof navigator !== "undefined" && navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    () => window.location.reload(),
+                    () => toast.error("Permissão ainda negada. Ajuste nas configurações do navegador."),
+                    { enableHighAccuracy: true, timeout: 10_000 },
+                  );
+                }
+              }}
+            >
+              Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="pb-24">
       {/* Sticky header */}
