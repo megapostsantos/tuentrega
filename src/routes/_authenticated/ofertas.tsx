@@ -788,32 +788,27 @@ function DetailsDialog({
 
   async function accept() {
     setBusy(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setBusy(false); return; }
-    const { error } = await supabase
-      .from("ofertas")
-      .update({ status: "accepted", entregador_id: user.id })
-      .eq("id", o.id)
-      .eq("status", "open");
-    if (!error && (o as any).operacao_id) {
-      const { data: pacotesSemOferta } = await supabase
-        .from("entregas_pacotes")
-        .select("id")
-        .eq("operacao_id", (o as any).operacao_id)
-        .is("oferta_id", null);
-      if (pacotesSemOferta && pacotesSemOferta.length > 0) {
-        await supabase
-          .from("entregas_pacotes")
-          .update({ oferta_id: o.id })
-          .in("id", pacotesSemOferta.map((p) => p.id));
-      }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase
+        .from("ofertas")
+        .update({ status: "in_progress", entregador_id: user.id })
+        .eq("id", o.id)
+        .eq("status", "open");
+      if (error) throw error;
+
+      await ensurePackagesForOferta(o);
+
+      toast.success("🎉 Oferta aceita! Sua rota foi iniciada");
+      onClose();
+      reload();
+      navigate({ to: "/rotas" });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao aceitar oferta.");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("🎉 Oferta aceita! Veja suas entregas ativas");
-    onClose();
-    reload();
-    navigate({ to: "/rotas" });
   }
 
   async function changeStatus(status: string) {
