@@ -44,6 +44,29 @@ type Oferta = {
   quantidade_pacotes: number | null;
 };
 
+async function ensurePackagesForOferta(oferta: Oferta) {
+  if (!oferta.quantidade_pacotes || oferta.quantidade_pacotes <= 0) return;
+
+  const { count, error: countErr } = await supabase
+    .from("entregas_pacotes")
+    .select("id", { count: "exact", head: true })
+    .eq("oferta_id", oferta.id);
+  if (countErr) throw countErr;
+  if ((count ?? 0) > 0) return;
+
+  const total = Math.max(1, Number(oferta.quantidade_pacotes));
+  const rows = Array.from({ length: total }, (_, i) => ({
+    oferta_id: oferta.id,
+    operacao_id: oferta.operacao_id ?? null,
+    numero_pacote: i + 1,
+    endereco_entrega: null,
+    status: "pending",
+  }));
+
+  const { error } = await supabase.from("entregas_pacotes").insert(rows as any);
+  if (error) throw error;
+}
+
 // UI choices mapped to motivo + sub_motivo respecting the DB check constraint
 const RADIO_CHOICES: Array<{ key: string; label: string; motivo: string; sub?: string }> = [
   { key: "ausente", label: "Cliente ausente", motivo: "could_not_deliver", sub: "ausente" },
@@ -65,44 +88,48 @@ function RotasPage() {
   async function load() {
     if (!user) return;
     setLoading(true);
-    const { data: ofs } = await supabase
-      .from("ofertas")
-      .select("id, empresa_id, titulo, status, quantidade_pacotes, operacao_id")
-      .eq("entregador_id", user.id)
-      .eq("status", "in_progress")
-      .order("data_trabalho", { ascending: false })
-      .limit(1);
-    const of = (ofs?.[0] as Oferta) ?? null;
-    setOferta(of);
+    try {
+      const { data: ofs } = await supabase
+        .from("ofertas")
+        .select("id, empresa_id, titulo, status, quantidade_pacotes, operacao_id")
+        .eq("entregador_id", user.id)
+        .in("status", ["in_progress", "accepted"])
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      let of = (ofs?.[0] as Oferta) ?? null;
 
-    if (of) {
-      // Vincula pacotes da operação que ainda não tenham oferta_id
-      if (of.operacao_id) {
-        const { data: pacotesSemOferta } = await supabase
-          .from("entregas_pacotes")
-          .select("id")
-          .eq("operacao_id", of.operacao_id)
-          .is("oferta_id", null);
-        if (pacotesSemOferta && pacotesSemOferta.length > 0) {
-          await supabase
-            .from("entregas_pacotes")
-            .update({ oferta_id: of.id })
-            .in("id", pacotesSemOferta.map((p) => p.id));
-        }
+      if (of?.status === "accepted") {
+        const { error: startErr } = await supabase
+          .from("ofertas")
+          .update({ status: "in_progress" })
+          .eq("id", of.id)
+          .eq("entregador_id", user.id);
+        if (!startErr) of = { ...of, status: "in_progress" };
       }
 
-      const { data: pks } = await supabase
-        .from("entregas_pacotes")
-        .select("id, oferta_id, numero_pacote, ordem_otimizada, endereco_entrega, status")
-        .eq("oferta_id", of.id);
-      const list = ((pks as Pacote[]) ?? []).sort(
-        (a, b) => (a.ordem_otimizada ?? a.numero_pacote) - (b.ordem_otimizada ?? b.numero_pacote),
-      );
-      setPacotes(list);
-    } else {
+      setOferta(of);
+
+      if (of) {
+        await ensurePackagesForOferta(of);
+
+        const { data: pks } = await supabase
+          .from("entregas_pacotes")
+          .select("id, oferta_id, numero_pacote, ordem_otimizada, endereco_entrega, status")
+          .eq("oferta_id", of.id);
+        const list = ((pks as Pacote[]) ?? []).sort(
+          (a, b) => (a.ordem_otimizada ?? a.numero_pacote) - (b.ordem_otimizada ?? b.numero_pacote),
+        );
+        setPacotes(list);
+      } else {
+        setPacotes([]);
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao carregar rota.");
+      setOferta(null);
       setPacotes([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
