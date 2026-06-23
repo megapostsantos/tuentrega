@@ -200,7 +200,7 @@ function Landing() {
                 icon: Wallet,
                 title: "Pagamento via PIX",
                 desc:
-                  "Receba via PIX de acordo com o SLA de cada empresa. Você vê o prazo antes de aceitar a rota — sem surpresa.",
+                  "Receba seus ganhos via PIX direto na sua conta, com segurança e rastreabilidade.",
               },
               {
                 icon: MapIcon,
