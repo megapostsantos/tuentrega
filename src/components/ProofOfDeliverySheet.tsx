@@ -119,7 +119,7 @@ export function ProofOfDeliverySheet({ open, onClose, pacote, entregadorId, onCo
           status: "delivered",
           assinatura_url: sigPath,
           foto_pod_url: photoPath,
-          nome_recebedor: nome.trim(),
+          nome_recebedor: nome.trim() || null,
           observacao_entrega: obs.trim() || null,
           entregue_em: new Date().toISOString(),
         } as any)
