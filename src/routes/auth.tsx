@@ -528,6 +528,8 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
             <Field label="Nome completo" value={f.nome_completo} onChange={(v) => set("nome_completo", v)} />
             <Field label="CPF" value={f.cpf} onChange={(v) => set("cpf", maskCPF(v))}
               valid={f.cpf ? isValidCPF(f.cpf) : undefined} />
+            <Field label="CNPJ (opcional — para emissão de nota fiscal)" value={f.cnpj}
+              onChange={(v) => set("cnpj", maskCNPJ(v))} />
             <Field label="Data de nascimento (DD/MM/AAAA)" value={f.data_nascimento}
               onChange={(v) => set("data_nascimento", maskDate(v))} />
             <Field label="WhatsApp" value={f.whatsapp} onChange={(v) => set("whatsapp", maskPhone(v))} />
