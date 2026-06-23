@@ -86,8 +86,8 @@ function Landing() {
               Ganhe <span className="text-[#e85d3a]">dinheiro extra</span> fazendo entregas.
             </h1>
             <p className="text-xl text-gray-400 max-w-xl">
-              Aceite rotas perto de você, trabalhe no seu tempo e receba via PIX conforme o
-              SLA da empresa. Empresas encontram entregadores PJ em minutos.
+              Aceite rotas perto de você, trabalhe no seu tempo e receba pagamento via PIX.
+              Empresas encontram entregadores PJ em minutos.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
@@ -153,7 +153,7 @@ function Landing() {
             { v: "+15k", l: "Entregadores PJ" },
             { v: "500+", l: "Pacotes/dia" },
             { v: "R$ 0", l: "Taxa de adesão" },
-            { v: "PIX", l: "Pagamento conforme SLA", accent: true },
+            { v: "PIX", l: "Pagamento via PIX", accent: true },
           ].map((s) => (
             <div key={s.l} className="text-center md:text-left">
               <p
@@ -200,7 +200,7 @@ function Landing() {
                 icon: Wallet,
                 title: "Pagamento via PIX",
                 desc:
-                  "Receba via PIX de acordo com o SLA de cada empresa. Você vê o prazo antes de aceitar a rota — sem surpresa.",
+                  "Receba seus ganhos via PIX direto na sua conta, com segurança e rastreabilidade.",
               },
               {
                 icon: MapIcon,
@@ -299,7 +299,7 @@ function Landing() {
               {[
                 "Entregadores PJ disponíveis em minutos",
                 "Painel de controle com rastreio ao vivo",
-                "Pagamento via PIX com SLA definido pela sua empresa",
+                "Pagamento via PIX direto pela plataforma",
                 "Score de confiabilidade dos entregadores",
               ].map((i) => (
                 <li key={i} className="flex items-center gap-3">
