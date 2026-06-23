@@ -79,10 +79,13 @@ type Props = {
   open: boolean;
   onClose: () => void;
   ofertaId: string;
-  entregadorId: string;
+  entregadorId: string | null;
+  operacaoId?: string | null;
 };
 
-export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId }: Props) {
+const BRAZIL_CENTER: [number, number] = [-15.7801, -47.9292];
+
+export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId, operacaoId }: Props) {
   const [loc, setLoc] = useState<Localizacao | null>(null);
   const [pacotes, setPacotes] = useState<Pacote[]>([]);
   const [entregador, setEntregador] = useState<Entregador | null>(null);
