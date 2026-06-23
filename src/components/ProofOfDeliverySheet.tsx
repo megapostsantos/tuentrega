@@ -100,7 +100,7 @@ export function ProofOfDeliverySheet({ open, onClose, pacote, entregadorId, onCo
 
   async function handleConfirm() {
     if (!pacote || !entregadorId) return;
-    if (!nome.trim()) { setStep(1); toast.error("Informe o nome do recebedor."); return; }
+    
     if (!signatureData) { setStep(2); toast.error("Assinatura obrigatória."); return; }
     if (!photo) { toast.error("Tire uma foto do pacote."); return; }
 
