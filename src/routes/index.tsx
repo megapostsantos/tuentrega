@@ -9,38 +9,38 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/")({
   head: () => ({
       meta: [
-        { title: "TuEntrega — Gestão de entregas Last Mile" },
-        { name: "description", content: "Plataforma TMS para operações de entrega urbana. Distribua rotas, pague via PIX e acompanhe entregadores PJ em tempo real." },
-        { property: "og:title", content: "TuEntrega — Gestão de entregas Last Mile" },
-        { property: "og:description", content: "Plataforma TMS para operações de entrega urbana. Distribua rotas, pague via PIX e acompanhe entregadores PJ em tempo real." },
+        { title: "TuEntrega — Ganhe dinheiro extra fazendo entregas" },
+        { name: "description", content: "Aceite rotas próximas, faça entregas no seu tempo e receba via PIX. Empresas encontram entregadores PJ e organizam toda a operação em um só lugar." },
+        { property: "og:title", content: "TuEntrega — Ganhe dinheiro extra fazendo entregas" },
+        { property: "og:description", content: "Aceite rotas próximas, faça entregas no seu tempo e receba via PIX. Empresas encontram entregadores PJ e organizam toda a operação." },
       ],
   }),
   component: Landing,
 });
 
 const features = [
-  { icon: Package, title: "TMS de Pacotes", desc: "Importe, audite e distribua pacotes em segundos com triagem inteligente." },
-  { icon: Store, title: "Marketplace", desc: "Encontre entregadores PJ disponíveis na sua região prontos para rotas." },
-  { icon: Wallet, title: "Pagamento PIX", desc: "Pague entregadores direto pela plataforma com repasses automatizados." },
-  { icon: Star, title: "Score de Confiabilidade", desc: "Identifique seus melhores entregadores com métricas objetivas." },
-  { icon: CalendarDays, title: "Agenda Semanal", desc: "Planeje a semana com previsibilidade e capacidade confirmada." },
-  { icon: MapIcon, title: "Planejador de Rotas", desc: "Rotas otimizadas por bairro para mais entregas por hora." },
+  { icon: Wallet, title: "Receba via PIX na hora", desc: "Sem espera, sem burocracia. O dinheiro cai direto na sua conta ao fechar a rota." },
+  { icon: MapIcon, title: "Rotas perto de você", desc: "Ofertas filtradas pela sua região para você rodar menos e ganhar mais." },
+  { icon: CalendarDays, title: "Você escolhe quando", desc: "Aceite as rotas nos dias e horários que cabem na sua agenda." },
+  { icon: Store, title: "Encontre entregadores PJ", desc: "Empresas publicam ofertas e os entregadores certos aceitam em segundos." },
+  { icon: Package, title: "Organize sua operação", desc: "Importe pacotes, divida por bairro e distribua rotas sem planilha." },
+  { icon: Star, title: "Score de confiabilidade", desc: "Bons entregadores ganham mais ofertas. Boas empresas atraem os melhores." },
 ];
 
 const empresaItems = [
-  "Importação de pacotes via Excel/CSV",
-  "Divisão automática por bairro",
-  "Pagamento PIX integrado",
-  "Controle de nota fiscal mensal",
-  "Acompanhamento em tempo real",
+  "Encontre entregadores PJ disponíveis na sua região",
+  "Importe pacotes e divida rotas em minutos",
+  "Acompanhe cada entrega em tempo real",
+  "Pague via PIX direto pela plataforma",
+  "Controle financeiro e nota fiscal mensal",
 ];
 
 const entregadorItems = [
-  "Ofertas filtradas pela sua região",
-  "Aceite rotas e fretes avulsos",
-  "Planejador de rotas otimizado",
-  "Reserve dias na agenda",
-  "Recebimento direto via PIX",
+  "Ganhe um dinheiro extra fazendo entregas",
+  "Trabalhe quando e onde quiser",
+  "Receba via PIX assim que terminar a rota",
+  "Aceite rotas próximas com poucos cliques",
+  "Construa reputação e ganhe mais ofertas",
 ];
 
 const plans = [
