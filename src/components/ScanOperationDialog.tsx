@@ -138,6 +138,7 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
 
       const rows = pkgs.map((p, i) => ({
         oferta_id: ofe.id,
+        operacao_id: op.id,
         numero_pacote: i + 1,
         codigo_pacote: p.code,
         endereco_entrega: p.endereco || null,
