@@ -1089,13 +1089,52 @@ function DetailsDialog({
           <Button variant="ghost" onClick={onClose}>Fechar</Button>
         </DialogFooter>
       </DialogContent>
-      {role === "empresa" && o.entregador_id && tracking && (
+      {role === "empresa" && tracking && (
         <LiveTrackingMap
           open={tracking}
           onClose={() => setTracking(false)}
           ofertaId={o.id}
           entregadorId={o.entregador_id}
+          operacaoId={o.operacao_id ?? null}
         />
+      )}
+      {role === "empresa" && linkOpen && (
+        <Dialog open={linkOpen} onOpenChange={(v) => !v && setLinkOpen(false)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Vincular entregador</DialogTitle>
+            </DialogHeader>
+            <Input
+              autoFocus
+              placeholder="Buscar por nome (mín. 2 letras)"
+              value={linkSearch}
+              onChange={(e) => setLinkSearch(e.target.value)}
+            />
+            <div className="max-h-64 space-y-1 overflow-y-auto">
+              {linkResults.length === 0 && linkSearch.trim().length >= 2 && (
+                <p className="py-4 text-center text-xs text-muted-foreground">Nenhum entregador encontrado</p>
+              )}
+              {linkResults.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  disabled={linkBusy}
+                  onClick={() => linkEntregador(r.id)}
+                  className="flex w-full items-center justify-between rounded-md border p-2 text-left text-sm hover:bg-accent disabled:opacity-50"
+                >
+                  <div>
+                    <p className="font-medium">{r.nome}</p>
+                    {r.veiculo && <p className="text-xs text-muted-foreground">{VEHICLE_MAP[r.veiculo]?.label ?? r.veiculo}</p>}
+                  </div>
+                  <span className="text-xs text-primary">Vincular</span>
+                </button>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setLinkOpen(false)}>Cancelar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </Dialog>
   );
