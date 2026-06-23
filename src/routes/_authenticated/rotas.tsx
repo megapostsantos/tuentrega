@@ -40,6 +40,7 @@ type Oferta = {
   empresa_id: string;
   titulo: string;
   status: string;
+  operacao_id?: string | null;
   quantidade_pacotes: number | null;
 };
 
