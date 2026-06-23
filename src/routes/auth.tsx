@@ -28,7 +28,7 @@ function translateAuthError(msg: string): string {
   if (m.includes("already registered") || m.includes("user already")) return "Este e-mail já está cadastrado. Faça login.";
   if (m.includes("invalid login") || m.includes("invalid credentials")) return "E-mail ou senha incorretos.";
   if (m.includes("email") && (m.includes("invalid") || m.includes("required"))) return "Informe um e-mail válido para criar sua conta.";
-  if (m.includes("password") && (m.includes("short") || m.includes("characters") || m.includes("required"))) return "Informe uma senha com pelo menos 8 caracteres.";
+  if (m.includes("password") && (m.includes("short") || m.includes("characters") || m.includes("required"))) return "Informe uma senha com pelo menos 6 caracteres.";
   if (m.includes("rate limit")) return "Muitas tentativas. Aguarde alguns segundos e tente novamente.";
   if (m.includes("database error")) return "Erro ao salvar cadastro. Verifique os dados e tente novamente.";
   return msg;
@@ -409,7 +409,7 @@ function EmpresaForm({ onSuccess }: { onSuccess: (email: string) => void }) {
         {step === 2 && (
           <>
             <Field label="E-mail" type="email" value={f.email} onChange={(v) => set("email", v)} />
-            <Field label="Senha (mín. 8)" type="password" value={f.password} onChange={(v) => set("password", v)} />
+            <Field label="Senha" type="password" value={f.password} onChange={(v) => set("password", v)} />
             <Field label="Confirme a senha" type="password" value={f.password2} onChange={(v) => set("password2", v)}
               valid={f.password2 ? f.password === f.password2 : undefined} />
             <p className="text-xs text-muted-foreground">
@@ -531,7 +531,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
               onChange={(v) => set("data_nascimento", maskDate(v))} />
             <Field label="WhatsApp" value={f.whatsapp} onChange={(v) => set("whatsapp", maskPhone(v))} />
             <Field label="E-mail" type="email" value={f.email} onChange={(v) => set("email", v)} />
-            <Field label="Senha (mín. 8)" type="password" value={f.password} onChange={(v) => set("password", v)} />
+            <Field label="Senha" type="password" value={f.password} onChange={(v) => set("password", v)} />
             <Field label="Confirme a senha" type="password" value={f.password2} onChange={(v) => set("password2", v)}
               valid={f.password2 ? f.password === f.password2 : undefined} />
 
