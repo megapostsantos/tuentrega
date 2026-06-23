@@ -100,7 +100,7 @@ export function ProofOfDeliverySheet({ open, onClose, pacote, entregadorId, onCo
 
   async function handleConfirm() {
     if (!pacote || !entregadorId) return;
-    if (!nome.trim()) { setStep(1); toast.error("Informe o nome do recebedor."); return; }
+    
     if (!signatureData) { setStep(2); toast.error("Assinatura obrigatória."); return; }
     if (!photo) { toast.error("Tire uma foto do pacote."); return; }
 
@@ -119,7 +119,7 @@ export function ProofOfDeliverySheet({ open, onClose, pacote, entregadorId, onCo
           status: "delivered",
           assinatura_url: sigPath,
           foto_pod_url: photoPath,
-          nome_recebedor: nome.trim(),
+          nome_recebedor: nome.trim() || null,
           observacao_entrega: obs.trim() || null,
           entregue_em: new Date().toISOString(),
         } as any)
@@ -155,7 +155,7 @@ export function ProofOfDeliverySheet({ open, onClose, pacote, entregadorId, onCo
           {step === 1 && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome de quem recebeu *</Label>
+                <Label htmlFor="nome">Nome de quem recebeu</Label>
                 <Input id="nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: João Silva" />
               </div>
               <div className="space-y-2">
@@ -217,7 +217,7 @@ export function ProofOfDeliverySheet({ open, onClose, pacote, entregadorId, onCo
         <SheetFooter className="flex-row gap-2">
           <Button variant="outline" className="flex-1" onClick={onClose} disabled={saving}>Cancelar</Button>
           {step === 1 && (
-            <Button className="flex-1" onClick={() => { if (!nome.trim()) { toast.error("Informe o nome."); return; } setStep(2); }}>
+            <Button className="flex-1" onClick={() => setStep(2)}>
               Continuar
             </Button>
           )}
