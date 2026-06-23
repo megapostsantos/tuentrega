@@ -437,6 +437,26 @@ function CreateOperation({
     if (empErr) throw new Error("Complete o cadastro da empresa em Configurações. (" + empErr.message + ")");
   }
 
+  async function createPlaceholderPackages(ofertaId: string, operacaoId: string, quantidade: number) {
+    const total = Math.max(0, Number(quantidade || 0));
+    if (total === 0) return;
+    const { count } = await supabase
+      .from("entregas_pacotes")
+      .select("id", { count: "exact", head: true })
+      .eq("oferta_id", ofertaId);
+    if ((count ?? 0) > 0) return;
+
+    const rows = Array.from({ length: total }, (_, i) => ({
+      oferta_id: ofertaId,
+      operacao_id: operacaoId,
+      numero_pacote: i + 1,
+      endereco_entrega: null,
+      status: "pending",
+    }));
+    const { error } = await supabase.from("entregas_pacotes").insert(rows as any);
+    if (error) throw error;
+  }
+
   async function publishAsOffers() {
     if (!createdOpId) return;
     setSubmitting(true);
@@ -464,7 +484,9 @@ function CreateOperation({
           data_trabalho: dataOperacao,
         } as any).select("id").single();
         if (ofErr) throw ofErr;
-        await supabase.from("rotas_operacao").update({ oferta_id: (of as any).id, status: "open" }).eq("id", rotaId);
+        const ofertaId = (of as any).id as string;
+        await createPlaceholderPackages(ofertaId, createdOpId, r.quantidade_pacotes);
+        await supabase.from("rotas_operacao").update({ oferta_id: ofertaId, status: "open" }).eq("id", rotaId);
       }
       await supabase.from("operacoes").update({ status: "published" } as any).eq("id", createdOpId);
       toast.success(`🎉 ${rotas.length} oferta(s) publicada(s)!`);

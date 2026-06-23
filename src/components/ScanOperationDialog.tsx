@@ -138,12 +138,13 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
 
       const rows = pkgs.map((p, i) => ({
         oferta_id: ofe.id,
+        operacao_id: op.id,
         numero_pacote: i + 1,
         codigo_pacote: p.code,
         endereco_entrega: p.endereco || null,
         status: "pending",
       }));
-      const { error: pkgErr } = await supabase.from("entregas_pacotes").insert(rows);
+      const { error: pkgErr } = await supabase.from("entregas_pacotes").insert(rows as any);
       if (pkgErr) throw pkgErr;
 
       toast.success("Operação criada com sucesso!");
