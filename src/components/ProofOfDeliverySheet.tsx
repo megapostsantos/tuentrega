@@ -217,7 +217,7 @@ export function ProofOfDeliverySheet({ open, onClose, pacote, entregadorId, onCo
         <SheetFooter className="flex-row gap-2">
           <Button variant="outline" className="flex-1" onClick={onClose} disabled={saving}>Cancelar</Button>
           {step === 1 && (
-            <Button className="flex-1" onClick={() => { if (!nome.trim()) { toast.error("Informe o nome."); return; } setStep(2); }}>
+            <Button className="flex-1" onClick={() => setStep(2)}>
               Continuar
             </Button>
           )}
