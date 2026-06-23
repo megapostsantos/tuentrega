@@ -776,6 +776,37 @@ function DetailsDialog({
   } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [tracking, setTracking] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkSearch, setLinkSearch] = useState("");
+  const [linkResults, setLinkResults] = useState<Array<{ id: string; nome: string; veiculo: string | null }>>([]);
+  const [linkBusy, setLinkBusy] = useState(false);
+
+  useEffect(() => {
+    if (!linkOpen || linkSearch.trim().length < 2) { setLinkResults([]); return; }
+    const t = setTimeout(async () => {
+      const { data } = await (supabase as any)
+        .from("entregadores")
+        .select("id, nome_completo, tipo_veiculo")
+        .ilike("nome_completo", `%${linkSearch.trim()}%`)
+        .eq("status", "ativo")
+        .limit(15);
+      setLinkResults((data ?? []).map((r: any) => ({ id: r.id, nome: r.nome_completo ?? "(sem nome)", veiculo: r.tipo_veiculo })));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [linkOpen, linkSearch]);
+
+  async function linkEntregador(entregadorId: string) {
+    setLinkBusy(true);
+    const { error } = await supabase.from("ofertas")
+      .update({ entregador_id: entregadorId })
+      .eq("id", o.id);
+    setLinkBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Entregador vinculado");
+    setLinkOpen(false);
+    setLinkSearch("");
+    reload();
+  }
 
   useEffect(() => {
     if (role === "empresa" && o.entregador_id) {
