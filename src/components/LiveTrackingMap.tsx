@@ -79,10 +79,13 @@ type Props = {
   open: boolean;
   onClose: () => void;
   ofertaId: string;
-  entregadorId: string;
+  entregadorId: string | null;
+  operacaoId?: string | null;
 };
 
-export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId }: Props) {
+const BRAZIL_CENTER: [number, number] = [-15.7801, -47.9292];
+
+export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId, operacaoId }: Props) {
   const [loc, setLoc] = useState<Localizacao | null>(null);
   const [pacotes, setPacotes] = useState<Pacote[]>([]);
   const [entregador, setEntregador] = useState<Entregador | null>(null);
@@ -102,40 +105,58 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId }: Props
     setLoading(true);
 
     (async () => {
+      const entPromise = entregadorId
+        ? supabase.from("entregadores").select("nome_completo, tipo_veiculo").eq("id", entregadorId).maybeSingle()
+        : Promise.resolve({ data: null } as any);
+      const locPromise = entregadorId
+        ? supabase.from("entregador_localizacao")
+            .select("lat, lng, registrado_em, velocidade_kmh")
+            .eq("entregador_id", entregadorId)
+            .order("registrado_em", { ascending: false })
+            .limit(1)
+        : Promise.resolve({ data: [] } as any);
+
       const [{ data: ent }, { data: pks }, { data: locs }] = await Promise.all([
-        supabase.from("entregadores").select("nome_completo, tipo_veiculo").eq("id", entregadorId).maybeSingle(),
+        entPromise,
         supabase.from("entregas_pacotes")
           .select("id, numero_pacote, ordem_otimizada, lat, lng, status, endereco_entrega")
           .eq("oferta_id", ofertaId),
-        supabase.from("entregador_localizacao")
-          .select("lat, lng, registrado_em, velocidade_kmh")
-          .eq("entregador_id", entregadorId)
-          .order("registrado_em", { ascending: false })
-          .limit(1),
+        locPromise,
       ]);
       if (!alive) return;
+      let packages = (pks as Pacote[]) ?? [];
+      // Fallback: if no packages tied to oferta yet, try the operation's packages
+      if (packages.length === 0 && operacaoId) {
+        const { data: opPks } = await supabase.from("entregas_pacotes")
+          .select("id, numero_pacote, ordem_otimizada, lat, lng, status, endereco_entrega")
+          .eq("operacao_id", operacaoId);
+        if (!alive) return;
+        packages = (opPks as Pacote[]) ?? [];
+      }
       setEntregador((ent as Entregador) ?? null);
-      setPacotes((pks as Pacote[]) ?? []);
+      setPacotes(packages);
       setLoc((locs?.[0] as Localizacao) ?? null);
       setLoading(false);
     })();
 
-    const locChan = supabase
-      .channel(`live-tracking-${entregadorId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "entregador_localizacao", filter: `entregador_id=eq.${entregadorId}` },
-        (payload) => {
-          const r = payload.new as any;
-          setLoc({
-            lat: Number(r.lat),
-            lng: Number(r.lng),
-            registrado_em: r.registrado_em,
-            velocidade_kmh: r.velocidade_kmh != null ? Number(r.velocidade_kmh) : null,
-          });
-        },
-      )
-      .subscribe();
+    const locChan = entregadorId
+      ? supabase
+          .channel(`live-tracking-${entregadorId}`)
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "entregador_localizacao", filter: `entregador_id=eq.${entregadorId}` },
+            (payload) => {
+              const r = payload.new as any;
+              setLoc({
+                lat: Number(r.lat),
+                lng: Number(r.lng),
+                registrado_em: r.registrado_em,
+                velocidade_kmh: r.velocidade_kmh != null ? Number(r.velocidade_kmh) : null,
+              });
+            },
+          )
+          .subscribe()
+      : null;
 
     const pkgChan = supabase
       .channel(`live-tracking-pkg-${ofertaId}`)
@@ -151,10 +172,10 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId }: Props
 
     return () => {
       alive = false;
-      supabase.removeChannel(locChan);
+      if (locChan) supabase.removeChannel(locChan);
       supabase.removeChannel(pkgChan);
     };
-  }, [open, ofertaId, entregadorId]);
+  }, [open, ofertaId, entregadorId, operacaoId]);
 
   const validPacotes = useMemo(
     () => pacotes
@@ -168,11 +189,13 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId }: Props
     return { total, done };
   }, [pacotes]);
 
-  const center: [number, number] | null = loc
+  const hasGeo = !!loc || validPacotes.length > 0;
+  const center: [number, number] = loc
     ? [loc.lat, loc.lng]
     : validPacotes[0]
       ? [validPacotes[0].lat as number, validPacotes[0].lng as number]
-      : null;
+      : BRAZIL_CENTER;
+  const zoom = hasGeo ? 14 : 4;
 
   const lastUpdate = loc ? new Date(loc.registrado_em) : null;
 
@@ -191,42 +214,47 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId }: Props
 
         <div className="grid gap-0 sm:grid-cols-[1fr_280px]">
           {/* Map */}
-          <div className="h-[60vh] sm:h-[70vh] bg-muted">
+          <div className="relative h-[60vh] sm:h-[70vh] bg-muted">
             {loading ? (
               <div className="flex h-full items-center justify-center">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : center ? (
-              <MapContainer center={center} zoom={14} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {loc && (
-                  <Marker position={[loc.lat, loc.lng]} icon={pulseIcon()}>
-                    <Tooltip direction="top" offset={[0, -12]}>Entregador</Tooltip>
-                  </Marker>
-                )}
-                {validPacotes.map((p, i) => {
-                  const done = p.status === "delivered" || p.status === "not_delivered";
-                  return (
-                    <Marker key={p.id} position={[p.lat as number, p.lng as number]} icon={stopIcon(i + 1, done)}>
-                      <Tooltip direction="top" offset={[0, -14]}>
-                        <strong>#{i + 1}</strong> — {p.endereco_entrega ?? "Sem endereço"}
-                      </Tooltip>
-                    </Marker>
-                  );
-                })}
-                <Recenter center={loc ? [loc.lat, loc.lng] : null} />
-              </MapContainer>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
-                <MapPin className="h-8 w-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Localização não disponível ainda</p>
-                <p className="text-xs text-muted-foreground">O entregador ainda não começou a compartilhar a posição.</p>
-              </div>
+              <>
+                <MapContainer center={center} zoom={zoom} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {loc && (
+                    <Marker position={[loc.lat, loc.lng]} icon={pulseIcon()}>
+                      <Tooltip direction="top" offset={[0, -12]}>Entregador</Tooltip>
+                    </Marker>
+                  )}
+                  {validPacotes.map((p, i) => {
+                    const done = p.status === "delivered" || p.status === "not_delivered";
+                    return (
+                      <Marker key={p.id} position={[p.lat as number, p.lng as number]} icon={stopIcon(i + 1, done)}>
+                        <Tooltip direction="top" offset={[0, -14]}>
+                          <strong>#{i + 1}</strong> — {p.endereco_entrega ?? "Sem endereço"}
+                        </Tooltip>
+                      </Marker>
+                    );
+                  })}
+                  <Recenter center={loc ? [loc.lat, loc.lng] : null} />
+                </MapContainer>
+                {!loc && (
+                  <div className="pointer-events-none absolute inset-x-0 top-3 z-[400] flex justify-center">
+                    <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-background/95 px-4 py-2 text-xs font-medium text-muted-foreground shadow-md ring-1 ring-border">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Entregador ainda não compartilhou localização
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
+
 
           {/* Side panel */}
           <div className="border-t sm:border-t-0 sm:border-l p-4 space-y-4 overflow-y-auto">

@@ -776,6 +776,37 @@ function DetailsDialog({
   } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [tracking, setTracking] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkSearch, setLinkSearch] = useState("");
+  const [linkResults, setLinkResults] = useState<Array<{ id: string; nome: string; veiculo: string | null }>>([]);
+  const [linkBusy, setLinkBusy] = useState(false);
+
+  useEffect(() => {
+    if (!linkOpen || linkSearch.trim().length < 2) { setLinkResults([]); return; }
+    const t = setTimeout(async () => {
+      const { data } = await (supabase as any)
+        .from("entregadores")
+        .select("id, nome_completo, tipo_veiculo")
+        .ilike("nome_completo", `%${linkSearch.trim()}%`)
+        .eq("status", "ativo")
+        .limit(15);
+      setLinkResults((data ?? []).map((r: any) => ({ id: r.id, nome: r.nome_completo ?? "(sem nome)", veiculo: r.tipo_veiculo })));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [linkOpen, linkSearch]);
+
+  async function linkEntregador(entregadorId: string) {
+    setLinkBusy(true);
+    const { error } = await supabase.from("ofertas")
+      .update({ entregador_id: entregadorId })
+      .eq("id", o.id);
+    setLinkBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Entregador vinculado");
+    setLinkOpen(false);
+    setLinkSearch("");
+    reload();
+  }
 
   useEffect(() => {
     if (role === "empresa" && o.entregador_id) {
@@ -922,30 +953,49 @@ function DetailsDialog({
             <DeliveryReport oferta={o} />
           )}
 
-          {/* EMPRESA: deliverer info + payment */}
-          {role === "empresa" && o.entregador_id && deliverer && (
+          {/* EMPRESA: deliverer status row (always when empresa) */}
+          {role === "empresa" && (
             <div className="space-y-3 rounded-lg border p-3">
-              <p className="text-sm font-semibold">Entregador</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <Info label="Nome" value={deliverer.nome_completo} />
-                {deliverer.tipo_veiculo && <Info label="Veículo" value={VEHICLE_MAP[deliverer.tipo_veiculo]?.label ?? deliverer.tipo_veiculo} />}
-              </div>
-              {deliverer.whatsapp && (
-                <Button variant="outline" size="sm" className="w-full" asChild>
-                  <a href={`https://wa.me/${deliverer.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
-                    Abrir WhatsApp
-                  </a>
-                </Button>
-              )}
-              {deliverer.pix_chave && (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Chave PIX ({deliverer.pix_tipo})</p>
-                  <div className="flex gap-2">
-                    <Input readOnly value={deliverer.pix_chave} className="text-xs" />
-                    <Button type="button" size="icon" variant="outline" onClick={copyPix}><Copy className="h-4 w-4" /></Button>
-                  </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">Entregador</p>
+                  <p className="truncate text-sm font-semibold">
+                    {o.entregador_id && deliverer ? deliverer.nome_completo : "Aguardando entregador"}
+                  </p>
                 </div>
+                {!o.entregador_id && o.status === "in_progress" && (
+                  <Button size="sm" variant="outline" onClick={() => setLinkOpen(true)}>
+                    Vincular entregador
+                  </Button>
+                )}
+              </div>
+
+              {o.entregador_id && deliverer && (
+                <>
+                  {deliverer.tipo_veiculo && (
+                    <p className="text-xs text-muted-foreground">
+                      Veículo: {VEHICLE_MAP[deliverer.tipo_veiculo]?.label ?? deliverer.tipo_veiculo}
+                    </p>
+                  )}
+                  {deliverer.whatsapp && (
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <a href={`https://wa.me/${deliverer.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
+                        Abrir WhatsApp
+                      </a>
+                    </Button>
+                  )}
+                  {deliverer.pix_chave && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Chave PIX ({deliverer.pix_tipo})</p>
+                      <div className="flex gap-2">
+                        <Input readOnly value={deliverer.pix_chave} className="text-xs" />
+                        <Button type="button" size="icon" variant="outline" onClick={copyPix}><Copy className="h-4 w-4" /></Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
+
               {o.status === "in_progress" && (
                 <Button
                   variant="outline"
@@ -959,16 +1009,19 @@ function DetailsDialog({
                   Rastrear ao vivo
                 </Button>
               )}
-              {o.exige_nota_fiscal && o.status !== "completed" && (
+
+              {o.entregador_id && o.exige_nota_fiscal && o.status !== "completed" && (
                 <p className="rounded-md bg-muted px-3 py-2 text-xs">⏳ Aguardando nota fiscal</p>
               )}
-              <Button
-                onClick={markPaid}
-                disabled={busy || o.status !== "completed"}
-                className="w-full bg-primary text-primary-foreground hover:opacity-90"
-              >
-                Marcar como pago
-              </Button>
+              {o.entregador_id && (
+                <Button
+                  onClick={markPaid}
+                  disabled={busy || o.status !== "completed"}
+                  className="w-full bg-primary text-primary-foreground hover:opacity-90"
+                >
+                  Marcar como pago
+                </Button>
+              )}
             </div>
           )}
 
@@ -1036,13 +1089,52 @@ function DetailsDialog({
           <Button variant="ghost" onClick={onClose}>Fechar</Button>
         </DialogFooter>
       </DialogContent>
-      {role === "empresa" && o.entregador_id && tracking && (
+      {role === "empresa" && tracking && (
         <LiveTrackingMap
           open={tracking}
           onClose={() => setTracking(false)}
           ofertaId={o.id}
           entregadorId={o.entregador_id}
+          operacaoId={o.operacao_id ?? null}
         />
+      )}
+      {role === "empresa" && linkOpen && (
+        <Dialog open={linkOpen} onOpenChange={(v) => !v && setLinkOpen(false)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Vincular entregador</DialogTitle>
+            </DialogHeader>
+            <Input
+              autoFocus
+              placeholder="Buscar por nome (mín. 2 letras)"
+              value={linkSearch}
+              onChange={(e) => setLinkSearch(e.target.value)}
+            />
+            <div className="max-h-64 space-y-1 overflow-y-auto">
+              {linkResults.length === 0 && linkSearch.trim().length >= 2 && (
+                <p className="py-4 text-center text-xs text-muted-foreground">Nenhum entregador encontrado</p>
+              )}
+              {linkResults.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  disabled={linkBusy}
+                  onClick={() => linkEntregador(r.id)}
+                  className="flex w-full items-center justify-between rounded-md border p-2 text-left text-sm hover:bg-accent disabled:opacity-50"
+                >
+                  <div>
+                    <p className="font-medium">{r.nome}</p>
+                    {r.veiculo && <p className="text-xs text-muted-foreground">{VEHICLE_MAP[r.veiculo]?.label ?? r.veiculo}</p>}
+                  </div>
+                  <span className="text-xs text-primary">Vincular</span>
+                </button>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setLinkOpen(false)}>Cancelar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </Dialog>
   );
