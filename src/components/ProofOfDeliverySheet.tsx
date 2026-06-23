@@ -155,7 +155,7 @@ export function ProofOfDeliverySheet({ open, onClose, pacote, entregadorId, onCo
           {step === 1 && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome de quem recebeu *</Label>
+                <Label htmlFor="nome">Nome de quem recebeu</Label>
                 <Input id="nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: João Silva" />
               </div>
               <div className="space-y-2">
