@@ -166,9 +166,9 @@ function Landing() {
         {/* FEATURES */}
         <section className="mx-auto max-w-7xl px-6 py-20">
           <div className="mx-auto mb-14 max-w-2xl text-center">
-            <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">Tudo que você precisa</h2>
+            <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">Pra quem entrega e pra quem precisa</h2>
             <p className="mt-4 leading-relaxed text-muted-foreground">
-              Gestão completa para operadores de logística urbana, do carregamento ao pagamento final.
+              Entregadores ganham dinheiro extra com rotas próximas. Empresas organizam tudo e encontram quem vai rodar.
             </p>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
