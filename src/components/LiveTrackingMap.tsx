@@ -105,40 +105,58 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId, operaca
     setLoading(true);
 
     (async () => {
+      const entPromise = entregadorId
+        ? supabase.from("entregadores").select("nome_completo, tipo_veiculo").eq("id", entregadorId).maybeSingle()
+        : Promise.resolve({ data: null } as any);
+      const locPromise = entregadorId
+        ? supabase.from("entregador_localizacao")
+            .select("lat, lng, registrado_em, velocidade_kmh")
+            .eq("entregador_id", entregadorId)
+            .order("registrado_em", { ascending: false })
+            .limit(1)
+        : Promise.resolve({ data: [] } as any);
+
       const [{ data: ent }, { data: pks }, { data: locs }] = await Promise.all([
-        supabase.from("entregadores").select("nome_completo, tipo_veiculo").eq("id", entregadorId).maybeSingle(),
+        entPromise,
         supabase.from("entregas_pacotes")
           .select("id, numero_pacote, ordem_otimizada, lat, lng, status, endereco_entrega")
           .eq("oferta_id", ofertaId),
-        supabase.from("entregador_localizacao")
-          .select("lat, lng, registrado_em, velocidade_kmh")
-          .eq("entregador_id", entregadorId)
-          .order("registrado_em", { ascending: false })
-          .limit(1),
+        locPromise,
       ]);
       if (!alive) return;
+      let packages = (pks as Pacote[]) ?? [];
+      // Fallback: if no packages tied to oferta yet, try the operation's packages
+      if (packages.length === 0 && operacaoId) {
+        const { data: opPks } = await supabase.from("entregas_pacotes")
+          .select("id, numero_pacote, ordem_otimizada, lat, lng, status, endereco_entrega")
+          .eq("operacao_id", operacaoId);
+        if (!alive) return;
+        packages = (opPks as Pacote[]) ?? [];
+      }
       setEntregador((ent as Entregador) ?? null);
-      setPacotes((pks as Pacote[]) ?? []);
+      setPacotes(packages);
       setLoc((locs?.[0] as Localizacao) ?? null);
       setLoading(false);
     })();
 
-    const locChan = supabase
-      .channel(`live-tracking-${entregadorId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "entregador_localizacao", filter: `entregador_id=eq.${entregadorId}` },
-        (payload) => {
-          const r = payload.new as any;
-          setLoc({
-            lat: Number(r.lat),
-            lng: Number(r.lng),
-            registrado_em: r.registrado_em,
-            velocidade_kmh: r.velocidade_kmh != null ? Number(r.velocidade_kmh) : null,
-          });
-        },
-      )
-      .subscribe();
+    const locChan = entregadorId
+      ? supabase
+          .channel(`live-tracking-${entregadorId}`)
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "entregador_localizacao", filter: `entregador_id=eq.${entregadorId}` },
+            (payload) => {
+              const r = payload.new as any;
+              setLoc({
+                lat: Number(r.lat),
+                lng: Number(r.lng),
+                registrado_em: r.registrado_em,
+                velocidade_kmh: r.velocidade_kmh != null ? Number(r.velocidade_kmh) : null,
+              });
+            },
+          )
+          .subscribe()
+      : null;
 
     const pkgChan = supabase
       .channel(`live-tracking-pkg-${ofertaId}`)
@@ -154,10 +172,10 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId, operaca
 
     return () => {
       alive = false;
-      supabase.removeChannel(locChan);
+      if (locChan) supabase.removeChannel(locChan);
       supabase.removeChannel(pkgChan);
     };
-  }, [open, ofertaId, entregadorId]);
+  }, [open, ofertaId, entregadorId, operacaoId]);
 
   const validPacotes = useMemo(
     () => pacotes
