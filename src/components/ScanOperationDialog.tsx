@@ -144,7 +144,7 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         endereco_entrega: p.endereco || null,
         status: "pending",
       }));
-      const { error: pkgErr } = await supabase.from("entregas_pacotes").insert(rows);
+      const { error: pkgErr } = await supabase.from("entregas_pacotes").insert(rows as any);
       if (pkgErr) throw pkgErr;
 
       toast.success("Operação criada com sucesso!");
