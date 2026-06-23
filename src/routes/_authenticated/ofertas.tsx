@@ -772,6 +772,19 @@ function DetailsDialog({
       .update({ status: "accepted", entregador_id: user.id })
       .eq("id", o.id)
       .eq("status", "open");
+    if (!error && (o as any).operacao_id) {
+      const { data: pacotesSemOferta } = await supabase
+        .from("entregas_pacotes")
+        .select("id")
+        .eq("operacao_id", (o as any).operacao_id)
+        .is("oferta_id", null);
+      if (pacotesSemOferta && pacotesSemOferta.length > 0) {
+        await supabase
+          .from("entregas_pacotes")
+          .update({ oferta_id: o.id })
+          .in("id", pacotesSemOferta.map((p) => p.id));
+      }
+    }
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("🎉 Oferta aceita! Veja suas entregas ativas");

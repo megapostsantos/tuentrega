@@ -1,0 +1,2 @@
+ALTER TABLE public.entregas_pacotes ADD COLUMN IF NOT EXISTS operacao_id uuid REFERENCES public.operacoes(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_entregas_pacotes_operacao_id ON public.entregas_pacotes(operacao_id);
