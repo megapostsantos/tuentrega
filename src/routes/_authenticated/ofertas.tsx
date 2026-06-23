@@ -953,30 +953,49 @@ function DetailsDialog({
             <DeliveryReport oferta={o} />
           )}
 
-          {/* EMPRESA: deliverer info + payment */}
-          {role === "empresa" && o.entregador_id && deliverer && (
+          {/* EMPRESA: deliverer status row (always when empresa) */}
+          {role === "empresa" && (
             <div className="space-y-3 rounded-lg border p-3">
-              <p className="text-sm font-semibold">Entregador</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <Info label="Nome" value={deliverer.nome_completo} />
-                {deliverer.tipo_veiculo && <Info label="Veículo" value={VEHICLE_MAP[deliverer.tipo_veiculo]?.label ?? deliverer.tipo_veiculo} />}
-              </div>
-              {deliverer.whatsapp && (
-                <Button variant="outline" size="sm" className="w-full" asChild>
-                  <a href={`https://wa.me/${deliverer.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
-                    Abrir WhatsApp
-                  </a>
-                </Button>
-              )}
-              {deliverer.pix_chave && (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Chave PIX ({deliverer.pix_tipo})</p>
-                  <div className="flex gap-2">
-                    <Input readOnly value={deliverer.pix_chave} className="text-xs" />
-                    <Button type="button" size="icon" variant="outline" onClick={copyPix}><Copy className="h-4 w-4" /></Button>
-                  </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">Entregador</p>
+                  <p className="truncate text-sm font-semibold">
+                    {o.entregador_id && deliverer ? deliverer.nome_completo : "Aguardando entregador"}
+                  </p>
                 </div>
+                {!o.entregador_id && o.status === "in_progress" && (
+                  <Button size="sm" variant="outline" onClick={() => setLinkOpen(true)}>
+                    Vincular entregador
+                  </Button>
+                )}
+              </div>
+
+              {o.entregador_id && deliverer && (
+                <>
+                  {deliverer.tipo_veiculo && (
+                    <p className="text-xs text-muted-foreground">
+                      Veículo: {VEHICLE_MAP[deliverer.tipo_veiculo]?.label ?? deliverer.tipo_veiculo}
+                    </p>
+                  )}
+                  {deliverer.whatsapp && (
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <a href={`https://wa.me/${deliverer.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
+                        Abrir WhatsApp
+                      </a>
+                    </Button>
+                  )}
+                  {deliverer.pix_chave && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Chave PIX ({deliverer.pix_tipo})</p>
+                      <div className="flex gap-2">
+                        <Input readOnly value={deliverer.pix_chave} className="text-xs" />
+                        <Button type="button" size="icon" variant="outline" onClick={copyPix}><Copy className="h-4 w-4" /></Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
+
               {o.status === "in_progress" && (
                 <Button
                   variant="outline"
@@ -990,16 +1009,19 @@ function DetailsDialog({
                   Rastrear ao vivo
                 </Button>
               )}
-              {o.exige_nota_fiscal && o.status !== "completed" && (
+
+              {o.entregador_id && o.exige_nota_fiscal && o.status !== "completed" && (
                 <p className="rounded-md bg-muted px-3 py-2 text-xs">⏳ Aguardando nota fiscal</p>
               )}
-              <Button
-                onClick={markPaid}
-                disabled={busy || o.status !== "completed"}
-                className="w-full bg-primary text-primary-foreground hover:opacity-90"
-              >
-                Marcar como pago
-              </Button>
+              {o.entregador_id && (
+                <Button
+                  onClick={markPaid}
+                  disabled={busy || o.status !== "completed"}
+                  className="w-full bg-primary text-primary-foreground hover:opacity-90"
+                >
+                  Marcar como pago
+                </Button>
+              )}
             </div>
           )}
 
