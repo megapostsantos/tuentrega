@@ -198,9 +198,9 @@ function Landing() {
             {[
               {
                 icon: Wallet,
-                title: "PIX na hora",
+                title: "Pagamento via PIX",
                 desc:
-                  "Receba seus ganhos direto na sua conta assim que finalizar a rota. Sem espera, sem burocracia.",
+                  "Receba via PIX de acordo com o SLA de cada empresa. Você vê o prazo antes de aceitar a rota — sem surpresa.",
               },
               {
                 icon: MapIcon,
