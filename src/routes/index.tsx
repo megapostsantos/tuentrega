@@ -153,7 +153,7 @@ function Landing() {
             { v: "+15k", l: "Entregadores PJ" },
             { v: "500+", l: "Pacotes/dia" },
             { v: "R$ 0", l: "Taxa de adesão" },
-            { v: "24h", l: "Pagamento via PIX", accent: true },
+            { v: "PIX", l: "Pagamento conforme SLA", accent: true },
           ].map((s) => (
             <div key={s.l} className="text-center md:text-left">
               <p
