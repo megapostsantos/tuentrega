@@ -1,393 +1,376 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Package, Store, Wallet, Star, CalendarDays, Map as MapIcon,
-  ArrowRight, Check, TrendingUp, ShieldCheck,
+  Truck,
+  Wallet,
+  Map as MapIcon,
+  ShieldCheck,
+  Check,
+  ArrowRight,
 } from "lucide-react";
-import { Logo } from "@/components/Logo";
-import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
   head: () => ({
-      meta: [
-        { title: "TuEntrega — Ganhe dinheiro extra fazendo entregas" },
-        { name: "description", content: "Aceite rotas próximas, faça entregas no seu tempo e receba via PIX. Empresas encontram entregadores PJ e organizam toda a operação em um só lugar." },
-        { property: "og:title", content: "TuEntrega — Ganhe dinheiro extra fazendo entregas" },
-        { property: "og:description", content: "Aceite rotas próximas, faça entregas no seu tempo e receba via PIX. Empresas encontram entregadores PJ e organizam toda a operação." },
-      ],
+    meta: [
+      { title: "TuEntrega — Ganhe dinheiro extra fazendo entregas" },
+      {
+        name: "description",
+        content:
+          "Aceite rotas perto de você, trabalhe no seu tempo e receba via PIX. Empresas encontram entregadores PJ e organizam toda a operação.",
+      },
+      { property: "og:title", content: "TuEntrega — Ganhe dinheiro extra fazendo entregas" },
+      {
+        property: "og:description",
+        content:
+          "Plataforma para entregadores ganharem dinheiro extra e empresas organizarem a operação com entregadores PJ.",
+      },
+    ],
   }),
   component: Landing,
 });
 
-const features = [
-  { icon: Wallet, title: "Receba via PIX na hora", desc: "Sem espera, sem burocracia. O dinheiro cai direto na sua conta ao fechar a rota." },
-  { icon: MapIcon, title: "Rotas perto de você", desc: "Ofertas filtradas pela sua região para você rodar menos e ganhar mais." },
-  { icon: CalendarDays, title: "Você escolhe quando", desc: "Aceite as rotas nos dias e horários que cabem na sua agenda." },
-  { icon: Store, title: "Encontre entregadores PJ", desc: "Empresas publicam ofertas e os entregadores certos aceitam em segundos." },
-  { icon: Package, title: "Organize sua operação", desc: "Importe pacotes, divida por bairro e distribua rotas sem planilha." },
-  { icon: Star, title: "Score de confiabilidade", desc: "Bons entregadores ganham mais ofertas. Boas empresas atraem os melhores." },
-];
-
-const empresaItems = [
-  "Encontre entregadores PJ disponíveis na sua região",
-  "Importe pacotes e divida rotas em minutos",
-  "Acompanhe cada entrega em tempo real",
-  "Pague via PIX direto pela plataforma",
-  "Controle financeiro e nota fiscal mensal",
-];
-
-const entregadorItems = [
-  "Ganhe um dinheiro extra fazendo entregas",
-  "Trabalhe quando e onde quiser",
-  "Receba via PIX assim que terminar a rota",
-  "Aceite rotas próximas com poucos cliques",
-  "Construa reputação e ganhe mais ofertas",
-];
-
-const plans = [
-  { name: "Free", price: "R$ 0", tag: "Para experimentar", items: ["50 pacotes/mês", "1 operação/dia", "Suporte por e-mail"] },
-  { name: "Starter", price: "R$ 89", tag: "Pequenas operações", items: ["500 pacotes/mês", "3 rotas/dia", "PIX integrado"] },
-  { name: "Pro", price: "R$ 249", tag: "Recomendado", featured: true, items: ["2.000 pacotes/mês", "Rotas ilimitadas", "Score de confiabilidade", "Suporte prioritário"] },
-  { name: "Enterprise", price: "Consultar", tag: "Operações grandes", items: ["Pacotes ilimitados", "SLA dedicado", "Integrações", "Onboarding assistido"] },
-];
+const headingFont = { fontFamily: "'Archivo Black', sans-serif" };
+const bodyFont = { fontFamily: "'Hind', sans-serif" };
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/15">
-      {/* NAV */}
-      <header className="sticky top-0 z-40 bg-background/85 backdrop-blur border-b border-border/60">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Logo />
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" asChild size="sm" className="text-muted-foreground hover:text-primary">
-              <Link to="/auth">Entrar</Link>
-            </Button>
-            <Button asChild size="sm" className="rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90 elev-1">
-              <Link to="/auth">Começar grátis</Link>
-            </Button>
+    <div className="bg-[#1a1a1a] text-white selection:bg-[#e85d3a]/30" style={bodyFont}>
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full z-50 bg-[#1a1a1a]/80 backdrop-blur-md border-b border-[#2d2d2d]">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-9 h-9 bg-[#e85d3a] rounded-lg flex items-center justify-center">
+              <Truck className="w-5 h-5 text-white" strokeWidth={2.5} />
+            </div>
+            <span className="text-xl tracking-tighter" style={headingFont}>
+              TU<span className="text-[#e85d3a]">ENTREGA</span>
+            </span>
+          </Link>
+          <div className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-wider">
+            <a href="#entregadores" className="hover:text-[#e85d3a] transition-colors">
+              Entregadores
+            </a>
+            <a href="#empresas" className="hover:text-[#e85d3a] transition-colors">
+              Empresas
+            </a>
+            <Link to="/auth" className="hover:text-[#e85d3a] transition-colors">
+              Entrar
+            </Link>
+            <Link
+              to="/auth"
+              className="bg-[#e85d3a] px-6 py-2.5 rounded-full font-bold hover:bg-[#cf4d2d] transition-all text-white"
+            >
+              Cadastrar
+            </Link>
+          </div>
+          <Link
+            to="/auth"
+            className="md:hidden bg-[#e85d3a] px-5 py-2 rounded-full text-sm font-bold text-white"
+          >
+            Entrar
+          </Link>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#2d2d2d] border border-[#4a4a4a] text-sm">
+              <span className="flex h-2 w-2 rounded-full bg-[#e85d3a] animate-pulse" />
+              <span className="text-[#e85d3a] font-semibold">Vagas abertas em todo Brasil</span>
+            </div>
+            <h1
+              className="text-5xl md:text-7xl leading-[1.05] tracking-tight uppercase"
+              style={headingFont}
+            >
+              Ganhe <span className="text-[#e85d3a]">dinheiro extra</span> fazendo entregas.
+            </h1>
+            <p className="text-xl text-gray-400 max-w-xl">
+              Aceite rotas perto de você, trabalhe no seu tempo e receba via PIX na hora.
+              Empresas encontram entregadores PJ em minutos.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link
+                to="/auth"
+                className="bg-[#e85d3a] px-8 py-4 rounded-xl font-bold text-lg hover:shadow-[0_0_30px_-5px_#e85d3a] transition-all inline-flex items-center justify-center gap-2 text-white"
+              >
+                Quero ser entregador <ArrowRight className="w-5 h-5" />
+              </Link>
+              <a
+                href="#empresas"
+                className="bg-[#2d2d2d] border border-[#4a4a4a] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#4a4a4a] transition-all inline-flex items-center justify-center"
+              >
+                Sou empresa
+              </a>
+            </div>
+          </div>
+
+          {/* Hero card */}
+          <div className="relative">
+            <div className="aspect-square bg-[#2d2d2d] rounded-3xl overflow-hidden border border-[#4a4a4a] relative">
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#e85d3a]/20 to-transparent" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20">
+                <MapIcon className="w-52 h-52 text-[#e85d3a]" strokeWidth={0.5} />
+              </div>
+
+              <div className="absolute top-8 left-8 right-8 flex items-center justify-between">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1a1a1a]/80 border border-[#4a4a4a] backdrop-blur">
+                  <span className="flex h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-xs font-bold uppercase tracking-wider">
+                    Nova oferta · 1,2 km
+                  </span>
+                </div>
+              </div>
+
+              <div className="absolute bottom-8 left-8 right-8 bg-[#1a1a1a]/95 p-6 rounded-2xl border border-[#4a4a4a] backdrop-blur">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-xs text-[#9a9a9a] uppercase font-bold tracking-widest mb-1">
+                      Ganhos da semana
+                    </p>
+                    <p className="text-3xl text-[#e85d3a]" style={headingFont}>
+                      R$ 1.240,00
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">via PIX · 18 rotas</p>
+                  </div>
+                  <div className="h-14 w-24 flex items-end gap-1">
+                    <div className="flex-1 bg-[#4a4a4a] rounded-sm h-[40%]" />
+                    <div className="flex-1 bg-[#4a4a4a] rounded-sm h-[60%]" />
+                    <div className="flex-1 bg-[#e85d3a] rounded-sm h-[100%]" />
+                    <div className="flex-1 bg-[#4a4a4a] rounded-sm h-[80%]" />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </header>
+      </section>
 
-      <main>
-        {/* HERO */}
-        <section className="mx-auto max-w-7xl px-6 py-16 lg:py-24">
-          <div className="grid items-center gap-16 lg:grid-cols-2">
-            <div className="space-y-8">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                  Renda extra com entregas
+      {/* Stats */}
+      <section className="py-12 border-y border-[#2d2d2d] bg-[#2d2d2d]/30">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+          {[
+            { v: "+15k", l: "Entregadores PJ" },
+            { v: "500+", l: "Pacotes/dia" },
+            { v: "R$ 0", l: "Taxa de adesão" },
+            { v: "24h", l: "Pagamento via PIX", accent: true },
+          ].map((s) => (
+            <div key={s.l} className="text-center md:text-left">
+              <p
+                className={`text-4xl ${s.accent ? "text-[#e85d3a]" : "text-white"}`}
+                style={headingFont}
+              >
+                {s.v}
+              </p>
+              <p className="text-[#9a9a9a] uppercase text-xs font-bold tracking-widest mt-1">
+                {s.l}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features entregador */}
+      <section id="entregadores" className="py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-4">
+            <div className="max-w-xl">
+              <h2
+                className="text-4xl md:text-5xl uppercase mb-4 leading-none"
+                style={headingFont}
+              >
+                Tudo que você
+                <br />
+                precisa para <span className="text-[#e85d3a]">rodar</span>
+              </h2>
+              <p className="text-gray-400 text-lg">
+                Ferramentas pensadas para quem está no trecho todos os dias.
+              </p>
+            </div>
+            <Link
+              to="/auth"
+              className="text-[#e85d3a] font-bold border-b border-[#e85d3a] pb-1 hover:text-white hover:border-white transition-all"
+            >
+              Criar minha conta
+            </Link>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Wallet,
+                title: "PIX na hora",
+                desc:
+                  "Receba seus ganhos direto na sua conta assim que finalizar a rota. Sem espera, sem burocracia.",
+              },
+              {
+                icon: MapIcon,
+                title: "Rotas perto de você",
+                desc:
+                  "Ofertas filtradas pela sua região para você rodar menos quilômetros e ganhar mais por hora.",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Score que abre portas",
+                desc:
+                  "Boas entregas viram score. Score alto te dá acesso às melhores ofertas das empresas.",
+              },
+            ].map((f) => (
+              <div
+                key={f.title}
+                className="p-8 rounded-3xl bg-[#2d2d2d] border border-[#4a4a4a] hover:border-[#e85d3a]/50 transition-colors group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-[#4a4a4a] flex items-center justify-center mb-6 group-hover:bg-[#e85d3a] transition-colors">
+                  <f.icon className="w-6 h-6 text-white" strokeWidth={2} />
+                </div>
+                <h3 className="text-xl uppercase mb-3" style={headingFont}>
+                  {f.title}
+                </h3>
+                <p className="text-gray-400 leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Bloco empresas */}
+      <section id="empresas" className="py-24 px-6 bg-[#2d2d2d]">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
+          <div className="flex-1 order-2 md:order-1 w-full">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="h-40 bg-[#1a1a1a] rounded-2xl flex flex-col items-center justify-center p-6 border border-[#4a4a4a]">
+                <span className="text-3xl text-[#e85d3a]" style={headingFont}>
+                  98%
+                </span>
+                <span className="text-xs uppercase tracking-widest text-[#9a9a9a] mt-1">
+                  Entregas no prazo
                 </span>
               </div>
-              <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight lg:text-7xl">
-                Ganhe <span className="text-primary">dinheiro extra</span> fazendo entregas
-              </h1>
-              <p className="max-w-lg text-lg leading-relaxed text-muted-foreground">
-                Aceite rotas perto de você, trabalhe no seu tempo e receba via PIX na hora. Empresas organizam a operação e encontram entregadores PJ em segundos.
-              </p>
-              <div className="flex flex-wrap gap-3 pt-2">
-                <Button asChild size="lg" className="h-13 rounded-xl bg-primary px-8 font-bold text-primary-foreground shadow-xl shadow-primary/20 hover:-translate-y-0.5 hover:bg-primary/90 transition-transform">
-                  <Link to="/auth">Quero fazer entregas <ArrowRight className="ml-1 h-5 w-5" /></Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="h-13 rounded-xl border-2 border-border bg-card px-8 font-bold text-foreground hover:bg-secondary">
-                  <Link to="/auth">Sou empresa</Link>
-                </Button>
-              </div>
-            </div>
-
-            {/* Hero mock */}
-            <div className="relative">
-              <div className="absolute -inset-6 rounded-[2.5rem] bg-primary/15 blur-3xl" />
-              <div className="relative rounded-3xl border border-border bg-card p-6 elev-3">
-                <div className="mb-5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-2 w-2 animate-pulse rounded-full bg-success" />
-                    <span className="label-caps text-success">Nova oferta perto de você</span>
-                  </div>
-                  <span className="rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">1,2 km</span>
-                </div>
-
-                <div className="rounded-2xl border border-primary/15 bg-primary/8 p-5">
-                  <p className="label-caps text-primary">Você recebe</p>
-                  <p className="mt-1 text-5xl font-extrabold tracking-tight">R$ 187<span className="text-2xl text-muted-foreground">,50</span></p>
-                  <p className="mt-2 text-sm text-muted-foreground">25 pacotes · ~3h de rota · PIX ao finalizar</p>
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  <div className="flex items-center justify-between rounded-xl border border-border bg-secondary/50 px-4 py-3">
-                    <div>
-                      <p className="label-caps text-muted-foreground">Bairro</p>
-                      <p className="text-sm font-bold">Vila Mariana, SP</p>
-                    </div>
-                    <MapIcon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-border bg-secondary/50 p-3">
-                      <p className="label-caps text-muted-foreground">Por pacote</p>
-                      <p className="mt-0.5 text-lg font-bold">R$ 7,50</p>
-                    </div>
-                    <div className="rounded-xl border border-border bg-secondary/50 p-3">
-                      <p className="label-caps text-muted-foreground">Hoje</p>
-                      <p className="mt-0.5 text-lg font-bold">14:00</p>
-                    </div>
-                  </div>
-                </div>
-
-                <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground elev-1">
-                  Aceitar rota <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* TRUST BAR */}
-        <section className="mx-auto max-w-5xl px-6 pb-16">
-          <div className="grid grid-cols-3 divide-x divide-border rounded-3xl border border-border bg-card elev-1">
-            {[
-              { v: "325+", l: "Entregadores", accent: false },
-              { v: "500+", l: "Pacotes/dia", accent: false },
-              { v: "98%", l: "Taxa sucesso", accent: true },
-            ].map((s) => (
-              <div key={s.l} className="p-8 text-center">
-                <p className={`text-4xl font-extrabold ${s.accent ? "text-primary" : ""}`}>{s.v}</p>
-                <p className="mt-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{s.l}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* FEATURES */}
-        <section className="mx-auto max-w-7xl px-6 py-20">
-          <div className="mx-auto mb-14 max-w-2xl text-center">
-            <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">Pra quem entrega e pra quem precisa</h2>
-            <p className="mt-4 leading-relaxed text-muted-foreground">
-              Entregadores ganham dinheiro extra com rotas próximas. Empresas organizam tudo e encontram quem vai rodar.
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
-              <div key={f.title} className="group rounded-2xl border border-border bg-card p-8 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5">
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
-                  <f.icon className="h-6 w-6" />
-                </div>
-                <h3 className="mb-2 text-lg font-bold">{f.title}</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* EMPRESAS — zigzag */}
-        <section className="bg-card py-24">
-          <div className="mx-auto grid max-w-7xl items-center gap-16 px-6 lg:grid-cols-2">
-            <div className="relative order-2 lg:order-1">
-              <div className="aspect-[5/4] overflow-hidden rounded-3xl border-8 border-card bg-[image:var(--gradient-primary)] elev-3">
-                <div className="flex h-full w-full items-center justify-center text-primary-foreground/20">
-                  <Package className="h-40 w-40" strokeWidth={1.2} />
-                </div>
-              </div>
-              <div className="absolute -bottom-6 -right-6 rounded-2xl border border-border bg-background p-5 elev-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success text-success-foreground">
-                    <TrendingUp className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="label-caps text-muted-foreground">Eficiência</p>
-                    <p className="text-base font-bold">+45% produtividade</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="order-1 lg:order-2">
-              <p className="label-caps mb-3 text-primary">Para empresas</p>
-              <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                Organize a operação e <span className="text-primary">encontre entregadores</span>
-              </h2>
-              <p className="mt-4 max-w-md leading-relaxed text-muted-foreground">
-                Publique rotas e tenha entregadores PJ prontos para rodar em minutos — sem planilha, sem WhatsApp.
-              </p>
-              <ul className="mt-8 space-y-4">
-                {empresaItems.map((i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
-                      <Check className="h-4 w-4" strokeWidth={3} />
-                    </span>
-                    <span className="font-medium">{i}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* ENTREGADORES — zigzag invertido */}
-        <section className="bg-secondary py-24">
-          <div className="mx-auto grid max-w-7xl items-center gap-16 px-6 lg:grid-cols-2">
-            <div>
-              <p className="label-caps mb-3 text-primary">Para entregadores</p>
-              <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                Trabalhe quando quiser, <span className="text-primary">receba na hora</span>
-              </h2>
-              <p className="mt-4 max-w-md leading-relaxed text-muted-foreground">
-                Aceite rotas próximas de você e tenha controle total da sua agenda.
-              </p>
-              <ul className="mt-8 space-y-4">
-                {entregadorItems.map((i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
-                      <Check className="h-4 w-4" strokeWidth={3} />
-                    </span>
-                    <span className="font-medium">{i}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="relative">
-              <div className="absolute -inset-2 rounded-[2rem] bg-[image:var(--gradient-primary)] opacity-15 blur-2xl" />
-              <div className="relative rounded-3xl border border-border bg-card p-4 elev-3">
-                <div className="relative overflow-hidden rounded-2xl bg-foreground p-7 text-background">
-                  <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/30 blur-3xl" />
-                  <p className="label-caps relative text-primary">Carteira digital</p>
-                  <p className="relative mt-2 text-4xl font-extrabold">R$ 1.250,00</p>
-                  <div className="relative mt-10 flex items-center justify-between">
-                    <span className="text-xs text-background/60">Saldo disponível</span>
-                    <button className="rounded-full bg-background px-4 py-2 text-xs font-bold text-foreground">
-                      Sacar PIX
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-border p-3">
-                    <p className="label-caps text-muted-foreground">Rotas hoje</p>
-                    <p className="text-lg font-bold">3</p>
-                  </div>
-                  <div className="rounded-xl border border-border p-3">
-                    <p className="label-caps text-muted-foreground">Score</p>
-                    <p className="text-lg font-bold">Diamond</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* TESTIMONIALS */}
-        <section className="mx-auto max-w-7xl px-6 py-24">
-          <div className="mx-auto mb-14 max-w-2xl text-center">
-            <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Quem já usa o TuEntrega</h2>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              { name: "Logística Santos", city: "São Paulo, SP", quote: "Reduzimos o tempo de distribuição de rotas em 70%. Os entregadores aceitam em segundos." },
-              { name: "Flex Express", city: "Campinas, SP", quote: "A transparência nos pagamentos via PIX trouxe muito mais segurança para nossa frota PJ.", featured: true },
-              { name: "Rapidão MEI", city: "Rio de Janeiro, RJ", quote: "Melhor TMS do mercado para quem trabalha com volume pesado de entregas." },
-            ].map((t, i) => (
-              <div
-                key={t.name}
-                className={`relative rounded-2xl border bg-card p-8 ${
-                  t.featured ? "border-primary/30 elev-2" : "border-border elev-1"
-                }`}
-              >
-                {t.featured && (
-                  <span className="absolute -top-3 right-8 rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">
-                    Destaque
-                  </span>
-                )}
-                <div className="mb-5 flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-                    U{i + 1}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.city}</p>
-                  </div>
-                </div>
-                <p className="leading-relaxed text-muted-foreground">"{t.quote}"</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* PRICING — dark band */}
-        <section className="mx-4 mb-24 rounded-[2.5rem] bg-foreground py-20 text-background md:mx-6">
-          <div className="mx-auto max-w-7xl px-6 text-center">
-            <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">Planos simples</h2>
-            <p className="mx-auto mt-4 max-w-md text-background/60">Escolha o plano que cabe na sua operação.</p>
-
-            <div className="mt-14 grid gap-5 text-left sm:grid-cols-2 lg:grid-cols-4">
-              {plans.map((p) => (
-                <div
-                  key={p.name}
-                  className={`relative rounded-2xl p-7 transition-all ${
-                    p.featured
-                      ? "scale-[1.03] border-2 border-primary bg-background text-foreground shadow-2xl shadow-primary/20"
-                      : "border border-background/15 bg-background/5 hover:border-background/30"
-                  }`}
+              <div className="h-40 bg-[#e85d3a] rounded-2xl flex items-center justify-center p-6">
+                <span
+                  className="text-white text-lg text-center uppercase leading-tight"
+                  style={headingFont}
                 >
-                  {p.featured && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
-                      {p.tag}
-                    </span>
-                  )}
-                  <p className={`label-caps ${p.featured ? "text-primary" : "text-background/50"}`}>
-                    {p.name}
-                  </p>
-                  <p className="mt-3 text-3xl font-extrabold">{p.price}</p>
-                  <p className={`mt-1 text-xs ${p.featured ? "text-muted-foreground" : "text-background/50"}`}>
-                    {p.featured ? "Por mês" : p.tag}
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm">
-                    {p.items.map((it) => (
-                      <li key={it} className="flex items-start gap-2">
-                        <Check className={`mt-0.5 h-4 w-4 shrink-0 ${p.featured ? "text-primary" : "text-success"}`} strokeWidth={3} />
-                        <span className={p.featured ? "text-foreground" : "text-background/80"}>{it}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    asChild
-                    className={`mt-8 w-full rounded-xl font-bold ${
-                      p.featured
-                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                        : "border border-background/20 bg-transparent text-background hover:bg-background/10"
-                    }`}
-                  >
-                    <Link to="/auth">{p.featured ? "Assinar Pro" : p.name === "Enterprise" ? "Falar com vendas" : "Começar"}</Link>
-                  </Button>
+                  500+ rotas
+                  <br />
+                  por dia
+                </span>
+              </div>
+              <div className="h-44 bg-[#1a1a1a] rounded-2xl col-span-2 border border-[#4a4a4a] overflow-hidden">
+                <div className="p-4 flex gap-2 border-b border-[#4a4a4a]">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <span className="ml-3 text-xs text-[#9a9a9a] uppercase tracking-widest font-bold">
+                    Operação · Hoje
+                  </span>
                 </div>
+                <div className="p-5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 bg-[#e85d3a] rounded-full w-5/6" />
+                    <span className="text-xs text-[#9a9a9a]">Rota 01 · 87%</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 bg-[#4a4a4a] rounded-full w-3/5" />
+                    <span className="text-xs text-[#9a9a9a]">Rota 02 · 62%</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 bg-[#4a4a4a] rounded-full w-2/5" />
+                    <span className="text-xs text-[#9a9a9a]">Rota 03 · 40%</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 bg-[#4a4a4a] rounded-full w-1/4" />
+                    <span className="text-xs text-[#9a9a9a]">Rota 04 · 24%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 space-y-6 order-1 md:order-2">
+            <h2 className="text-4xl md:text-5xl uppercase leading-tight" style={headingFont}>
+              Para empresas:{" "}
+              <span className="text-[#e85d3a]">logística sem caos</span>
+            </h2>
+            <p className="text-gray-400 text-lg">
+              Importe pacotes, divida rotas por bairro, encontre entregadores PJ na sua região
+              e acompanhe cada entrega em tempo real.
+            </p>
+            <ul className="space-y-4">
+              {[
+                "Entregadores PJ disponíveis em minutos",
+                "Painel de controle com rastreio ao vivo",
+                "Pagamento via PIX direto pela plataforma",
+                "Score de confiabilidade dos entregadores",
+              ].map((i) => (
+                <li key={i} className="flex items-center gap-3">
+                  <Check className="text-[#e85d3a] w-5 h-5" strokeWidth={3} />
+                  <span className="font-semibold">{i}</span>
+                </li>
               ))}
-            </div>
+            </ul>
+            <Link
+              to="/auth"
+              className="inline-flex items-center gap-2 bg-white text-[#1a1a1a] px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-200 transition-all uppercase"
+            >
+              Cadastrar empresa <ArrowRight className="w-5 h-5" />
+            </Link>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* CTA */}
-        <section className="mx-auto max-w-4xl px-6 pb-24 text-center">
-          <div className="rounded-[3rem] border border-primary/15 bg-primary/5 p-12 md:p-16">
-            <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <h2 className="text-4xl font-extrabold tracking-tight md:text-5xl">Comece grátis hoje</h2>
-            <p className="mt-4 text-muted-foreground">14 dias grátis, sem cartão de crédito.</p>
-            <Button asChild size="lg" className="mt-8 h-14 rounded-full bg-primary px-10 font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-105 transition-transform">
-              <Link to="/auth">Criar conta grátis <ArrowRight className="ml-2 h-5 w-5" /></Link>
-            </Button>
+      {/* CTA final */}
+      <section className="py-24 px-6">
+        <div className="max-w-4xl mx-auto text-center space-y-8 bg-gradient-to-b from-[#2d2d2d] to-transparent p-12 rounded-[3rem] border border-[#4a4a4a]">
+          <h2
+            className="text-4xl md:text-6xl uppercase tracking-tighter"
+            style={headingFont}
+          >
+            Pronto para
+            <br />
+            <span className="text-[#e85d3a]">acelerar</span> com a gente?
+          </h2>
+          <p className="text-xl text-gray-400">
+            Cadastro grátis. Comece a rodar ou publicar rotas em minutos.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link
+              to="/auth"
+              className="bg-[#e85d3a] px-10 py-5 rounded-full font-bold text-xl shadow-[0_20px_40px_-10px_rgba(232,93,58,0.4)] hover:scale-105 transition-all text-white"
+            >
+              Criar conta grátis
+            </Link>
+            <Link
+              to="/auth"
+              className="bg-[#2d2d2d] border border-[#4a4a4a] px-10 py-5 rounded-full font-bold text-xl hover:bg-[#4a4a4a] transition-all"
+            >
+              Já tenho conta
+            </Link>
           </div>
-        </section>
-      </main>
+        </div>
+      </section>
 
-      <footer className="border-t border-border bg-card">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-6 py-10 text-sm text-muted-foreground md:flex-row">
-          <div className="flex flex-col items-center gap-1 md:items-start">
-            <Logo />
-            <p className="text-xs">Gestão de entregas em tempo real</p>
+      {/* Footer */}
+      <footer className="py-12 px-6 border-t border-[#2d2d2d]">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-[#e85d3a] rounded flex items-center justify-center">
+              <Truck className="w-4 h-4 text-white" strokeWidth={2.5} />
+            </div>
+            <span className="text-sm tracking-tighter" style={headingFont}>
+              TUENTREGA © 2026
+            </span>
           </div>
-          <div className="flex gap-6 text-xs font-semibold">
-            <a href="#" className="hover:text-primary">Termos</a>
-            <a href="#" className="hover:text-primary">Privacidade</a>
-            <a href="#" className="hover:text-primary">Contato</a>
+          <div className="flex gap-8 text-xs font-bold uppercase tracking-widest text-[#9a9a9a]">
+            <a href="#" className="hover:text-white transition-colors">
+              Privacidade
+            </a>
+            <a href="#" className="hover:text-white transition-colors">
+              Termos
+            </a>
+            <a href="#" className="hover:text-white transition-colors">
+              Suporte
+            </a>
           </div>
-          <p className="text-xs">© {new Date().getFullYear()} TuEntrega</p>
         </div>
       </footer>
     </div>
