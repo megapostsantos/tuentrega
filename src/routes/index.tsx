@@ -299,7 +299,7 @@ function Landing() {
               {[
                 "Entregadores PJ disponíveis em minutos",
                 "Painel de controle com rastreio ao vivo",
-                "Pagamento via PIX direto pela plataforma",
+                "Pagamento via PIX com SLA definido pela sua empresa",
                 "Score de confiabilidade dos entregadores",
               ].map((i) => (
                 <li key={i} className="flex items-center gap-3">
