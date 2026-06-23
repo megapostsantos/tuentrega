@@ -57,6 +57,7 @@ type Oferta = {
   pacotes_entregues: number | null;
   pacotes_nao_entregues: number | null;
   closed_at: string | null;
+  operacao_id?: string | null;
 };
 
 const VEHICLES = [
@@ -91,6 +92,28 @@ function timeLeft(iso: string | null): string {
   if (h >= 24) return `${Math.floor(h / 24)}d restantes`;
   if (h > 0) return `${h}h ${m}m restantes`;
   return `${m}m restantes`;
+}
+
+async function ensurePackagesForOferta(oferta: Pick<Oferta, "id" | "quantidade_pacotes" | "operacao_id">) {
+  if (!oferta.quantidade_pacotes || oferta.quantidade_pacotes <= 0) return;
+
+  const { count, error: countErr } = await supabase
+    .from("entregas_pacotes")
+    .select("id", { count: "exact", head: true })
+    .eq("oferta_id", oferta.id);
+  if (countErr) throw countErr;
+  if ((count ?? 0) > 0) return;
+
+  const rows = Array.from({ length: Math.max(1, Number(oferta.quantidade_pacotes)) }, (_, i) => ({
+    oferta_id: oferta.id,
+    operacao_id: oferta.operacao_id ?? null,
+    numero_pacote: i + 1,
+    endereco_entrega: null,
+    status: "pending",
+  }));
+
+  const { error } = await supabase.from("entregas_pacotes").insert(rows as any);
+  if (error) throw error;
 }
 
 function OfertasPage() {
