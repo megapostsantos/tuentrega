@@ -76,21 +76,21 @@ function Landing() {
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
                 <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                  Plataforma para entregas Last Mile
+                  Renda extra com entregas
                 </span>
               </div>
               <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight lg:text-7xl">
-                Gerencie entregas como um <span className="text-primary">profissional</span>
+                Ganhe <span className="text-primary">dinheiro extra</span> fazendo entregas
               </h1>
               <p className="max-w-lg text-lg leading-relaxed text-muted-foreground">
-                Conecte sua empresa com entregadores PJ. Distribua rotas, pague via PIX e acompanhe tudo em tempo real.
+                Aceite rotas perto de você, trabalhe no seu tempo e receba via PIX na hora. Empresas organizam a operação e encontram entregadores PJ em segundos.
               </p>
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button asChild size="lg" className="h-13 rounded-xl bg-primary px-8 font-bold text-primary-foreground shadow-xl shadow-primary/20 hover:-translate-y-0.5 hover:bg-primary/90 transition-transform">
-                  <Link to="/auth">Sou empresa <ArrowRight className="ml-1 h-5 w-5" /></Link>
+                  <Link to="/auth">Quero fazer entregas <ArrowRight className="ml-1 h-5 w-5" /></Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="h-13 rounded-xl border-2 border-border bg-card px-8 font-bold text-foreground hover:bg-secondary">
-                  <Link to="/auth">Sou entregador</Link>
+                  <Link to="/auth">Sou empresa</Link>
                 </Button>
               </div>
             </div>
