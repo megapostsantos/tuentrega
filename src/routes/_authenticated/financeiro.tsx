@@ -260,8 +260,29 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
         }
       />
 
+      {/* Alertas fiscais — PJ com pendência > R$500 */}
+      {pjAlerts.length > 0 && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900">
+                ⚠️ {pjAlerts.length} entregador{pjAlerts.length > 1 ? "es" : ""} PJ com NF pendente — valor total: {brl(pjAlertTotal)}
+              </p>
+              <p className="text-xs text-amber-800/80 mt-0.5">
+                Pagamentos pendentes acima de R$ 500,00 no mês atual.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setShowPjList(true)}>
+              Ver lista
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Cards de resumo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
         <SummaryCard
           label="Total Entradas"
           value={brl(totalEntradas)}
