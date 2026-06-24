@@ -687,22 +687,34 @@ function Row({ k, v, bold }: { k: string; v: string; bold?: boolean }) {
 function EntregadorFinanceiro() {
   const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, string>>({});
+  const [entregas, setEntregas] = useState<Record<string, { id: string; nota_fiscal_url: string | null }>>({});
+  const [me, setMe] = useState<{ id: string; nome: string; cnpj: string | null; tipo_pessoa: "pf" | "pj" } | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [custom, setCustom] = useState({ from: "", to: "" });
   const [receipt, setReceipt] = useState<Oferta | null>(null);
+  const [showHowToNf, setShowHowToNf] = useState(false);
+  const [nfUploadFor, setNfUploadFor] = useState<{ ofertaId: string; entregaId: string } | null>(null);
 
   async function load() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
     const sb = supabase as any;
-    const { data } = await sb.from("ofertas")
-      .select("id, empresa_id, entregador_id, titulo, valor, valor_por_pacote, quantidade_pacotes, data_trabalho, status, payment_status, payment_date, payment_notes, exige_nota_fiscal")
-      .eq("entregador_id", user.id)
-      .in("status", ["completed", "closed"])
-      .order("data_trabalho", { ascending: false });
-    const list = (data ?? []) as Oferta[];
+    const [meRes, ofRes] = await Promise.all([
+      sb.from("entregadores").select("id, nome_completo, cnpj, tipo_pessoa").eq("id", user.id).maybeSingle(),
+      sb.from("ofertas")
+        .select("id, empresa_id, entregador_id, titulo, valor, valor_por_pacote, quantidade_pacotes, data_trabalho, status, payment_status, payment_date, payment_notes, exige_nota_fiscal")
+        .eq("entregador_id", user.id)
+        .in("status", ["completed", "closed"])
+        .order("data_trabalho", { ascending: false }),
+    ]);
+    const m = meRes.data;
+    if (m) {
+      const isPj = m.tipo_pessoa === "pj" || (m.cnpj && String(m.cnpj).trim().length > 0);
+      setMe({ id: m.id, nome: m.nome_completo, cnpj: m.cnpj ?? null, tipo_pessoa: isPj ? "pj" : "pf" });
+    }
+    const list = (ofRes.data ?? []) as Oferta[];
     setOfertas(list);
     const ids = Array.from(new Set(list.map(o => o.empresa_id)));
     if (ids.length) {
@@ -710,6 +722,15 @@ function EntregadorFinanceiro() {
       const map: Record<string, string> = {};
       (emp ?? []).forEach((e: any) => { map[e.id] = e.nome_fantasia || e.razao_social; });
       setEmpresas(map);
+    }
+    // load entregas to get nota_fiscal_url per oferta
+    const ofIds = list.map(o => o.id);
+    if (ofIds.length) {
+      const { data: ents } = await sb.from("entregas")
+        .select("id, oferta_id, nota_fiscal_url").in("oferta_id", ofIds);
+      const em: Record<string, { id: string; nota_fiscal_url: string | null }> = {};
+      (ents ?? []).forEach((e: any) => { em[e.oferta_id] = { id: e.id, nota_fiscal_url: e.nota_fiscal_url }; });
+      setEntregas(em);
     }
     setLoading(false);
   }
