@@ -561,6 +561,7 @@ const formSchema = z.object({
   descricao: z.string().max(500).optional().or(z.literal("")),
   valor: z.number({ invalid_type_error: "Informe o valor" }).positive("Valor deve ser maior que 0"),
   data_lancamento: z.date({ required_error: "Selecione a data" }),
+  entregador_id: z.string().nullable().optional(),
 });
 type FormValues = z.infer<typeof formSchema>;
 
