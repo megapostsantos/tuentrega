@@ -679,6 +679,7 @@ function LancamentoDialog({
         valor: values.valor,
         data_lancamento: format(values.data_lancamento, "yyyy-MM-dd"),
         comprovante_url,
+        entregador_id: values.categoria === CAT_PAGAMENTO_ENTREGADOR ? (values.entregador_id ?? null) : null,
       };
 
       if (editing) {
