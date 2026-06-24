@@ -692,6 +692,7 @@ export type Database = {
           status: string
           suspended_at: string | null
           suspension_reason: string | null
+          tipo_pessoa: string
           tipo_veiculo: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos: string[]
           updated_at: string
@@ -724,6 +725,7 @@ export type Database = {
           status?: string
           suspended_at?: string | null
           suspension_reason?: string | null
+          tipo_pessoa?: string
           tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos?: string[]
           updated_at?: string
@@ -756,6 +758,7 @@ export type Database = {
           status?: string
           suspended_at?: string | null
           suspension_reason?: string | null
+          tipo_pessoa?: string
           tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos?: string[]
           updated_at?: string
@@ -1027,6 +1030,7 @@ export type Database = {
           data_lancamento: string
           descricao: string | null
           empresa_id: string
+          entregador_id: string | null
           id: string
           tipo: string
           updated_at: string
@@ -1039,6 +1043,7 @@ export type Database = {
           data_lancamento?: string
           descricao?: string | null
           empresa_id: string
+          entregador_id?: string | null
           id?: string
           tipo: string
           updated_at?: string
@@ -1051,6 +1056,7 @@ export type Database = {
           data_lancamento?: string
           descricao?: string | null
           empresa_id?: string
+          entregador_id?: string | null
           id?: string
           tipo?: string
           updated_at?: string
@@ -1062,6 +1068,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_lancamentos_entregador_id_fkey"
+            columns: ["entregador_id"]
+            isOneToOne: false
+            referencedRelation: "entregadores"
             referencedColumns: ["id"]
           },
         ]
@@ -1425,6 +1438,8 @@ export type Database = {
           empresa_id: string
           entregador_id: string
           id: string
+          nf_numero: string | null
+          nf_url: string | null
           observacao: string | null
           ofertas_ids: string[]
           valor_total: number
@@ -1436,6 +1451,8 @@ export type Database = {
           empresa_id: string
           entregador_id: string
           id?: string
+          nf_numero?: string | null
+          nf_url?: string | null
           observacao?: string | null
           ofertas_ids?: string[]
           valor_total?: number
@@ -1447,6 +1464,8 @@ export type Database = {
           empresa_id?: string
           entregador_id?: string
           id?: string
+          nf_numero?: string | null
+          nf_url?: string | null
           observacao?: string | null
           ofertas_ids?: string[]
           valor_total?: number
