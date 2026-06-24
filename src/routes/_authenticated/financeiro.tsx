@@ -135,14 +135,72 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
     },
   });
 
+
+  // Lançamentos filtrados pelo dia (se selecionado no gráfico)
+  const lancamentosFiltrados = useMemo(
+    () => dayFilter ? lancamentos.filter(l => l.data_lancamento === dayFilter) : lancamentos,
+    [lancamentos, dayFilter],
+  );
+
   const { totalEntradas, totalSaidas, saldo } = useMemo(() => {
     let e = 0, s = 0;
-    for (const l of lancamentos) {
+    for (const l of lancamentosFiltrados) {
       if (l.tipo === "entrada") e += Number(l.valor);
       else s += Number(l.valor);
     }
     return { totalEntradas: e, totalSaidas: s, saldo: e - s };
-  }, [lancamentos]);
+  }, [lancamentosFiltrados]);
+
+  // Dados do gráfico (todos os dias do período, sempre baseado em lancamentos completos)
+  const chartData = useMemo(() => {
+    const days = eachDayOfInterval({ start: range.from, end: range.to });
+    const map = new Map<string, { date: string; entradas: number; saidas: number }>();
+    days.forEach(d => {
+      const key = format(d, "yyyy-MM-dd");
+      map.set(key, { date: key, entradas: 0, saidas: 0 });
+    });
+    lancamentos.forEach(l => {
+      const row = map.get(l.data_lancamento);
+      if (!row) return;
+      if (l.tipo === "entrada") row.entradas += Number(l.valor);
+      else row.saidas += Number(l.valor);
+    });
+    return Array.from(map.values()).map(r => ({
+      ...r,
+      label: format(new Date(r.date + "T00:00"), "dd/MM"),
+    }));
+  }, [lancamentos, range]);
+
+  // Alerta fiscal: entregadores PJ com pendente > R$500 no mês atual
+  const { data: pjAlerts = [] } = useQuery({
+    queryKey: ["financeiro-pj-alerts", empresaId],
+    queryFn: async () => {
+      const monthStart = startOfMonth(new Date()).toISOString().slice(0, 10);
+      const monthEnd = endOfMonth(new Date()).toISOString().slice(0, 10);
+      const sb = supabase as any;
+      const { data: ofs } = await sb.from("ofertas")
+        .select("entregador_id, valor, payment_status, exige_nota_fiscal, data_trabalho")
+        .eq("empresa_id", empresaId)
+        .eq("payment_status", "pending")
+        .gte("data_trabalho", monthStart)
+        .lte("data_trabalho", monthEnd);
+      const byEnt = new Map<string, number>();
+      (ofs ?? []).forEach((o: any) => {
+        if (!o.entregador_id) return;
+        byEnt.set(o.entregador_id, (byEnt.get(o.entregador_id) ?? 0) + Number(o.valor || 0));
+      });
+      const ids = Array.from(byEnt.keys());
+      if (!ids.length) return [];
+      const { data: ents } = await sb.from("entregadores")
+        .select("id, nome_completo, cnpj, tipo_pessoa").in("id", ids);
+      const pjList = (ents ?? [])
+        .filter((e: any) => e.tipo_pessoa === "pj" || (e.cnpj && e.cnpj.trim().length > 0))
+        .map((e: any) => ({ id: e.id, nome: e.nome_completo, valor: byEnt.get(e.id) ?? 0 }))
+        .filter((e: any) => e.valor > 500);
+      return pjList.sort((a: any, b: any) => b.valor - a.valor);
+    },
+  });
+  const pjAlertTotal = pjAlerts.reduce((s: number, p: any) => s + p.valor, 0);
 
   const allCategorias = useMemo(
     () => Array.from(new Set([...CATEGORIAS.entrada, ...CATEGORIAS.saida])),
