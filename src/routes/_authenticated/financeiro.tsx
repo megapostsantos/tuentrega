@@ -4,12 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, startOfMonth, endOfMonth, subMonths, startOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, startOfDay, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2, Upload, Loader2,
-  CalendarIcon, FileText, ArrowDownCircle, ArrowUpCircle, Download,
+  CalendarIcon, FileText, ArrowDownCircle, ArrowUpCircle, Download, AlertTriangle,
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { exportToExcel } from "@/lib/export";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,12 +51,16 @@ type Lancamento = {
   valor: number;
   data_lancamento: string;
   comprovante_url: string | null;
+  entregador_id: string | null;
   created_at: string;
 };
+
+const CAT_PAGAMENTO_ENTREGADOR = "Pagamento a entregadores";
 
 const CATEGORIAS: Record<Tipo, string[]> = {
   entrada: ["Receita de cliente", "Adiantamento", "Outros recebimentos"],
   saida: [
+    CAT_PAGAMENTO_ENTREGADOR,
     "Combustível", "Aluguel", "Salário", "Fornecedor",
     "Manutenção", "Impostos", "Marketing", "Outros",
   ],
@@ -102,10 +107,12 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
   const [custom, setCustom] = useState<{ from?: Date; to?: Date }>({});
   const [tipoFilter, setTipoFilter] = useState<"todos" | Tipo>("todos");
   const [catFilter, setCatFilter] = useState<string>("todas");
+  const [dayFilter, setDayFilter] = useState<string | null>(null); // yyyy-MM-dd
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editing, setEditing] = useState<Lancamento | null>(null);
   const [toDelete, setToDelete] = useState<Lancamento | null>(null);
+  const [showPjList, setShowPjList] = useState(false);
 
   const range = useMemo(() => periodRange(periodo, custom), [periodo, custom]);
 
@@ -128,14 +135,72 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
     },
   });
 
+
+  // Lançamentos filtrados pelo dia (se selecionado no gráfico)
+  const lancamentosFiltrados = useMemo(
+    () => dayFilter ? lancamentos.filter(l => l.data_lancamento === dayFilter) : lancamentos,
+    [lancamentos, dayFilter],
+  );
+
   const { totalEntradas, totalSaidas, saldo } = useMemo(() => {
     let e = 0, s = 0;
-    for (const l of lancamentos) {
+    for (const l of lancamentosFiltrados) {
       if (l.tipo === "entrada") e += Number(l.valor);
       else s += Number(l.valor);
     }
     return { totalEntradas: e, totalSaidas: s, saldo: e - s };
-  }, [lancamentos]);
+  }, [lancamentosFiltrados]);
+
+  // Dados do gráfico (todos os dias do período, sempre baseado em lancamentos completos)
+  const chartData = useMemo(() => {
+    const days = eachDayOfInterval({ start: range.from, end: range.to });
+    const map = new Map<string, { date: string; entradas: number; saidas: number }>();
+    days.forEach(d => {
+      const key = format(d, "yyyy-MM-dd");
+      map.set(key, { date: key, entradas: 0, saidas: 0 });
+    });
+    lancamentos.forEach(l => {
+      const row = map.get(l.data_lancamento);
+      if (!row) return;
+      if (l.tipo === "entrada") row.entradas += Number(l.valor);
+      else row.saidas += Number(l.valor);
+    });
+    return Array.from(map.values()).map(r => ({
+      ...r,
+      label: format(new Date(r.date + "T00:00"), "dd/MM"),
+    }));
+  }, [lancamentos, range]);
+
+  // Alerta fiscal: entregadores PJ com pendente > R$500 no mês atual
+  const { data: pjAlerts = [] } = useQuery({
+    queryKey: ["financeiro-pj-alerts", empresaId],
+    queryFn: async () => {
+      const monthStart = startOfMonth(new Date()).toISOString().slice(0, 10);
+      const monthEnd = endOfMonth(new Date()).toISOString().slice(0, 10);
+      const sb = supabase as any;
+      const { data: ofs } = await sb.from("ofertas")
+        .select("entregador_id, valor, payment_status, exige_nota_fiscal, data_trabalho")
+        .eq("empresa_id", empresaId)
+        .eq("payment_status", "pending")
+        .gte("data_trabalho", monthStart)
+        .lte("data_trabalho", monthEnd);
+      const byEnt = new Map<string, number>();
+      (ofs ?? []).forEach((o: any) => {
+        if (!o.entregador_id) return;
+        byEnt.set(o.entregador_id, (byEnt.get(o.entregador_id) ?? 0) + Number(o.valor || 0));
+      });
+      const ids = Array.from(byEnt.keys());
+      if (!ids.length) return [];
+      const { data: ents } = await sb.from("entregadores")
+        .select("id, nome_completo, cnpj, tipo_pessoa").in("id", ids);
+      const pjList = (ents ?? [])
+        .filter((e: any) => e.tipo_pessoa === "pj" || (e.cnpj && e.cnpj.trim().length > 0))
+        .map((e: any) => ({ id: e.id, nome: e.nome_completo, valor: byEnt.get(e.id) ?? 0 }))
+        .filter((e: any) => e.valor > 500);
+      return pjList.sort((a: any, b: any) => b.valor - a.valor);
+    },
+  });
+  const pjAlertTotal = pjAlerts.reduce((s: number, p: any) => s + p.valor, 0);
 
   const allCategorias = useMemo(
     () => Array.from(new Set([...CATEGORIAS.entrada, ...CATEGORIAS.saida])),
@@ -164,7 +229,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
 
   function handleExport() {
     const headers = ["Data", "Tipo", "Categoria", "Descrição", "Valor"];
-    const rows: (string | number)[][] = lancamentos.map((l) => [
+    const rows: (string | number)[][] = lancamentosFiltrados.map((l) => [
       format(new Date(l.data_lancamento + "T00:00"), "dd/MM/yyyy"),
       l.tipo === "entrada" ? "Entrada" : "Saída",
       l.categoria,
@@ -195,8 +260,29 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
         }
       />
 
+      {/* Alertas fiscais — PJ com pendência > R$500 */}
+      {pjAlerts.length > 0 && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900">
+                ⚠️ {pjAlerts.length} entregador{pjAlerts.length > 1 ? "es" : ""} PJ com NF pendente — valor total: {brl(pjAlertTotal)}
+              </p>
+              <p className="text-xs text-amber-800/80 mt-0.5">
+                Pagamentos pendentes acima de R$ 500,00 no mês atual.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setShowPjList(true)}>
+              Ver lista
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Cards de resumo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
         <SummaryCard
           label="Total Entradas"
           value={brl(totalEntradas)}
@@ -285,6 +371,39 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
         </CardContent>
       </Card>
 
+      {/* Gráfico diário */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium">Entradas vs Saídas por dia</p>
+            {dayFilter && (
+              <Button size="sm" variant="ghost" onClick={() => setDayFilter(null)}>
+                Limpar filtro de dia ({format(new Date(dayFilter + "T00:00"), "dd/MM")})
+              </Button>
+            )}
+          </div>
+          <div className="w-full h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} onClick={(e: any) => {
+                const p = e?.activePayload?.[0]?.payload;
+                if (p?.date) setDayFilter(prev => prev === p.date ? null : p.date);
+              }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${v}`} />
+                <Tooltip
+                  formatter={(v: any) => brl(Number(v))}
+                  labelFormatter={(l) => `Dia ${l}`}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="entradas" name="Entradas" fill="#16a34a" cursor="pointer" />
+                <Bar dataKey="saidas" name="Saídas" fill="#dc2626" cursor="pointer" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Lista */}
       <Card>
         <CardContent className="p-0">
@@ -292,14 +411,14 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
             <div className="p-8 flex justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : lancamentos.length === 0 ? (
+          ) : lancamentosFiltrados.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
               <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              Nenhum lançamento no período
+              {dayFilter ? "Nenhum lançamento neste dia" : "Nenhum lançamento no período"}
             </div>
           ) : (
             <ul className="divide-y">
-              {lancamentos.map((l) => (
+              {lancamentosFiltrados.map((l) => (
                 <li key={l.id} className="p-4 flex items-center gap-3 hover:bg-muted/40">
                   <div className={cn(
                     "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
@@ -378,7 +497,33 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showPjList} onOpenChange={setShowPjList}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Entregadores PJ com NF pendente</DialogTitle>
+            <DialogDescription>
+              Pagamentos pendentes acima de R$ 500 no mês atual.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="divide-y max-h-80 overflow-auto">
+            {pjAlerts.map((p: any) => (
+              <li key={p.id} className="py-2 flex justify-between items-center">
+                <span className="text-sm truncate">{p.nome}</span>
+                <span className="font-semibold text-amber-700 tabular-nums">{brl(p.valor)}</span>
+              </li>
+            ))}
+          </ul>
+          <DialogFooter>
+            <div className="flex w-full justify-between items-center">
+              <span className="text-sm text-muted-foreground">Total</span>
+              <span className="font-bold">{brl(pjAlertTotal)}</span>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
 
@@ -416,6 +561,7 @@ const formSchema = z.object({
   descricao: z.string().max(500).optional().or(z.literal("")),
   valor: z.number({ invalid_type_error: "Informe o valor" }).positive("Valor deve ser maior que 0"),
   data_lancamento: z.date({ required_error: "Selecione a data" }),
+  entregador_id: z.string().nullable().optional(),
 });
 type FormValues = z.infer<typeof formSchema>;
 
@@ -436,6 +582,7 @@ function LancamentoDialog({
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [entSearch, setEntSearch] = useState("");
 
   const {
     register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting },
@@ -447,6 +594,7 @@ function LancamentoDialog({
       descricao: "",
       valor: 0,
       data_lancamento: new Date(),
+      entregador_id: null,
     },
   });
 
@@ -454,6 +602,34 @@ function LancamentoDialog({
   const valor = watch("valor");
   const data = watch("data_lancamento");
   const categoria = watch("categoria");
+  const entregadorId = watch("entregador_id");
+
+  // Carrega entregadores quando categoria for "Pagamento a entregadores"
+  const { data: entregadoresList = [] } = useQuery({
+    queryKey: ["entregadores-empresa", empresaId],
+    queryFn: async () => {
+      const sb = supabase as any;
+      // pega entregadores que já trabalharam com a empresa
+      const { data: ofs } = await sb.from("ofertas")
+        .select("entregador_id").eq("empresa_id", empresaId).not("entregador_id", "is", null);
+      const ids = Array.from(new Set((ofs ?? []).map((o: any) => o.entregador_id))) as string[];
+      if (!ids.length) return [] as { id: string; nome: string; tipo_pessoa: string | null }[];
+      const { data: ents } = await sb.from("entregadores")
+        .select("id, nome_completo, tipo_pessoa, cnpj").in("id", ids);
+      return (ents ?? []).map((e: any) => ({
+        id: e.id, nome: e.nome_completo,
+        tipo_pessoa: e.tipo_pessoa ?? (e.cnpj ? "pj" : "pf"),
+      }));
+    },
+    enabled: open && categoria === CAT_PAGAMENTO_ENTREGADOR,
+  });
+
+  const entregadoresFiltrados = useMemo(() =>
+    entregadoresList.filter((e: any) =>
+      e.nome.toLowerCase().includes(entSearch.toLowerCase())
+    ).slice(0, 20),
+    [entregadoresList, entSearch],
+  );
 
   // reset on open
   useMemo(() => {
@@ -465,14 +641,16 @@ function LancamentoDialog({
         descricao: editing.descricao ?? "",
         valor: Number(editing.valor),
         data_lancamento: new Date(editing.data_lancamento + "T00:00"),
+        entregador_id: editing.entregador_id ?? null,
       });
     } else {
       reset({
         tipo: "entrada", categoria: "", descricao: "", valor: 0,
-        data_lancamento: new Date(),
+        data_lancamento: new Date(), entregador_id: null,
       });
     }
     setFile(null);
+    setEntSearch("");
   }, [open, editing, reset]);
 
   const onSubmit = async (values: FormValues) => {
@@ -501,17 +679,18 @@ function LancamentoDialog({
         valor: values.valor,
         data_lancamento: format(values.data_lancamento, "yyyy-MM-dd"),
         comprovante_url,
+        entregador_id: values.categoria === CAT_PAGAMENTO_ENTREGADOR ? (values.entregador_id ?? null) : null,
       };
 
       if (editing) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("financeiro_lancamentos")
           .update(payload)
           .eq("id", editing.id);
         if (error) throw error;
         toast.success("Lançamento atualizado");
       } else {
-        const { error } = await supabase.from("financeiro_lancamentos").insert(payload);
+        const { error } = await (supabase as any).from("financeiro_lancamentos").insert(payload);
         if (error) throw error;
         toast.success("Lançamento criado");
       }
@@ -575,6 +754,42 @@ function LancamentoDialog({
             </Select>
             {errors.categoria && <p className="text-xs text-red-600 mt-1">{errors.categoria.message}</p>}
           </div>
+
+          {tipo === "saida" && categoria === CAT_PAGAMENTO_ENTREGADOR && (
+            <div>
+              <Label>Entregador</Label>
+              <Input
+                placeholder="Buscar por nome..."
+                value={entSearch}
+                onChange={(e) => setEntSearch(e.target.value)}
+              />
+              <div className="mt-2 max-h-40 overflow-auto rounded border divide-y">
+                {entregadoresFiltrados.length === 0 ? (
+                  <p className="p-2 text-xs text-muted-foreground">Nenhum entregador encontrado</p>
+                ) : entregadoresFiltrados.map((e: any) => (
+                  <button
+                    type="button"
+                    key={e.id}
+                    onClick={() => setValue("entregador_id", e.id, { shouldValidate: true })}
+                    className={cn(
+                      "w-full text-left p-2 text-sm hover:bg-muted/50 flex items-center justify-between",
+                      entregadorId === e.id && "bg-primary/10"
+                    )}
+                  >
+                    <span className="truncate">{e.nome}</span>
+                    <Badge variant="outline" className="text-[10px] ml-2">
+                      {e.tipo_pessoa === "pj" ? "PJ" : "PF"}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+              {entregadorId && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Selecionado: {entregadoresList.find((e: any) => e.id === entregadorId)?.nome ?? "—"}
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <Label>Valor</Label>

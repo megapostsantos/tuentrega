@@ -61,6 +61,7 @@ type Oferta = {
 type EntregadorInfo = {
   nome: string; pix_tipo: string | null; pix_chave: string | null;
   whatsapp: string | null; banco: string | null; cpf: string | null;
+  cnpj: string | null; tipo_pessoa: "pf" | "pj";
 };
 
 type PeriodKey = "hoje" | "semana" | "mes" | "mes_ant" | "custom";
@@ -137,12 +138,14 @@ function EmpresaFinanceiro() {
     const ids = Array.from(new Set(list.map(o => o.entregador_id).filter(Boolean))) as string[];
     if (ids.length) {
       const { data: ppl } = await sb.from("entregadores")
-        .select("id, nome_completo, pix_tipo, pix_chave, whatsapp, banco, cpf").in("id", ids);
+        .select("id, nome_completo, pix_tipo, pix_chave, whatsapp, banco, cpf, cnpj, tipo_pessoa").in("id", ids);
       const map: Record<string, EntregadorInfo> = {};
       (ppl ?? []).forEach((p: any) => {
+        const isPj = p.tipo_pessoa === "pj" || (p.cnpj && String(p.cnpj).trim().length > 0);
         map[p.id] = {
           nome: p.nome_completo, pix_tipo: p.pix_tipo, pix_chave: p.pix_chave,
           whatsapp: p.whatsapp, banco: p.banco, cpf: p.cpf,
+          cnpj: p.cnpj ?? null, tipo_pessoa: isPj ? "pj" : "pf",
         };
       });
       setPessoas(map);
@@ -168,11 +171,12 @@ function EmpresaFinanceiro() {
     for (const o of ofertas) {
       if (!o.entregador_id) continue;
       const info = pessoas[o.entregador_id];
-      const g = m.get(o.entregador_id) ?? {
+      const g: GrupoEmpresa = m.get(o.entregador_id) ?? {
         entregador_id: o.entregador_id,
         nome: info?.nome ?? "Entregador",
         pix_tipo: info?.pix_tipo ?? null, pix_chave: info?.pix_chave ?? null,
         whatsapp: info?.whatsapp ?? null, banco: info?.banco ?? null, cpf: info?.cpf ?? null,
+        cnpj: info?.cnpj ?? null, tipo_pessoa: info?.tipo_pessoa ?? "pf",
         ofertas: [], total_pendente: 0, total_pago: 0, has_nf_pending: false,
       };
       g.ofertas.push(o);
@@ -297,8 +301,22 @@ function EmpresaFinanceiro() {
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Badge variant="outline" className="text-[10px]">{g.ofertas.length} rotas</Badge>
+                        {g.tipo_pessoa === "pj" ? (
+                          <Badge className="text-[10px] bg-blue-500/15 text-blue-700 hover:bg-blue-500/15">
+                            PJ — Emite NF
+                          </Badge>
+                        ) : (
+                          <Badge className="text-[10px] bg-muted text-muted-foreground hover:bg-muted">
+                            PF — Sem NF
+                          </Badge>
+                        )}
+                        {g.tipo_pessoa === "pj" && g.total_pendente > 500 && (
+                          <Badge className="text-[10px] bg-red-500/15 text-red-700 hover:bg-red-500/15">
+                            <AlertTriangle className="h-3 w-3 mr-0.5" />NF obrigatória
+                          </Badge>
+                        )}
                         {g.has_nf_pending && (
-                          <Badge className="text-[10px] bg-amber-500/15 text-amber-700">
+                          <Badge className="text-[10px] bg-amber-500/15 text-amber-700 hover:bg-amber-500/15">
                             <AlertTriangle className="h-3 w-3 mr-0.5" />NF pendente
                           </Badge>
                         )}
@@ -381,6 +399,7 @@ type GrupoEmpresa = {
   entregador_id: string; nome: string;
   pix_tipo: string | null; pix_chave: string | null;
   whatsapp: string | null; banco: string | null; cpf: string | null;
+  cnpj: string | null; tipo_pessoa: "pf" | "pj";
   ofertas: Oferta[]; total_pendente: number; total_pago: number; has_nf_pending: boolean;
 };
 
@@ -426,17 +445,35 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
 }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0,10));
   const [obs, setObs] = useState("");
+  const [nfNumero, setNfNumero] = useState("");
+  const [nfFile, setNfFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const isPj = grupo.tipo_pessoa === "pj";
   const pendingOfertas = grupo.ofertas.filter(o => o.payment_status === "pending");
   const total = pendingOfertas.reduce((s,o) => s + Number(o.valor||0), 0);
 
   async function confirm() {
+    if (isPj && (!nfNumero.trim() || !nfFile)) {
+      return toast.error("Para entregadores PJ, informe o número da NF e anexe o arquivo.");
+    }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
     const sb = supabase as any;
     const ids = pendingOfertas.map(o => o.id);
     const ts = new Date(date + "T12:00:00").toISOString();
+
+    let nfUrl: string | null = null;
+    if (isPj && nfFile) {
+      const ext = nfFile.name.split(".").pop() || "pdf";
+      const path = `empresa/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("notas-fiscais")
+        .upload(path, nfFile, { contentType: nfFile.type, upsert: false });
+      if (upErr) { setSaving(false); return toast.error("Falha no upload da NF: " + upErr.message); }
+      const { data: signed } = await supabase.storage.from("notas-fiscais")
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+      nfUrl = signed?.signedUrl ?? null;
+    }
 
     const { error } = await sb.from("ofertas").update({
       payment_status: "paid", payment_date: ts,
@@ -447,6 +484,7 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
     await sb.from("pagamentos").insert({
       empresa_id: user.id, entregador_id: grupo.entregador_id, ofertas_ids: ids,
       valor_total: total, data_pagamento: ts, observacao: obs || null, created_by: user.id,
+      nf_numero: nfNumero.trim() || null, nf_url: nfUrl,
     });
     await sb.from("entregas").update({ status: "pago", data_pagamento: ts })
       .in("oferta_id", ids).eq("status", "pendente");
@@ -469,7 +507,14 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
         </DialogHeader>
         <div className="space-y-3">
           <div className="rounded-lg border bg-muted/30 p-3 space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Nome</span><span className="font-medium">{grupo.nome}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Nome</span>
+              <span className="font-medium flex items-center gap-1">
+                {grupo.nome}
+                <Badge className={cn("text-[10px]", isPj ? "bg-blue-500/15 text-blue-700" : "bg-muted text-muted-foreground")}>
+                  {isPj ? "PJ" : "PF"}
+                </Badge>
+              </span>
+            </div>
             <div className="flex justify-between"><span className="text-muted-foreground">PIX</span><span className="font-mono text-xs">{grupo.pix_chave || "—"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Banco</span><span>{grupo.banco || "—"}</span></div>
             <div className="flex justify-between border-t pt-1 mt-1"><span className="text-muted-foreground">Valor</span>
@@ -479,6 +524,19 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
             <label className="text-xs text-muted-foreground">Data do pagamento</label>
             <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
           </div>
+          {isPj && (
+            <>
+              <div>
+                <label className="text-xs text-muted-foreground">Número da NF <span className="text-red-600">*</span></label>
+                <Input value={nfNumero} onChange={e => setNfNumero(e.target.value)} placeholder="Ex: 000123" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Arquivo da NF (PDF) <span className="text-red-600">*</span></label>
+                <Input type="file" accept="application/pdf"
+                  onChange={e => setNfFile(e.target.files?.[0] ?? null)} />
+              </div>
+            </>
+          )}
           <div>
             <label className="text-xs text-muted-foreground">Observação (opcional)</label>
             <Textarea value={obs} onChange={e => setObs(e.target.value)} rows={2} />
@@ -503,11 +561,37 @@ function FechamentoDialog({ empresaName, pacotesMl, mlValor, ofertas, pessoas, o
 }) {
   const mes = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const recebido = pacotesMl * mlValor;
-  const pago = ofertas.filter(o => o.payment_status === "paid").reduce((s,o) => s + Number(o.valor||0), 0);
+  const paidOfertas = ofertas.filter(o => o.payment_status === "paid");
+  const pago = paidOfertas.reduce((s,o) => s + Number(o.valor||0), 0);
   const margem = recebido - pago;
   const margemPct = recebido > 0 ? ((margem / recebido) * 100).toFixed(1) : "0";
   const entregadoresAtivos = new Set(ofertas.map(o => o.entregador_id).filter(Boolean)).size;
   const mediaEntregador = entregadoresAtivos ? margem / entregadoresAtivos : 0;
+
+  // Obrigações fiscais — split por tipo_pessoa
+  let pagoPj = 0, pagoPf = 0, nfsEsperadas = 0;
+  paidOfertas.forEach(o => {
+    if (!o.entregador_id) return;
+    const isPj = pessoas[o.entregador_id]?.tipo_pessoa === "pj";
+    const v = Number(o.valor || 0);
+    if (isPj) { pagoPj += v; if (o.exige_nota_fiscal) nfsEsperadas += 1; }
+    else pagoPf += v;
+  });
+
+  // Consultar NFs recebidas no mês
+  const [nfsRecebidas, setNfsRecebidas] = useState(0);
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const { data } = await (supabase as any).from("pagamentos")
+        .select("nf_url").eq("empresa_id", user.id)
+        .gte("data_pagamento", monthStart).not("nf_url", "is", null);
+      setNfsRecebidas((data ?? []).length);
+    })();
+  }, []);
+  const nfsPendentes = Math.max(0, nfsEsperadas - nfsRecebidas);
 
   // Best deliverer
   const totals: Record<string, number> = {};
@@ -521,6 +605,11 @@ function FechamentoDialog({ empresaName, pacotesMl, mlValor, ofertas, pessoas, o
       { Item: "Pacotes entregues (ML)", Valor: pacotesMl },
       { Item: "Recebido do ML", Valor: recebido },
       { Item: "Pago a entregadores", Valor: pago },
+      { Item: "Pago a PJs", Valor: pagoPj },
+      { Item: "Pago a PFs", Valor: pagoPf },
+      { Item: "NFs esperadas (PJ)", Valor: nfsEsperadas },
+      { Item: "NFs recebidas", Valor: nfsRecebidas },
+      { Item: "NFs pendentes", Valor: nfsPendentes },
       { Item: "Margem bruta", Valor: margem },
       { Item: "Margem %", Valor: margemPct + "%" },
       { Item: "Entregadores ativos", Valor: entregadoresAtivos },
@@ -533,7 +622,7 @@ function FechamentoDialog({ empresaName, pacotesMl, mlValor, ofertas, pessoas, o
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Fechamento de {mes}</DialogTitle>
           <DialogDescription>{empresaName}</DialogDescription>
@@ -547,6 +636,14 @@ function FechamentoDialog({ empresaName, pacotesMl, mlValor, ofertas, pessoas, o
           <Section title="Custos">
             <Row k="Pago a entregadores" v={brl(pago)} />
             <Row k="Total custos" v={brl(pago)} bold />
+          </Section>
+          <Section title="Obrigações fiscais">
+            <Row k="Total pago a PJs" v={brl(pagoPj)} />
+            <Row k="Total pago a PFs" v={brl(pagoPf)} />
+            <Row k="NFs recebidas" v={`${nfsRecebidas} de ${nfsEsperadas}`} />
+            {nfsPendentes > 0 && (
+              <Row k="NFs pendentes" v={`⚠️ ${nfsPendentes}`} bold />
+            )}
           </Section>
           <Section title="Margem">
             <Row k="Margem bruta" v={brl(margem)} bold />
@@ -590,22 +687,34 @@ function Row({ k, v, bold }: { k: string; v: string; bold?: boolean }) {
 function EntregadorFinanceiro() {
   const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, string>>({});
+  const [entregas, setEntregas] = useState<Record<string, { id: string; nota_fiscal_url: string | null }>>({});
+  const [me, setMe] = useState<{ id: string; nome: string; cnpj: string | null; tipo_pessoa: "pf" | "pj" } | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [custom, setCustom] = useState({ from: "", to: "" });
   const [receipt, setReceipt] = useState<Oferta | null>(null);
+  const [showHowToNf, setShowHowToNf] = useState(false);
+  const [nfUploadFor, setNfUploadFor] = useState<{ ofertaId: string; entregaId: string } | null>(null);
 
   async function load() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
     const sb = supabase as any;
-    const { data } = await sb.from("ofertas")
-      .select("id, empresa_id, entregador_id, titulo, valor, valor_por_pacote, quantidade_pacotes, data_trabalho, status, payment_status, payment_date, payment_notes, exige_nota_fiscal")
-      .eq("entregador_id", user.id)
-      .in("status", ["completed", "closed"])
-      .order("data_trabalho", { ascending: false });
-    const list = (data ?? []) as Oferta[];
+    const [meRes, ofRes] = await Promise.all([
+      sb.from("entregadores").select("id, nome_completo, cnpj, tipo_pessoa").eq("id", user.id).maybeSingle(),
+      sb.from("ofertas")
+        .select("id, empresa_id, entregador_id, titulo, valor, valor_por_pacote, quantidade_pacotes, data_trabalho, status, payment_status, payment_date, payment_notes, exige_nota_fiscal")
+        .eq("entregador_id", user.id)
+        .in("status", ["completed", "closed"])
+        .order("data_trabalho", { ascending: false }),
+    ]);
+    const m = meRes.data;
+    if (m) {
+      const isPj = m.tipo_pessoa === "pj" || (m.cnpj && String(m.cnpj).trim().length > 0);
+      setMe({ id: m.id, nome: m.nome_completo, cnpj: m.cnpj ?? null, tipo_pessoa: isPj ? "pj" : "pf" });
+    }
+    const list = (ofRes.data ?? []) as Oferta[];
     setOfertas(list);
     const ids = Array.from(new Set(list.map(o => o.empresa_id)));
     if (ids.length) {
@@ -613,6 +722,15 @@ function EntregadorFinanceiro() {
       const map: Record<string, string> = {};
       (emp ?? []).forEach((e: any) => { map[e.id] = e.nome_fantasia || e.razao_social; });
       setEmpresas(map);
+    }
+    // load entregas to get nota_fiscal_url per oferta
+    const ofIds = list.map(o => o.id);
+    if (ofIds.length) {
+      const { data: ents } = await sb.from("entregas")
+        .select("id, oferta_id, nota_fiscal_url").in("oferta_id", ofIds);
+      const em: Record<string, { id: string; nota_fiscal_url: string | null }> = {};
+      (ents ?? []).forEach((e: any) => { em[e.oferta_id] = { id: e.id, nota_fiscal_url: e.nota_fiscal_url }; });
+      setEntregas(em);
     }
     setLoading(false);
   }
@@ -669,8 +787,61 @@ function EntregadorFinanceiro() {
 
   if (loading) return <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />;
 
+  const isPj = me?.tipo_pessoa === "pj";
+
+  async function downloadDre() {
+    const list = filtered.filter(o => o.payment_status === "paid");
+    const rows: any[] = list.map(o => ({
+      Data: o.data_trabalho ?? "",
+      Empresa: empresas[o.empresa_id] ?? "",
+      Titulo: o.titulo,
+      Valor: Number(o.valor || 0),
+    }));
+    const totalReceita = rows.reduce((s, r) => s + Number(r.Valor || 0), 0);
+    const iss = isPj ? totalReceita * 0.05 : 0;
+    const inss = !isPj ? totalReceita * 0.11 : 0;
+    const liquido = totalReceita - iss - inss;
+    rows.push({});
+    rows.push({ Data: "TOTAL RECEITAS", Valor: totalReceita });
+    if (isPj) rows.push({ Data: "ISS (estimado 5%)", Valor: -iss });
+    if (!isPj) rows.push({ Data: "INSS (estimado 11%)", Valor: -inss });
+    rows.push({ Data: "RESULTADO LÍQUIDO ESTIMADO", Valor: liquido });
+    rows.push({});
+    rows.push({ Data: "Obs: Esta é apenas uma estimativa. Consulte um contador." });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "DRE");
+    XLSX.writeFile(wb, `dre-${me?.nome ?? "extrato"}-${new Date().toISOString().slice(0,7)}.xlsx`);
+  }
+
   return (
     <div className="space-y-4">
+      {/* Situação fiscal */}
+      {me && (
+        <Card className={cn("border-2", isPj ? "border-blue-200 bg-blue-50" : "border-muted bg-muted/30")}>
+          <CardContent className="p-4 flex items-start gap-3">
+            <Receipt className={cn("h-5 w-5 mt-0.5 shrink-0", isPj ? "text-blue-600" : "text-muted-foreground")} />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm">Situação fiscal</p>
+              {isPj ? (
+                <>
+                  <p className="text-xs mt-1">✅ Você é <strong>PJ</strong> — lembre de emitir NF para pagamentos acima de R$ 500.</p>
+                  <Button size="sm" variant="link" className="p-0 h-auto mt-1" onClick={() => setShowHowToNf(true)}>
+                    Como emitir NF →
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs mt-1">ℹ️ Você é <strong>PF</strong> — não precisa emitir nota fiscal.</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Considere abrir um MEI para ter mais benefícios.
+                  </p>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <SummaryCard color="orange" label="A receber" value={brl(aReceber)} hint="Aguardando confirmação" icon={Clock} />
         <SummaryCard color="green" label="Recebido este mês" value={brl(recebidoMes)} icon={CheckCircle2} />
@@ -691,10 +862,13 @@ function EntregadorFinanceiro() {
         </div>
       </CardContent></Card>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         {([["semana","Esta semana"],["mes","Este mês"],["mes_ant","Mês anterior"],["custom","Personalizado"]] as [PeriodKey,string][]).map(([k,l]) => (
           <Chip key={k} active={period===k} onClick={() => setPeriod(k)}>{l}</Chip>
         ))}
+        <Button size="sm" variant="outline" className="ml-auto" onClick={downloadDre}>
+          <FileSpreadsheet className="h-4 w-4 mr-1" />Baixar DRE
+        </Button>
       </div>
       {period === "custom" && (
         <div className="grid grid-cols-2 gap-2">
@@ -714,27 +888,57 @@ function EntregadorFinanceiro() {
             return (
               <div key={key} className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">{key} · {brl(total)}</p>
-                {items.map(o => (
-                  <Card key={o.id} className="cursor-pointer hover:elev-2"
-                    onClick={() => o.payment_status === "paid" && setReceipt(o)}>
-                    <CardContent className="p-3 flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">{o.titulo}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {empresas[o.empresa_id] ?? "Empresa"} ·{" "}
-                          {o.data_trabalho ? new Date(o.data_trabalho).toLocaleDateString("pt-BR") : "—"}
-                          {o.quantidade_pacotes ? ` · ${o.quantidade_pacotes} pac.` : ""}
-                        </p>
+                {items.map(o => {
+                  const ent = entregas[o.id];
+                  const nfNeeded = o.exige_nota_fiscal && o.payment_status === "paid";
+                  const nfSent = !!ent?.nota_fiscal_url;
+                  return (
+                  <Card key={o.id} className="hover:elev-2">
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-3 cursor-pointer"
+                        onClick={() => o.payment_status === "paid" && setReceipt(o)}>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{o.titulo}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {empresas[o.empresa_id] ?? "Empresa"} ·{" "}
+                            {o.data_trabalho ? new Date(o.data_trabalho).toLocaleDateString("pt-BR") : "—"}
+                            {o.quantidade_pacotes ? ` · ${o.quantidade_pacotes} pac.` : ""}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-primary">{brl(Number(o.valor||0))}</p>
+                          <Badge variant={o.payment_status==="paid"?"secondary":"outline"} className="text-[10px]">
+                            {o.payment_status==="paid"?"Pago":"Pendente"}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-bold text-primary">{brl(Number(o.valor||0))}</p>
-                        <Badge variant={o.payment_status==="paid"?"secondary":"outline"} className="text-[10px]">
-                          {o.payment_status==="paid"?"Pago":"Pendente"}
-                        </Badge>
-                      </div>
+                      {nfNeeded && (
+                        <div className="mt-2 pt-2 border-t flex items-center justify-between gap-2">
+                          {nfSent ? (
+                            <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15">
+                              NF enviada ✅
+                            </Badge>
+                          ) : (
+                            <Badge className="text-[10px] bg-amber-500/15 text-amber-700 hover:bg-amber-500/15">
+                              <AlertTriangle className="h-3 w-3 mr-0.5" />NF pendente
+                            </Badge>
+                          )}
+                          {!nfSent && ent && (
+                            <Button size="sm" variant="outline"
+                              onClick={() => setNfUploadFor({ ofertaId: o.id, entregaId: ent.id })}>
+                              <Receipt className="h-3 w-3 mr-1" />Enviar NF
+                            </Button>
+                          )}
+                          {nfSent && ent?.nota_fiscal_url && (
+                            <a href={ent.nota_fiscal_url} target="_blank" rel="noreferrer"
+                              className="text-xs text-primary underline">Ver NF</a>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             );
           })}
@@ -745,6 +949,33 @@ function EntregadorFinanceiro() {
         <ReceiptDialog oferta={receipt} empresa={empresas[receipt.empresa_id] ?? "Empresa"}
           onClose={() => setReceipt(null)} />
       )}
+
+      {nfUploadFor && me && (
+        <NfUploadDialog target={nfUploadFor} entregadorId={me.id}
+          onClose={() => setNfUploadFor(null)}
+          onDone={() => { setNfUploadFor(null); load(); }} />
+      )}
+
+      <Dialog open={showHowToNf} onOpenChange={setShowHowToNf}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Como emitir nota fiscal (PJ)</DialogTitle>
+            <DialogDescription>Passos básicos — consulte seu contador.</DialogDescription>
+          </DialogHeader>
+          <ol className="text-sm space-y-2 list-decimal pl-5">
+            <li>Acesse o portal da prefeitura da sua cidade (NFS-e).</li>
+            <li>Faça login com certificado digital ou senha web.</li>
+            <li>Selecione "Emitir NFS-e" e informe o CNPJ do tomador (a empresa).</li>
+            <li>Descreva o serviço (ex: "Serviço de entrega de pacotes").</li>
+            <li>Informe o valor e a alíquota de ISS da sua cidade (geralmente 2% a 5%).</li>
+            <li>Emita a nota e baixe o PDF.</li>
+            <li>Volte aqui e anexe o PDF clicando em "Enviar NF" na rota correspondente.</li>
+          </ol>
+          <p className="text-xs text-muted-foreground mt-2">
+            ⚠️ Esta orientação é genérica. Cada cidade tem regras próprias. Procure um contador.
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -789,6 +1020,57 @@ function ReceiptDialog({ oferta, empresa, onClose }: { oferta: Oferta; empresa: 
           <Button variant="outline" onClick={() => window.print()}><FileDown className="h-4 w-4 mr-1" />PDF</Button>
           <Button variant="outline" onClick={share}><Share2 className="h-4 w-4 mr-1" />Compartilhar</Button>
           <Button onClick={onClose}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NfUploadDialog({ target, entregadorId, onClose, onDone }: {
+  target: { ofertaId: string; entregaId: string };
+  entregadorId: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function upload() {
+    if (!file) return toast.error("Selecione o PDF da nota fiscal.");
+    setSaving(true);
+    const ext = file.name.split(".").pop() || "pdf";
+    const path = `${entregadorId}/${target.entregaId}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("notas-fiscais")
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (upErr) { setSaving(false); return toast.error("Falha no upload: " + upErr.message); }
+    const { data: signed } = await supabase.storage.from("notas-fiscais")
+      .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+    const url = signed?.signedUrl ?? null;
+    const { error } = await (supabase as any).from("entregas")
+      .update({ nota_fiscal_url: url }).eq("id", target.entregaId);
+    if (error) { setSaving(false); return toast.error(error.message); }
+    toast.success("Nota fiscal enviada!");
+    setSaving(false);
+    onDone();
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Enviar nota fiscal</DialogTitle>
+          <DialogDescription>Anexe o PDF da NFS-e emitida.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Input type="file" accept="application/pdf"
+            onChange={e => setFile(e.target.files?.[0] ?? null)} />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={upload} disabled={saving || !file}>
+            {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+            Enviar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
