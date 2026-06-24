@@ -683,14 +683,14 @@ function LancamentoDialog({
       };
 
       if (editing) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("financeiro_lancamentos")
           .update(payload)
           .eq("id", editing.id);
         if (error) throw error;
         toast.success("Lançamento atualizado");
       } else {
-        const { error } = await supabase.from("financeiro_lancamentos").insert(payload);
+        const { error } = await (supabase as any).from("financeiro_lancamentos").insert(payload);
         if (error) throw error;
         toast.success("Lançamento criado");
       }
