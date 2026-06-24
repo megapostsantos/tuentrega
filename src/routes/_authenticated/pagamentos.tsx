@@ -384,6 +384,7 @@ type GrupoEmpresa = {
   entregador_id: string; nome: string;
   pix_tipo: string | null; pix_chave: string | null;
   whatsapp: string | null; banco: string | null; cpf: string | null;
+  cnpj: string | null; tipo_pessoa: "pf" | "pj";
   ofertas: Oferta[]; total_pendente: number; total_pago: number; has_nf_pending: boolean;
 };
 
