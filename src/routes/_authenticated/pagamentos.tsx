@@ -445,17 +445,35 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
 }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0,10));
   const [obs, setObs] = useState("");
+  const [nfNumero, setNfNumero] = useState("");
+  const [nfFile, setNfFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const isPj = grupo.tipo_pessoa === "pj";
   const pendingOfertas = grupo.ofertas.filter(o => o.payment_status === "pending");
   const total = pendingOfertas.reduce((s,o) => s + Number(o.valor||0), 0);
 
   async function confirm() {
+    if (isPj && (!nfNumero.trim() || !nfFile)) {
+      return toast.error("Para entregadores PJ, informe o número da NF e anexe o arquivo.");
+    }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
     const sb = supabase as any;
     const ids = pendingOfertas.map(o => o.id);
     const ts = new Date(date + "T12:00:00").toISOString();
+
+    let nfUrl: string | null = null;
+    if (isPj && nfFile) {
+      const ext = nfFile.name.split(".").pop() || "pdf";
+      const path = `empresa/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("notas-fiscais")
+        .upload(path, nfFile, { contentType: nfFile.type, upsert: false });
+      if (upErr) { setSaving(false); return toast.error("Falha no upload da NF: " + upErr.message); }
+      const { data: signed } = await supabase.storage.from("notas-fiscais")
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+      nfUrl = signed?.signedUrl ?? null;
+    }
 
     const { error } = await sb.from("ofertas").update({
       payment_status: "paid", payment_date: ts,
@@ -466,6 +484,7 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
     await sb.from("pagamentos").insert({
       empresa_id: user.id, entregador_id: grupo.entregador_id, ofertas_ids: ids,
       valor_total: total, data_pagamento: ts, observacao: obs || null, created_by: user.id,
+      nf_numero: nfNumero.trim() || null, nf_url: nfUrl,
     });
     await sb.from("entregas").update({ status: "pago", data_pagamento: ts })
       .in("oferta_id", ids).eq("status", "pendente");
@@ -488,7 +507,14 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
         </DialogHeader>
         <div className="space-y-3">
           <div className="rounded-lg border bg-muted/30 p-3 space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Nome</span><span className="font-medium">{grupo.nome}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Nome</span>
+              <span className="font-medium flex items-center gap-1">
+                {grupo.nome}
+                <Badge className={cn("text-[10px]", isPj ? "bg-blue-500/15 text-blue-700" : "bg-muted text-muted-foreground")}>
+                  {isPj ? "PJ" : "PF"}
+                </Badge>
+              </span>
+            </div>
             <div className="flex justify-between"><span className="text-muted-foreground">PIX</span><span className="font-mono text-xs">{grupo.pix_chave || "—"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Banco</span><span>{grupo.banco || "—"}</span></div>
             <div className="flex justify-between border-t pt-1 mt-1"><span className="text-muted-foreground">Valor</span>
@@ -498,6 +524,19 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
             <label className="text-xs text-muted-foreground">Data do pagamento</label>
             <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
           </div>
+          {isPj && (
+            <>
+              <div>
+                <label className="text-xs text-muted-foreground">Número da NF <span className="text-red-600">*</span></label>
+                <Input value={nfNumero} onChange={e => setNfNumero(e.target.value)} placeholder="Ex: 000123" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Arquivo da NF (PDF) <span className="text-red-600">*</span></label>
+                <Input type="file" accept="application/pdf"
+                  onChange={e => setNfFile(e.target.files?.[0] ?? null)} />
+              </div>
+            </>
+          )}
           <div>
             <label className="text-xs text-muted-foreground">Observação (opcional)</label>
             <Textarea value={obs} onChange={e => setObs(e.target.value)} rows={2} />
