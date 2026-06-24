@@ -862,10 +862,13 @@ function EntregadorFinanceiro() {
         </div>
       </CardContent></Card>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         {([["semana","Esta semana"],["mes","Este mês"],["mes_ant","Mês anterior"],["custom","Personalizado"]] as [PeriodKey,string][]).map(([k,l]) => (
           <Chip key={k} active={period===k} onClick={() => setPeriod(k)}>{l}</Chip>
         ))}
+        <Button size="sm" variant="outline" className="ml-auto" onClick={downloadDre}>
+          <FileSpreadsheet className="h-4 w-4 mr-1" />Baixar DRE
+        </Button>
       </div>
       {period === "custom" && (
         <div className="grid grid-cols-2 gap-2">
@@ -885,27 +888,57 @@ function EntregadorFinanceiro() {
             return (
               <div key={key} className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">{key} · {brl(total)}</p>
-                {items.map(o => (
-                  <Card key={o.id} className="cursor-pointer hover:elev-2"
-                    onClick={() => o.payment_status === "paid" && setReceipt(o)}>
-                    <CardContent className="p-3 flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">{o.titulo}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {empresas[o.empresa_id] ?? "Empresa"} ·{" "}
-                          {o.data_trabalho ? new Date(o.data_trabalho).toLocaleDateString("pt-BR") : "—"}
-                          {o.quantidade_pacotes ? ` · ${o.quantidade_pacotes} pac.` : ""}
-                        </p>
+                {items.map(o => {
+                  const ent = entregas[o.id];
+                  const nfNeeded = o.exige_nota_fiscal && o.payment_status === "paid";
+                  const nfSent = !!ent?.nota_fiscal_url;
+                  return (
+                  <Card key={o.id} className="hover:elev-2">
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-3 cursor-pointer"
+                        onClick={() => o.payment_status === "paid" && setReceipt(o)}>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{o.titulo}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {empresas[o.empresa_id] ?? "Empresa"} ·{" "}
+                            {o.data_trabalho ? new Date(o.data_trabalho).toLocaleDateString("pt-BR") : "—"}
+                            {o.quantidade_pacotes ? ` · ${o.quantidade_pacotes} pac.` : ""}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-primary">{brl(Number(o.valor||0))}</p>
+                          <Badge variant={o.payment_status==="paid"?"secondary":"outline"} className="text-[10px]">
+                            {o.payment_status==="paid"?"Pago":"Pendente"}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-bold text-primary">{brl(Number(o.valor||0))}</p>
-                        <Badge variant={o.payment_status==="paid"?"secondary":"outline"} className="text-[10px]">
-                          {o.payment_status==="paid"?"Pago":"Pendente"}
-                        </Badge>
-                      </div>
+                      {nfNeeded && (
+                        <div className="mt-2 pt-2 border-t flex items-center justify-between gap-2">
+                          {nfSent ? (
+                            <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15">
+                              NF enviada ✅
+                            </Badge>
+                          ) : (
+                            <Badge className="text-[10px] bg-amber-500/15 text-amber-700 hover:bg-amber-500/15">
+                              <AlertTriangle className="h-3 w-3 mr-0.5" />NF pendente
+                            </Badge>
+                          )}
+                          {!nfSent && ent && (
+                            <Button size="sm" variant="outline"
+                              onClick={() => setNfUploadFor({ ofertaId: o.id, entregaId: ent.id })}>
+                              <Receipt className="h-3 w-3 mr-1" />Enviar NF
+                            </Button>
+                          )}
+                          {nfSent && ent?.nota_fiscal_url && (
+                            <a href={ent.nota_fiscal_url} target="_blank" rel="noreferrer"
+                              className="text-xs text-primary underline">Ver NF</a>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             );
           })}
@@ -916,6 +949,33 @@ function EntregadorFinanceiro() {
         <ReceiptDialog oferta={receipt} empresa={empresas[receipt.empresa_id] ?? "Empresa"}
           onClose={() => setReceipt(null)} />
       )}
+
+      {nfUploadFor && me && (
+        <NfUploadDialog target={nfUploadFor} entregadorId={me.id}
+          onClose={() => setNfUploadFor(null)}
+          onDone={() => { setNfUploadFor(null); load(); }} />
+      )}
+
+      <Dialog open={showHowToNf} onOpenChange={setShowHowToNf}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Como emitir nota fiscal (PJ)</DialogTitle>
+            <DialogDescription>Passos básicos — consulte seu contador.</DialogDescription>
+          </DialogHeader>
+          <ol className="text-sm space-y-2 list-decimal pl-5">
+            <li>Acesse o portal da prefeitura da sua cidade (NFS-e).</li>
+            <li>Faça login com certificado digital ou senha web.</li>
+            <li>Selecione "Emitir NFS-e" e informe o CNPJ do tomador (a empresa).</li>
+            <li>Descreva o serviço (ex: "Serviço de entrega de pacotes").</li>
+            <li>Informe o valor e a alíquota de ISS da sua cidade (geralmente 2% a 5%).</li>
+            <li>Emita a nota e baixe o PDF.</li>
+            <li>Volte aqui e anexe o PDF clicando em "Enviar NF" na rota correspondente.</li>
+          </ol>
+          <p className="text-xs text-muted-foreground mt-2">
+            ⚠️ Esta orientação é genérica. Cada cidade tem regras próprias. Procure um contador.
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
