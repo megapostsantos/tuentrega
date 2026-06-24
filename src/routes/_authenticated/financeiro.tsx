@@ -497,7 +497,33 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showPjList} onOpenChange={setShowPjList}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Entregadores PJ com NF pendente</DialogTitle>
+            <DialogDescription>
+              Pagamentos pendentes acima de R$ 500 no mês atual.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="divide-y max-h-80 overflow-auto">
+            {pjAlerts.map((p: any) => (
+              <li key={p.id} className="py-2 flex justify-between items-center">
+                <span className="text-sm truncate">{p.nome}</span>
+                <span className="font-semibold text-amber-700 tabular-nums">{brl(p.valor)}</span>
+              </li>
+            ))}
+          </ul>
+          <DialogFooter>
+            <div className="flex w-full justify-between items-center">
+              <span className="text-sm text-muted-foreground">Total</span>
+              <span className="font-bold">{brl(pjAlertTotal)}</span>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
 
