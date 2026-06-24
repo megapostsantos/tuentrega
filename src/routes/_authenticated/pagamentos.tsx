@@ -301,8 +301,22 @@ function EmpresaFinanceiro() {
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Badge variant="outline" className="text-[10px]">{g.ofertas.length} rotas</Badge>
+                        {g.tipo_pessoa === "pj" ? (
+                          <Badge className="text-[10px] bg-blue-500/15 text-blue-700 hover:bg-blue-500/15">
+                            PJ — Emite NF
+                          </Badge>
+                        ) : (
+                          <Badge className="text-[10px] bg-muted text-muted-foreground hover:bg-muted">
+                            PF — Sem NF
+                          </Badge>
+                        )}
+                        {g.tipo_pessoa === "pj" && g.total_pendente > 500 && (
+                          <Badge className="text-[10px] bg-red-500/15 text-red-700 hover:bg-red-500/15">
+                            <AlertTriangle className="h-3 w-3 mr-0.5" />NF obrigatória
+                          </Badge>
+                        )}
                         {g.has_nf_pending && (
-                          <Badge className="text-[10px] bg-amber-500/15 text-amber-700">
+                          <Badge className="text-[10px] bg-amber-500/15 text-amber-700 hover:bg-amber-500/15">
                             <AlertTriangle className="h-3 w-3 mr-0.5" />NF pendente
                           </Badge>
                         )}
