@@ -755,6 +755,42 @@ function LancamentoDialog({
             {errors.categoria && <p className="text-xs text-red-600 mt-1">{errors.categoria.message}</p>}
           </div>
 
+          {tipo === "saida" && categoria === CAT_PAGAMENTO_ENTREGADOR && (
+            <div>
+              <Label>Entregador</Label>
+              <Input
+                placeholder="Buscar por nome..."
+                value={entSearch}
+                onChange={(e) => setEntSearch(e.target.value)}
+              />
+              <div className="mt-2 max-h-40 overflow-auto rounded border divide-y">
+                {entregadoresFiltrados.length === 0 ? (
+                  <p className="p-2 text-xs text-muted-foreground">Nenhum entregador encontrado</p>
+                ) : entregadoresFiltrados.map((e: any) => (
+                  <button
+                    type="button"
+                    key={e.id}
+                    onClick={() => setValue("entregador_id", e.id, { shouldValidate: true })}
+                    className={cn(
+                      "w-full text-left p-2 text-sm hover:bg-muted/50 flex items-center justify-between",
+                      entregadorId === e.id && "bg-primary/10"
+                    )}
+                  >
+                    <span className="truncate">{e.nome}</span>
+                    <Badge variant="outline" className="text-[10px] ml-2">
+                      {e.tipo_pessoa === "pj" ? "PJ" : "PF"}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+              {entregadorId && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Selecionado: {entregadoresList.find((e: any) => e.id === entregadorId)?.nome ?? "—"}
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
             <Label>Valor</Label>
             <Input
