@@ -561,11 +561,37 @@ function FechamentoDialog({ empresaName, pacotesMl, mlValor, ofertas, pessoas, o
 }) {
   const mes = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const recebido = pacotesMl * mlValor;
-  const pago = ofertas.filter(o => o.payment_status === "paid").reduce((s,o) => s + Number(o.valor||0), 0);
+  const paidOfertas = ofertas.filter(o => o.payment_status === "paid");
+  const pago = paidOfertas.reduce((s,o) => s + Number(o.valor||0), 0);
   const margem = recebido - pago;
   const margemPct = recebido > 0 ? ((margem / recebido) * 100).toFixed(1) : "0";
   const entregadoresAtivos = new Set(ofertas.map(o => o.entregador_id).filter(Boolean)).size;
   const mediaEntregador = entregadoresAtivos ? margem / entregadoresAtivos : 0;
+
+  // Obrigações fiscais — split por tipo_pessoa
+  let pagoPj = 0, pagoPf = 0, nfsEsperadas = 0;
+  paidOfertas.forEach(o => {
+    if (!o.entregador_id) return;
+    const isPj = pessoas[o.entregador_id]?.tipo_pessoa === "pj";
+    const v = Number(o.valor || 0);
+    if (isPj) { pagoPj += v; if (o.exige_nota_fiscal) nfsEsperadas += 1; }
+    else pagoPf += v;
+  });
+
+  // Consultar NFs recebidas no mês
+  const [nfsRecebidas, setNfsRecebidas] = useState(0);
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const { data } = await (supabase as any).from("pagamentos")
+        .select("nf_url").eq("empresa_id", user.id)
+        .gte("data_pagamento", monthStart).not("nf_url", "is", null);
+      setNfsRecebidas((data ?? []).length);
+    })();
+  }, []);
+  const nfsPendentes = Math.max(0, nfsEsperadas - nfsRecebidas);
 
   // Best deliverer
   const totals: Record<string, number> = {};
@@ -579,6 +605,11 @@ function FechamentoDialog({ empresaName, pacotesMl, mlValor, ofertas, pessoas, o
       { Item: "Pacotes entregues (ML)", Valor: pacotesMl },
       { Item: "Recebido do ML", Valor: recebido },
       { Item: "Pago a entregadores", Valor: pago },
+      { Item: "Pago a PJs", Valor: pagoPj },
+      { Item: "Pago a PFs", Valor: pagoPf },
+      { Item: "NFs esperadas (PJ)", Valor: nfsEsperadas },
+      { Item: "NFs recebidas", Valor: nfsRecebidas },
+      { Item: "NFs pendentes", Valor: nfsPendentes },
       { Item: "Margem bruta", Valor: margem },
       { Item: "Margem %", Valor: margemPct + "%" },
       { Item: "Entregadores ativos", Valor: entregadoresAtivos },
@@ -591,7 +622,7 @@ function FechamentoDialog({ empresaName, pacotesMl, mlValor, ofertas, pessoas, o
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Fechamento de {mes}</DialogTitle>
           <DialogDescription>{empresaName}</DialogDescription>
@@ -605,6 +636,14 @@ function FechamentoDialog({ empresaName, pacotesMl, mlValor, ofertas, pessoas, o
           <Section title="Custos">
             <Row k="Pago a entregadores" v={brl(pago)} />
             <Row k="Total custos" v={brl(pago)} bold />
+          </Section>
+          <Section title="Obrigações fiscais">
+            <Row k="Total pago a PJs" v={brl(pagoPj)} />
+            <Row k="Total pago a PFs" v={brl(pagoPf)} />
+            <Row k="NFs recebidas" v={`${nfsRecebidas} de ${nfsEsperadas}`} />
+            {nfsPendentes > 0 && (
+              <Row k="NFs pendentes" v={`⚠️ ${nfsPendentes}`} bold />
+            )}
           </Section>
           <Section title="Margem">
             <Row k="Margem bruta" v={brl(margem)} bold />
