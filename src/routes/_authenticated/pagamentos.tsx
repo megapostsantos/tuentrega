@@ -787,8 +787,61 @@ function EntregadorFinanceiro() {
 
   if (loading) return <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />;
 
+  const isPj = me?.tipo_pessoa === "pj";
+
+  async function downloadDre() {
+    const list = filtered.filter(o => o.payment_status === "paid");
+    const rows: any[] = list.map(o => ({
+      Data: o.data_trabalho ?? "",
+      Empresa: empresas[o.empresa_id] ?? "",
+      Titulo: o.titulo,
+      Valor: Number(o.valor || 0),
+    }));
+    const totalReceita = rows.reduce((s, r) => s + Number(r.Valor || 0), 0);
+    const iss = isPj ? totalReceita * 0.05 : 0;
+    const inss = !isPj ? totalReceita * 0.11 : 0;
+    const liquido = totalReceita - iss - inss;
+    rows.push({});
+    rows.push({ Data: "TOTAL RECEITAS", Valor: totalReceita });
+    if (isPj) rows.push({ Data: "ISS (estimado 5%)", Valor: -iss });
+    if (!isPj) rows.push({ Data: "INSS (estimado 11%)", Valor: -inss });
+    rows.push({ Data: "RESULTADO LÍQUIDO ESTIMADO", Valor: liquido });
+    rows.push({});
+    rows.push({ Data: "Obs: Esta é apenas uma estimativa. Consulte um contador." });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "DRE");
+    XLSX.writeFile(wb, `dre-${me?.nome ?? "extrato"}-${new Date().toISOString().slice(0,7)}.xlsx`);
+  }
+
   return (
     <div className="space-y-4">
+      {/* Situação fiscal */}
+      {me && (
+        <Card className={cn("border-2", isPj ? "border-blue-200 bg-blue-50" : "border-muted bg-muted/30")}>
+          <CardContent className="p-4 flex items-start gap-3">
+            <Receipt className={cn("h-5 w-5 mt-0.5 shrink-0", isPj ? "text-blue-600" : "text-muted-foreground")} />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm">Situação fiscal</p>
+              {isPj ? (
+                <>
+                  <p className="text-xs mt-1">✅ Você é <strong>PJ</strong> — lembre de emitir NF para pagamentos acima de R$ 500.</p>
+                  <Button size="sm" variant="link" className="p-0 h-auto mt-1" onClick={() => setShowHowToNf(true)}>
+                    Como emitir NF →
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs mt-1">ℹ️ Você é <strong>PF</strong> — não precisa emitir nota fiscal.</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Considere abrir um MEI para ter mais benefícios.
+                  </p>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <SummaryCard color="orange" label="A receber" value={brl(aReceber)} hint="Aguardando confirmação" icon={Clock} />
         <SummaryCard color="green" label="Recebido este mês" value={brl(recebidoMes)} icon={CheckCircle2} />
