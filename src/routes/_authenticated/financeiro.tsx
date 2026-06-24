@@ -371,6 +371,39 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
         </CardContent>
       </Card>
 
+      {/* Gráfico diário */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium">Entradas vs Saídas por dia</p>
+            {dayFilter && (
+              <Button size="sm" variant="ghost" onClick={() => setDayFilter(null)}>
+                Limpar filtro de dia ({format(new Date(dayFilter + "T00:00"), "dd/MM")})
+              </Button>
+            )}
+          </div>
+          <div className="w-full h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} onClick={(e: any) => {
+                const p = e?.activePayload?.[0]?.payload;
+                if (p?.date) setDayFilter(prev => prev === p.date ? null : p.date);
+              }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${v}`} />
+                <Tooltip
+                  formatter={(v: any) => brl(Number(v))}
+                  labelFormatter={(l) => `Dia ${l}`}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="entradas" name="Entradas" fill="#16a34a" cursor="pointer" />
+                <Bar dataKey="saidas" name="Saídas" fill="#dc2626" cursor="pointer" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Lista */}
       <Card>
         <CardContent className="p-0">
@@ -378,14 +411,14 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
             <div className="p-8 flex justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : lancamentos.length === 0 ? (
+          ) : lancamentosFiltrados.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
               <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              Nenhum lançamento no período
+              {dayFilter ? "Nenhum lançamento neste dia" : "Nenhum lançamento no período"}
             </div>
           ) : (
             <ul className="divide-y">
-              {lancamentos.map((l) => (
+              {lancamentosFiltrados.map((l) => (
                 <li key={l.id} className="p-4 flex items-center gap-3 hover:bg-muted/40">
                   <div className={cn(
                     "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
