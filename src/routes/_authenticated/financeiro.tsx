@@ -51,12 +51,16 @@ type Lancamento = {
   valor: number;
   data_lancamento: string;
   comprovante_url: string | null;
+  entregador_id: string | null;
   created_at: string;
 };
+
+const CAT_PAGAMENTO_ENTREGADOR = "Pagamento a entregadores";
 
 const CATEGORIAS: Record<Tipo, string[]> = {
   entrada: ["Receita de cliente", "Adiantamento", "Outros recebimentos"],
   saida: [
+    CAT_PAGAMENTO_ENTREGADOR,
     "Combustível", "Aluguel", "Salário", "Fornecedor",
     "Manutenção", "Impostos", "Marketing", "Outros",
   ],
