@@ -582,6 +582,7 @@ function LancamentoDialog({
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [entSearch, setEntSearch] = useState("");
 
   const {
     register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting },
@@ -593,6 +594,7 @@ function LancamentoDialog({
       descricao: "",
       valor: 0,
       data_lancamento: new Date(),
+      entregador_id: null,
     },
   });
 
@@ -600,6 +602,34 @@ function LancamentoDialog({
   const valor = watch("valor");
   const data = watch("data_lancamento");
   const categoria = watch("categoria");
+  const entregadorId = watch("entregador_id");
+
+  // Carrega entregadores quando categoria for "Pagamento a entregadores"
+  const { data: entregadoresList = [] } = useQuery({
+    queryKey: ["entregadores-empresa", empresaId],
+    queryFn: async () => {
+      const sb = supabase as any;
+      // pega entregadores que já trabalharam com a empresa
+      const { data: ofs } = await sb.from("ofertas")
+        .select("entregador_id").eq("empresa_id", empresaId).not("entregador_id", "is", null);
+      const ids = Array.from(new Set((ofs ?? []).map((o: any) => o.entregador_id))) as string[];
+      if (!ids.length) return [] as { id: string; nome: string; tipo_pessoa: string | null }[];
+      const { data: ents } = await sb.from("entregadores")
+        .select("id, nome_completo, tipo_pessoa, cnpj").in("id", ids);
+      return (ents ?? []).map((e: any) => ({
+        id: e.id, nome: e.nome_completo,
+        tipo_pessoa: e.tipo_pessoa ?? (e.cnpj ? "pj" : "pf"),
+      }));
+    },
+    enabled: open && categoria === CAT_PAGAMENTO_ENTREGADOR,
+  });
+
+  const entregadoresFiltrados = useMemo(() =>
+    entregadoresList.filter((e: any) =>
+      e.nome.toLowerCase().includes(entSearch.toLowerCase())
+    ).slice(0, 20),
+    [entregadoresList, entSearch],
+  );
 
   // reset on open
   useMemo(() => {
@@ -611,14 +641,16 @@ function LancamentoDialog({
         descricao: editing.descricao ?? "",
         valor: Number(editing.valor),
         data_lancamento: new Date(editing.data_lancamento + "T00:00"),
+        entregador_id: editing.entregador_id ?? null,
       });
     } else {
       reset({
         tipo: "entrada", categoria: "", descricao: "", valor: 0,
-        data_lancamento: new Date(),
+        data_lancamento: new Date(), entregador_id: null,
       });
     }
     setFile(null);
+    setEntSearch("");
   }, [open, editing, reset]);
 
   const onSubmit = async (values: FormValues) => {
