@@ -107,10 +107,12 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
   const [custom, setCustom] = useState<{ from?: Date; to?: Date }>({});
   const [tipoFilter, setTipoFilter] = useState<"todos" | Tipo>("todos");
   const [catFilter, setCatFilter] = useState<string>("todas");
+  const [dayFilter, setDayFilter] = useState<string | null>(null); // yyyy-MM-dd
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editing, setEditing] = useState<Lancamento | null>(null);
   const [toDelete, setToDelete] = useState<Lancamento | null>(null);
+  const [showPjList, setShowPjList] = useState(false);
 
   const range = useMemo(() => periodRange(periodo, custom), [periodo, custom]);
 
