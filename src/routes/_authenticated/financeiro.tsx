@@ -229,7 +229,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
 
   function handleExport() {
     const headers = ["Data", "Tipo", "Categoria", "Descrição", "Valor"];
-    const rows: (string | number)[][] = lancamentos.map((l) => [
+    const rows: (string | number)[][] = lancamentosFiltrados.map((l) => [
       format(new Date(l.data_lancamento + "T00:00"), "dd/MM/yyyy"),
       l.tipo === "entrada" ? "Entrada" : "Saída",
       l.categoria,
