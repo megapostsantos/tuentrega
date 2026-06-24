@@ -4,12 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, startOfMonth, endOfMonth, subMonths, startOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, startOfDay, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2, Upload, Loader2,
-  CalendarIcon, FileText, ArrowDownCircle, ArrowUpCircle, Download,
+  CalendarIcon, FileText, ArrowDownCircle, ArrowUpCircle, Download, AlertTriangle,
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { exportToExcel } from "@/lib/export";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
