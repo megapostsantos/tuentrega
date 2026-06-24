@@ -61,6 +61,7 @@ type Oferta = {
 type EntregadorInfo = {
   nome: string; pix_tipo: string | null; pix_chave: string | null;
   whatsapp: string | null; banco: string | null; cpf: string | null;
+  cnpj: string | null; tipo_pessoa: "pf" | "pj";
 };
 
 type PeriodKey = "hoje" | "semana" | "mes" | "mes_ant" | "custom";
