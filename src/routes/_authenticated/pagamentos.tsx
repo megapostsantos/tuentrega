@@ -1025,3 +1025,54 @@ function ReceiptDialog({ oferta, empresa, onClose }: { oferta: Oferta; empresa: 
     </Dialog>
   );
 }
+
+function NfUploadDialog({ target, entregadorId, onClose, onDone }: {
+  target: { ofertaId: string; entregaId: string };
+  entregadorId: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function upload() {
+    if (!file) return toast.error("Selecione o PDF da nota fiscal.");
+    setSaving(true);
+    const ext = file.name.split(".").pop() || "pdf";
+    const path = `${entregadorId}/${target.entregaId}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("notas-fiscais")
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (upErr) { setSaving(false); return toast.error("Falha no upload: " + upErr.message); }
+    const { data: signed } = await supabase.storage.from("notas-fiscais")
+      .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+    const url = signed?.signedUrl ?? null;
+    const { error } = await (supabase as any).from("entregas")
+      .update({ nota_fiscal_url: url }).eq("id", target.entregaId);
+    if (error) { setSaving(false); return toast.error(error.message); }
+    toast.success("Nota fiscal enviada!");
+    setSaving(false);
+    onDone();
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Enviar nota fiscal</DialogTitle>
+          <DialogDescription>Anexe o PDF da NFS-e emitida.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Input type="file" accept="application/pdf"
+            onChange={e => setFile(e.target.files?.[0] ?? null)} />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={upload} disabled={saving || !file}>
+            {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+            Enviar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
