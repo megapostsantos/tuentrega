@@ -138,12 +138,14 @@ function EmpresaFinanceiro() {
     const ids = Array.from(new Set(list.map(o => o.entregador_id).filter(Boolean))) as string[];
     if (ids.length) {
       const { data: ppl } = await sb.from("entregadores")
-        .select("id, nome_completo, pix_tipo, pix_chave, whatsapp, banco, cpf").in("id", ids);
+        .select("id, nome_completo, pix_tipo, pix_chave, whatsapp, banco, cpf, cnpj, tipo_pessoa").in("id", ids);
       const map: Record<string, EntregadorInfo> = {};
       (ppl ?? []).forEach((p: any) => {
+        const isPj = p.tipo_pessoa === "pj" || (p.cnpj && String(p.cnpj).trim().length > 0);
         map[p.id] = {
           nome: p.nome_completo, pix_tipo: p.pix_tipo, pix_chave: p.pix_chave,
           whatsapp: p.whatsapp, banco: p.banco, cpf: p.cpf,
+          cnpj: p.cnpj ?? null, tipo_pessoa: isPj ? "pj" : "pf",
         };
       });
       setPessoas(map);
