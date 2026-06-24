@@ -171,11 +171,12 @@ function EmpresaFinanceiro() {
     for (const o of ofertas) {
       if (!o.entregador_id) continue;
       const info = pessoas[o.entregador_id];
-      const g = m.get(o.entregador_id) ?? {
+      const g: GrupoEmpresa = m.get(o.entregador_id) ?? {
         entregador_id: o.entregador_id,
         nome: info?.nome ?? "Entregador",
         pix_tipo: info?.pix_tipo ?? null, pix_chave: info?.pix_chave ?? null,
         whatsapp: info?.whatsapp ?? null, banco: info?.banco ?? null, cpf: info?.cpf ?? null,
+        cnpj: info?.cnpj ?? null, tipo_pessoa: info?.tipo_pessoa ?? "pf",
         ofertas: [], total_pendente: 0, total_pago: 0, has_nf_pending: false,
       };
       g.ofertas.push(o);
