@@ -338,7 +338,7 @@ function EntregadorProfile() {
         pix_tipo: null, pix_chave: "", banco: "", data_nascimento: null, selfie_url: null,
         cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "",
         turnos: [], plataformas: [], plataforma_comprovante_url: null,
-        tipo_pessoa: "pf", cnpj: "",
+        tipo_pessoa: null, cnpj: null,
       };
       setF(row);
       if (row.selfie_url) {
@@ -425,8 +425,8 @@ function EntregadorProfile() {
       cep: f.cep, rua: f.rua, numero: f.numero, complemento: f.complemento,
       bairro: f.bairro, cidade: f.cidade, estado: f.estado,
       turnos: f.turnos, plataformas: f.plataformas,
-      tipo_pessoa: f.tipo_pessoa,
-      cnpj: f.tipo_pessoa === "pj" ? (f.cnpj ?? "") : null,
+      tipo_pessoa: f.tipo_pessoa ?? null,
+      cnpj: f.tipo_pessoa === "pj" ? (f.cnpj ?? null) : null,
     } as never).eq("id", f.id);
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -479,36 +479,6 @@ function EntregadorProfile() {
               <Input value={f.data_nascimento ?? ""} disabled />
             </Field>
 
-            <Field label="Tipo de pessoa">
-              <Select
-                value={f.tipo_pessoa ?? "pf"}
-                onValueChange={(v) => up("tipo_pessoa", v as "pf" | "pj")}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pf">PF — Pessoa Física</SelectItem>
-                  <SelectItem value="pj">PJ — Pessoa Jurídica (emite NF)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Empresas exigem NF de PJs para pagamentos.
-              </p>
-            </Field>
-
-            {f.tipo_pessoa === "pj" && (
-              <Field label="CNPJ">
-                <Input
-                  value={f.cnpj ?? ""}
-                  placeholder="00.000.000/0000-00"
-                  onChange={(e) => up("cnpj", maskCNPJ(e.target.value))}
-                  className={emptyClass(f.cnpj)}
-                />
-                {f.cnpj && !isValidCNPJ(f.cnpj) && (
-                  <p className="text-xs text-destructive">CNPJ inválido</p>
-                )}
-                <EmptyHint v={f.cnpj} />
-              </Field>
-            )}
 
 
             <Field label="WhatsApp">
@@ -594,6 +564,34 @@ function EntregadorProfile() {
                 {compPreview && <a href={compPreview} target="_blank" rel="noreferrer" className="ml-3 text-xs text-primary underline">ver comprovante</a>}
               </div>
             </Field>
+
+            <Field label="Tipo de pessoa">
+              <Select
+                value={f.tipo_pessoa ?? "pf"}
+                onValueChange={(v) => up("tipo_pessoa", v as "pf" | "pj")}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pf">PF — Pessoa Física</SelectItem>
+                  <SelectItem value="pj">PJ — Pessoa Jurídica</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            {f.tipo_pessoa === "pj" && (
+              <Field label="CNPJ">
+                <Input
+                  value={f.cnpj ?? ""}
+                  placeholder="00.000.000/0000-00"
+                  onChange={(e) => up("cnpj", maskCNPJ(e.target.value))}
+                  className={emptyClass(f.cnpj)}
+                />
+                {f.cnpj && !isValidCNPJ(f.cnpj) && (
+                  <p className="text-xs text-destructive">CNPJ inválido</p>
+                )}
+                <EmptyHint v={f.cnpj} />
+              </Field>
+            )}
 
             <Field label="Tipo de chave PIX">
               <Select value={f.pix_tipo ?? ""} onValueChange={(v) => up("pix_tipo", v)}>
