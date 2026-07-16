@@ -383,11 +383,24 @@ function EmpresaFinanceiro() {
                               <p className="text-[10px] text-amber-700">⚠️ Aguardando NF</p>
                             )}
                           </div>
-                          <div className="text-right shrink-0">
-                            <p className="font-semibold">{brl(Number(o.valor||0))}</p>
-                            <Badge variant={o.payment_status==="paid"?"secondary":"outline"} className="text-[10px]">
-                              {o.payment_status==="paid"?"Pago":"Pendente"}
-                            </Badge>
+                          <div className="text-right shrink-0 flex items-center gap-1">
+                            {g.tipo_pessoa === "pj" && o.payment_status === "paid" && nfUrlByOferta[o.id]?.url && (
+                              <a
+                                href={nfUrlByOferta[o.id].url!}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={`Ver NF${nfUrlByOferta[o.id].numero ? ` ${nfUrlByOferta[o.id].numero}` : ""}`}
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-md border text-muted-foreground hover:bg-muted"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                              </a>
+                            )}
+                            <div>
+                              <p className="font-semibold">{brl(Number(o.valor||0))}</p>
+                              <Badge variant={o.payment_status==="paid"?"secondary":"outline"} className="text-[10px]">
+                                {o.payment_status==="paid"?"Pago":"Pendente"}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
                       ))}
