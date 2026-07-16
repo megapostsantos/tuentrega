@@ -151,6 +151,23 @@ function EmpresaFinanceiro() {
       });
       setPessoas(map);
     } else setPessoas({});
+
+    // load pagamentos to expose NF number/url per oferta
+    const ofIds = list.map(o => o.id);
+    if (ofIds.length) {
+      const { data: pgs } = await sb.from("pagamentos")
+        .select("ofertas_ids, nf_numero, nf_url")
+        .eq("empresa_id", user.id)
+        .overlaps("ofertas_ids", ofIds);
+      const nfMap: Record<string, { numero: string | null; url: string | null }> = {};
+      (pgs ?? []).forEach((p: any) => {
+        (p.ofertas_ids ?? []).forEach((oid: string) => {
+          if (ofIds.includes(oid)) nfMap[oid] = { numero: p.nf_numero ?? null, url: p.nf_url ?? null };
+        });
+      });
+      setNfUrlByOferta(nfMap);
+    } else setNfUrlByOferta({});
+
     setLoading(false);
   }
 
