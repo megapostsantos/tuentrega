@@ -1163,3 +1163,30 @@ function NfUploadDialog({ target, entregadorId, onClose, onDone }: {
     </Dialog>
   );
 }
+
+function InformarNfDialog({ open, valor, onClose, onSave }: {
+  open: boolean; valor: number; onClose: () => void; onSave: (numero: string) => void | Promise<void>;
+}) {
+  const [numero, setNumero] = useState("");
+  useEffect(() => { if (!open) setNumero(""); }, [open]);
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Informar NF emitida</DialogTitle>
+          <DialogDescription>
+            Registre o número da NF emitida para este pagamento{valor ? ` de ${brl(valor)}` : ""}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label>Número da NF</Label>
+          <Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex: 000123" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button disabled={!numero.trim()} onClick={() => onSave(numero.trim())}>Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
