@@ -182,8 +182,8 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
         .select("id, entregador_id, valor, status, data_trabalho")
         .eq("empresa_id", empresaId)
         .in("status", ["completed", "closed"])
-        .gte("data_trabalho", dateFrom)
-        .lte("data_trabalho", dateTo);
+        .gte("data_trabalho", rangeFromIso)
+        .lte("data_trabalho", rangeToIso);
       const ofertas = (ofs ?? []) as Array<{ id: string; entregador_id: string | null; valor: number }>;
       const entIds = Array.from(new Set(ofertas.map(o => o.entregador_id).filter(Boolean))) as string[];
       if (!entIds.length) return [];
