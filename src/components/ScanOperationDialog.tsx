@@ -182,19 +182,32 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         <DialogHeader className="border-b p-4">
           <DialogTitle className="flex items-center gap-2">
             <ScanLine className="h-5 w-5 text-primary" />
-            Nova Operação por Scanner
-            <span className="ml-auto text-xs font-normal text-muted-foreground">Etapa {step} de 3</span>
+            {tipoServico === "nex" ? "Nova Operação Nex" : "Nova Operação por Scanner"}
+            <span className="ml-auto text-xs font-normal text-muted-foreground">Etapa {step + 1} de 4</span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="p-4">
+          {step === 0 && (
+            <Step0Tipo
+              tipoServico={tipoServico}
+              setTipoServico={setTipoServico}
+              nxCode={nxCode}
+              setNxCode={setNxCode}
+              sacaQr={sacaQr}
+              setSacaQr={setSacaQr}
+              onCancel={handleClose}
+              onNext={() => setStep(1)}
+            />
+          )}
+
           {step === 1 && (
             <Step1Scanner
               pkgs={pkgs}
               onScan={addCode}
               onRemove={removeCode}
               onNext={() => setStep(2)}
-              onCancel={handleClose}
+              onCancel={() => setStep(0)}
             />
           )}
 
@@ -221,9 +234,13 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
               submitting={submitting}
               onBack={() => setStep(2)}
               onConfirm={createOperation}
+              tipoServico={tipoServico}
+              nxCode={nxCode}
+              sacaQr={sacaQr}
             />
           )}
         </div>
+
 
         {/* Paste bulk addresses sub-dialog */}
         <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
