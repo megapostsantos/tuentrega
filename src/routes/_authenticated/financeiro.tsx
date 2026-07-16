@@ -172,8 +172,10 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
   }, [lancamentos, range]);
 
   // Alerta fiscal: entregadores PJ com pendente > R$500 no mês atual
+  const rangeFromIso = range.from.toISOString().slice(0, 10);
+  const rangeToIso = range.to.toISOString().slice(0, 10);
   const { data: pjAlerts = [] } = useQuery({
-    queryKey: ["financeiro-pj-alerts", empresaId, dateFrom, dateTo],
+    queryKey: ["financeiro-pj-alerts", empresaId, rangeFromIso, rangeToIso],
     queryFn: async () => {
       const sb = supabase as any;
       const { data: ofs } = await sb.from("ofertas")
