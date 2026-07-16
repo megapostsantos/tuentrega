@@ -48,7 +48,10 @@ function beep() {
 }
 
 export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Props) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
+  const [tipoServico, setTipoServico] = useState<"flex" | "nex">("flex");
+  const [nxCode, setNxCode] = useState("");
+  const [sacaQr, setSacaQr] = useState("");
   const [pkgs, setPkgs] = useState<PkgRow[]>([]);
   const [valorPorPacote, setValorPorPacote] = useState<number>(1.8);
   const [dataOperacao, setDataOperacao] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -57,7 +60,8 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
   const [submitting, setSubmitting] = useState(false);
 
   function reset() {
-    setStep(1); setPkgs([]); setValorPorPacote(1.8);
+    setStep(0); setTipoServico("flex"); setNxCode(""); setSacaQr("");
+    setPkgs([]); setValorPorPacote(1.8);
     setDataOperacao(new Date().toISOString().slice(0, 10));
     setPasteOpen(false); setPasteText(""); setSubmitting(false);
   }
@@ -93,10 +97,15 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
     if (submitting) return;
     if (pkgs.length === 0) return;
     if (!(valorPorPacote > 0)) { toast.error("Informe um valor por pacote válido"); return; }
+    if (tipoServico === "nex" && (!nxCode.trim() || !sacaQr.trim())) {
+      toast.error("Informe o código NX e o QR code da saca");
+      return;
+    }
     setSubmitting(true);
     try {
       const total = pkgs.length;
       const valorTotal = total * valorPorPacote;
+      const tituloBase = tipoServico === "nex" ? "Operação Nex" : "Operação Scanner";
 
       const { data: op, error: opErr } = await supabase.from("operacoes").insert({
         empresa_id: empresaId,
@@ -107,12 +116,15 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         valor_por_pacote: valorPorPacote,
         metodo_divisao: "manual",
         status: "draft",
-      }).select("id").single();
+        tipo_servico: tipoServico,
+        nx_code: tipoServico === "nex" ? nxCode.trim() : null,
+        saca_qr_code: tipoServico === "nex" ? sacaQr.trim() : null,
+      } as any).select("id").single();
       if (opErr || !op) throw opErr ?? new Error("Falha ao criar operação");
 
       const { data: ofe, error: ofeErr } = await supabase.from("ofertas").insert({
         empresa_id: empresaId,
-        titulo: `Operação Scanner - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`,
+        titulo: `${tituloBase} - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`,
         valor: valorTotal,
         valor_por_pacote: valorPorPacote,
         quantidade_pacotes: total,
@@ -121,13 +133,14 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         operacao_id: op.id,
         status: "draft",
         tipo: "public",
-      }).select("id").single();
+        tipo_servico: tipoServico,
+      } as any).select("id").single();
       if (ofeErr || !ofe) throw ofeErr ?? new Error("Falha ao criar oferta");
 
       const { error: rotaErr } = await supabase.from("rotas_operacao").insert({
         operacao_id: op.id,
         empresa_id: empresaId,
-        nome: "Rota Scanner",
+        nome: tipoServico === "nex" ? `Saca ${nxCode.trim()}` : "Rota Scanner",
         quantidade_pacotes: total,
         quantidade_paradas: total,
         valor_total: valorTotal,
@@ -141,6 +154,7 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         operacao_id: op.id,
         numero_pacote: i + 1,
         codigo_pacote: p.code,
+        nx_code: tipoServico === "nex" ? p.code : null,
         endereco_entrega: p.endereco || null,
         status: "pending",
       }));
@@ -168,19 +182,32 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         <DialogHeader className="border-b p-4">
           <DialogTitle className="flex items-center gap-2">
             <ScanLine className="h-5 w-5 text-primary" />
-            Nova Operação por Scanner
-            <span className="ml-auto text-xs font-normal text-muted-foreground">Etapa {step} de 3</span>
+            {tipoServico === "nex" ? "Nova Operação Nex" : "Nova Operação por Scanner"}
+            <span className="ml-auto text-xs font-normal text-muted-foreground">Etapa {step + 1} de 4</span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="p-4">
+          {step === 0 && (
+            <Step0Tipo
+              tipoServico={tipoServico}
+              setTipoServico={setTipoServico}
+              nxCode={nxCode}
+              setNxCode={setNxCode}
+              sacaQr={sacaQr}
+              setSacaQr={setSacaQr}
+              onCancel={handleClose}
+              onNext={() => setStep(1)}
+            />
+          )}
+
           {step === 1 && (
             <Step1Scanner
               pkgs={pkgs}
               onScan={addCode}
               onRemove={removeCode}
               onNext={() => setStep(2)}
-              onCancel={handleClose}
+              onCancel={() => setStep(0)}
             />
           )}
 
@@ -207,9 +234,13 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
               submitting={submitting}
               onBack={() => setStep(2)}
               onConfirm={createOperation}
+              tipoServico={tipoServico}
+              nxCode={nxCode}
+              sacaQr={sacaQr}
             />
           )}
         </div>
+
 
         {/* Paste bulk addresses sub-dialog */}
         <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
@@ -435,18 +466,90 @@ function Step2Addresses({
   );
 }
 
+/* -------- Step 0 -------- */
+function Step0Tipo({
+  tipoServico, setTipoServico, nxCode, setNxCode, sacaQr, setSacaQr, onCancel, onNext,
+}: {
+  tipoServico: "flex" | "nex"; setTipoServico: (t: "flex" | "nex") => void;
+  nxCode: string; setNxCode: (s: string) => void;
+  sacaQr: string; setSacaQr: (s: string) => void;
+  onCancel: () => void; onNext: () => void;
+}) {
+  const canNext = tipoServico === "flex" || (nxCode.trim() && sacaQr.trim());
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label className="mb-2 block">Tipo de serviço</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setTipoServico("flex")}
+            className={`rounded-lg border p-3 text-left transition ${tipoServico === "flex" ? "border-primary bg-primary/5" : "hover:bg-accent"}`}
+          >
+            <div className="text-sm font-semibold">Flex</div>
+            <div className="text-xs text-muted-foreground">Pacotes avulsos escaneados individualmente</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipoServico("nex")}
+            className={`rounded-lg border p-3 text-left transition ${tipoServico === "nex" ? "border-primary bg-primary/5" : "hover:bg-accent"}`}
+          >
+            <div className="text-sm font-semibold">Nex</div>
+            <div className="text-xs text-muted-foreground">Rota do Mercado Livre entregue em saca lacrada</div>
+          </button>
+        </div>
+      </div>
+
+      {tipoServico === "nex" && (
+        <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <p className="text-xs text-muted-foreground">
+            Bipe (ou digite) os dois códigos que vêm na etiqueta da saca Nex antes de escanear os pacotes.
+          </p>
+          <div>
+            <Label htmlFor="nx">Código NX da saca</Label>
+            <Input id="nx" placeholder="Ex: NX123456789" value={nxCode} onChange={(e) => setNxCode(e.target.value)} autoFocus />
+          </div>
+          <div>
+            <Label htmlFor="qr">QR code da saca</Label>
+            <Input id="qr" placeholder="Conteúdo do QR code" value={sacaQr} onChange={(e) => setSacaQr(e.target.value)} />
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-between gap-2">
+        <Button variant="outline" onClick={onCancel}><X className="mr-1 h-4 w-4" />Cancelar</Button>
+        <Button onClick={onNext} disabled={!canNext}>
+          Continuar <ArrowRight className="ml-1 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /* -------- Step 3 -------- */
 function Step3Confirm({
   total, valorPorPacote, valorTotal, dataOperacao, submitting, onBack, onConfirm,
+  tipoServico, nxCode, sacaQr,
 }: {
   total: number; valorPorPacote: number; valorTotal: number; dataOperacao: string;
   submitting: boolean; onBack: () => void; onConfirm: () => void;
+  tipoServico: "flex" | "nex"; nxCode: string; sacaQr: string;
 }) {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border p-4">
         <h3 className="mb-3 text-base font-semibold">Resumo da operação</h3>
         <dl className="grid grid-cols-2 gap-y-2 text-sm">
+          <dt className="text-muted-foreground">Tipo</dt>
+          <dd className="text-right font-medium">{tipoServico === "nex" ? "Nex (saca ML)" : "Flex"}</dd>
+          {tipoServico === "nex" && (
+            <>
+              <dt className="text-muted-foreground">NX</dt>
+              <dd className="text-right font-mono text-xs">{nxCode}</dd>
+              <dt className="text-muted-foreground">QR saca</dt>
+              <dd className="text-right font-mono text-xs truncate">{sacaQr}</dd>
+            </>
+          )}
           <dt className="text-muted-foreground">Data</dt>
           <dd className="text-right font-medium">{new Date(dataOperacao).toLocaleDateString("pt-BR")}</dd>
           <dt className="text-muted-foreground">Pacotes</dt>
