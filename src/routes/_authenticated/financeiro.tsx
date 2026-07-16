@@ -289,7 +289,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
 
       {/* Alertas fiscais — PJ com pendência > R$500 */}
       {pjAlerts.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50">
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
           <CardContent className="p-4 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
