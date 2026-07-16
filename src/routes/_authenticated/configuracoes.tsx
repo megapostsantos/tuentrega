@@ -425,8 +425,8 @@ function EntregadorProfile() {
       cep: f.cep, rua: f.rua, numero: f.numero, complemento: f.complemento,
       bairro: f.bairro, cidade: f.cidade, estado: f.estado,
       turnos: f.turnos, plataformas: f.plataformas,
-      tipo_pessoa: f.tipo_pessoa,
-      cnpj: f.tipo_pessoa === "pj" ? (f.cnpj ?? "") : null,
+      tipo_pessoa: f.tipo_pessoa ?? null,
+      cnpj: f.tipo_pessoa === "pj" ? (f.cnpj ?? null) : null,
     } as never).eq("id", f.id);
     setSaving(false);
     if (error) return toast.error(error.message);
