@@ -510,7 +510,7 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
             <div className="flex justify-between"><span className="text-muted-foreground">Nome</span>
               <span className="font-medium flex items-center gap-1">
                 {grupo.nome}
-                <Badge className={cn("text-[10px]", isPj ? "bg-blue-500/15 text-blue-700" : "bg-muted text-muted-foreground")}>
+                <Badge className={cn("text-[10px]", isPj ? "bg-orange-500/15 text-orange-700" : "bg-muted text-muted-foreground")}>
                   {isPj ? "PJ" : "PF"}
                 </Badge>
               </span>
