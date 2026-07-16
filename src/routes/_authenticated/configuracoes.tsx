@@ -565,6 +565,34 @@ function EntregadorProfile() {
               </div>
             </Field>
 
+            <Field label="Tipo de pessoa">
+              <Select
+                value={f.tipo_pessoa ?? "pf"}
+                onValueChange={(v) => up("tipo_pessoa", v as "pf" | "pj")}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pf">PF — Pessoa Física</SelectItem>
+                  <SelectItem value="pj">PJ — Pessoa Jurídica</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            {f.tipo_pessoa === "pj" && (
+              <Field label="CNPJ">
+                <Input
+                  value={f.cnpj ?? ""}
+                  placeholder="00.000.000/0000-00"
+                  onChange={(e) => up("cnpj", maskCNPJ(e.target.value))}
+                  className={emptyClass(f.cnpj)}
+                />
+                {f.cnpj && !isValidCNPJ(f.cnpj) && (
+                  <p className="text-xs text-destructive">CNPJ inválido</p>
+                )}
+                <EmptyHint v={f.cnpj} />
+              </Field>
+            )}
+
             <Field label="Tipo de chave PIX">
               <Select value={f.pix_tipo ?? ""} onValueChange={(v) => up("pix_tipo", v)}>
                 <SelectTrigger className={emptyClass(f.pix_tipo)}><SelectValue placeholder="Selecione" /></SelectTrigger>
