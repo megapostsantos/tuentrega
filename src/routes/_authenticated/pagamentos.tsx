@@ -91,6 +91,7 @@ function EmpresaFinanceiro() {
   const [loading, setLoading] = useState(true);
   const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [pessoas, setPessoas] = useState<Record<string, EntregadorInfo>>({});
+  const [nfUrlByOferta, setNfUrlByOferta] = useState<Record<string, { numero: string | null; url: string | null }>>({});
   const [mlValor, setMlValor] = useState(2.6);
   const [pacotesMl, setPacotesMl] = useState(0);
   const [empresaName, setEmpresaName] = useState("");
