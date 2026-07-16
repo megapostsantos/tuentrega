@@ -726,6 +726,8 @@ function EntregadorFinanceiro() {
   const [receipt, setReceipt] = useState<Oferta | null>(null);
   const [showHowToNf, setShowHowToNf] = useState(false);
   const [nfUploadFor, setNfUploadFor] = useState<{ ofertaId: string; entregaId: string } | null>(null);
+  const [pagamentos, setPagamentos] = useState<Array<{ id: string; valor_total: number; data_pagamento: string; nf_numero: string | null; empresa_id: string }>>([]);
+  const [informarNf, setInformarNf] = useState<{ id: string; valor: number } | null>(null);
 
   async function load() {
     setLoading(true);
