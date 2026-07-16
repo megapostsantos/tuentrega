@@ -320,12 +320,12 @@ function EmpresaFinanceiro() {
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Badge variant="outline" className="text-[10px]">{g.ofertas.length} rotas</Badge>
                         {g.tipo_pessoa === "pj" ? (
-                          <Badge className="text-[10px] bg-orange-500/15 text-orange-700 hover:bg-orange-500/15">
-                            PJ
+                          <Badge className="text-[10px] bg-blue-500/15 text-blue-700 hover:bg-blue-500/15">
+                            PJ — Emite NF
                           </Badge>
                         ) : (
                           <Badge className="text-[10px] bg-muted text-muted-foreground hover:bg-muted">
-                            PF
+                            PF — Sem NF
                           </Badge>
                         )}
                         {g.tipo_pessoa === "pj" && g.total_pendente > 500 && (
@@ -575,7 +575,7 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={confirm} disabled={saving}>
+          <Button onClick={confirm} disabled={saving || (isPj && (!nfNumero.trim() || !nfFile))}>
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             Confirmar pagamento
           </Button>
