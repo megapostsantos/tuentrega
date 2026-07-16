@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { fetchCEP, maskCEP, maskCNPJ, maskPhone, maskPlaca, onlyDigits, validateCNPJ } from "@/lib/validators";
+import { fetchCEP, isValidCNPJ, maskCEP, maskCNPJ, maskPhone, maskPlaca, onlyDigits } from "@/lib/validators";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: Settings,
