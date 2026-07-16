@@ -466,12 +466,74 @@ function Step2Addresses({
   );
 }
 
+/* -------- Step 0 -------- */
+function Step0Tipo({
+  tipoServico, setTipoServico, nxCode, setNxCode, sacaQr, setSacaQr, onCancel, onNext,
+}: {
+  tipoServico: "flex" | "nex"; setTipoServico: (t: "flex" | "nex") => void;
+  nxCode: string; setNxCode: (s: string) => void;
+  sacaQr: string; setSacaQr: (s: string) => void;
+  onCancel: () => void; onNext: () => void;
+}) {
+  const canNext = tipoServico === "flex" || (nxCode.trim() && sacaQr.trim());
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label className="mb-2 block">Tipo de serviço</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setTipoServico("flex")}
+            className={`rounded-lg border p-3 text-left transition ${tipoServico === "flex" ? "border-primary bg-primary/5" : "hover:bg-accent"}`}
+          >
+            <div className="text-sm font-semibold">Flex</div>
+            <div className="text-xs text-muted-foreground">Pacotes avulsos escaneados individualmente</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipoServico("nex")}
+            className={`rounded-lg border p-3 text-left transition ${tipoServico === "nex" ? "border-primary bg-primary/5" : "hover:bg-accent"}`}
+          >
+            <div className="text-sm font-semibold">Nex</div>
+            <div className="text-xs text-muted-foreground">Rota do Mercado Livre entregue em saca lacrada</div>
+          </button>
+        </div>
+      </div>
+
+      {tipoServico === "nex" && (
+        <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <p className="text-xs text-muted-foreground">
+            Bipe (ou digite) os dois códigos que vêm na etiqueta da saca Nex antes de escanear os pacotes.
+          </p>
+          <div>
+            <Label htmlFor="nx">Código NX da saca</Label>
+            <Input id="nx" placeholder="Ex: NX123456789" value={nxCode} onChange={(e) => setNxCode(e.target.value)} autoFocus />
+          </div>
+          <div>
+            <Label htmlFor="qr">QR code da saca</Label>
+            <Input id="qr" placeholder="Conteúdo do QR code" value={sacaQr} onChange={(e) => setSacaQr(e.target.value)} />
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-between gap-2">
+        <Button variant="outline" onClick={onCancel}><X className="mr-1 h-4 w-4" />Cancelar</Button>
+        <Button onClick={onNext} disabled={!canNext}>
+          Continuar <ArrowRight className="ml-1 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /* -------- Step 3 -------- */
 function Step3Confirm({
   total, valorPorPacote, valorTotal, dataOperacao, submitting, onBack, onConfirm,
+  tipoServico, nxCode, sacaQr,
 }: {
   total: number; valorPorPacote: number; valorTotal: number; dataOperacao: string;
   submitting: boolean; onBack: () => void; onConfirm: () => void;
+  tipoServico: "flex" | "nex"; nxCode: string; sacaQr: string;
 }) {
   return (
     <div className="space-y-4">
