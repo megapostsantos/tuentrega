@@ -1179,7 +1179,7 @@ function InformarNfDialog({ open, valor, onClose, onSave }: {
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Label>Número da NF</Label>
+          <p className="text-sm font-medium">Número da NF</p>
           <Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex: 000123" />
         </div>
         <DialogFooter>
