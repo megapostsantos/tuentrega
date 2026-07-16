@@ -1,27 +1,32 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  Package,
   Truck,
-  Wallet,
-  Map as MapIcon,
+  MapPin,
+  Clock,
   ShieldCheck,
-  Check,
+  BarChart3,
+  Building2,
+  Zap,
   ArrowRight,
+  Check,
+  PhoneCall,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "TuEntrega — Ganhe dinheiro extra fazendo entregas" },
+      { title: "Bag Envios — Logística last mile para e-commerces e marketplaces" },
       {
         name: "description",
         content:
-          "Aceite rotas perto de você, trabalhe no seu tempo e receba via PIX. Empresas encontram entregadores PJ e organizam toda a operação.",
+          "Entregamos o último quilômetro no mesmo dia com rastreio ao vivo, prova de entrega digital e cobertura nacional. Bag Envios: logística inteligente para o seu e-commerce.",
       },
-      { property: "og:title", content: "TuEntrega — Ganhe dinheiro extra fazendo entregas" },
+      { property: "og:title", content: "Bag Envios — Logística last mile" },
       {
         property: "og:description",
         content:
-          "Plataforma para entregadores ganharem dinheiro extra e empresas organizarem a operação com entregadores PJ.",
+          "Same day, next day e fracionado com rastreio ao vivo em todo o Brasil.",
       },
     ],
   }),
@@ -33,34 +38,30 @@ const bodyFont = { fontFamily: "'Hind', sans-serif" };
 
 function Landing() {
   return (
-    <div className="bg-[#1a1a1a] text-white selection:bg-[#e85d3a]/30" style={bodyFont}>
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-[#1a1a1a]/80 backdrop-blur-md border-b border-[#2d2d2d]">
+    <div className="bg-[#0f0f0f] text-white selection:bg-[#e85d3a]/30" style={bodyFont}>
+      {/* Nav */}
+      <nav className="fixed top-0 w-full z-50 bg-[#0f0f0f]/85 backdrop-blur-md border-b border-[#242424]">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-[#e85d3a] rounded-lg flex items-center justify-center">
-              <Truck className="w-5 h-5 text-white" strokeWidth={2.5} />
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="w-10 h-10 bg-[#e85d3a] rounded-lg flex items-center justify-center shadow-[0_0_20px_-5px_#e85d3a]">
+              <Package className="w-5 h-5 text-white" strokeWidth={2.5} />
             </div>
-            <span className="text-xl tracking-tighter" style={headingFont}>
-              TU<span className="text-[#e85d3a]">ENTREGA</span>
+            <span className="text-xl tracking-tight" style={headingFont}>
+              BAG<span className="text-[#e85d3a]"> ENVIOS</span>
             </span>
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-wider">
-            <a href="#entregadores" className="hover:text-[#e85d3a] transition-colors">
-              Entregadores
-            </a>
-            <a href="#empresas" className="hover:text-[#e85d3a] transition-colors">
-              Empresas
-            </a>
-            <Link to="/auth" className="hover:text-[#e85d3a] transition-colors">
-              Entrar
-            </Link>
-            <Link
-              to="/auth"
+            <a href="#servicos" className="hover:text-[#e85d3a] transition-colors">Serviços</a>
+            <a href="#cobertura" className="hover:text-[#e85d3a] transition-colors">Cobertura</a>
+            <a href="#tecnologia" className="hover:text-[#e85d3a] transition-colors">Tecnologia</a>
+            <a href="#entregador" className="hover:text-[#e85d3a] transition-colors">Seja entregador</a>
+            <Link to="/auth" className="hover:text-[#e85d3a] transition-colors">Entrar</Link>
+            <a
+              href="#contato"
               className="bg-[#e85d3a] px-6 py-2.5 rounded-full font-bold hover:bg-[#cf4d2d] transition-all text-white"
             >
-              Cadastrar
-            </Link>
+              Fale com vendas
+            </a>
           </div>
           <Link
             to="/auth"
@@ -72,73 +73,100 @@ function Landing() {
       </nav>
 
       {/* Hero */}
-      <section className="pt-32 pb-20 px-6">
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+      <section className="pt-36 pb-24 px-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(232,93,58,0.15),transparent_60%)]" />
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-16 items-center relative">
           <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#2d2d2d] border border-[#4a4a4a] text-sm">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1c1c1c] border border-[#333] text-sm">
               <span className="flex h-2 w-2 rounded-full bg-[#e85d3a] animate-pulse" />
-              <span className="text-[#e85d3a] font-semibold">Vagas abertas em todo Brasil</span>
+              <span className="text-[#e85d3a] font-semibold uppercase tracking-widest text-xs">
+                Operação em 120+ cidades
+              </span>
             </div>
             <h1
-              className="text-5xl md:text-7xl leading-[1.05] tracking-tight uppercase"
+              className="text-5xl md:text-7xl leading-[0.95] tracking-tight uppercase"
               style={headingFont}
             >
-              Ganhe <span className="text-[#e85d3a]">dinheiro extra</span> fazendo entregas.
+              O último quilômetro,
+              <br />
+              <span className="text-[#e85d3a]">no mesmo dia.</span>
             </h1>
-            <p className="text-xl text-gray-400 max-w-xl">
-              Aceite rotas perto de você, trabalhe no seu tempo e receba pagamento via PIX.
-              Empresas encontram entregadores PJ em minutos.
+            <p className="text-xl text-gray-400 max-w-xl leading-relaxed">
+              A Bag Envios é a operadora logística last mile dos e-commerces
+              que não podem atrasar. Same day, next day e fracionado — com
+              rastreio ao vivo, prova de entrega digital e SLA transparente.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link
-                to="/auth"
-                className="bg-[#e85d3a] px-8 py-4 rounded-xl font-bold text-lg hover:shadow-[0_0_30px_-5px_#e85d3a] transition-all inline-flex items-center justify-center gap-2 text-white"
-              >
-                Quero ser entregador <ArrowRight className="w-5 h-5" />
-              </Link>
               <a
-                href="#empresas"
-                className="bg-[#2d2d2d] border border-[#4a4a4a] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#4a4a4a] transition-all inline-flex items-center justify-center"
+                href="#contato"
+                className="bg-[#e85d3a] px-8 py-4 rounded-xl font-bold text-lg hover:shadow-[0_0_30px_-5px_#e85d3a] transition-all inline-flex items-center justify-center gap-2 text-white uppercase tracking-wide"
               >
-                Sou empresa
+                Solicitar proposta <ArrowRight className="w-5 h-5" />
               </a>
+              <a
+                href="#servicos"
+                className="bg-[#1c1c1c] border border-[#333] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#242424] transition-all inline-flex items-center justify-center uppercase tracking-wide"
+              >
+                Ver serviços
+              </a>
+            </div>
+            <div className="flex flex-wrap gap-6 pt-4 text-sm text-gray-500">
+              <span className="flex items-center gap-2"><Check className="w-4 h-4 text-[#e85d3a]" /> Integração via API</span>
+              <span className="flex items-center gap-2"><Check className="w-4 h-4 text-[#e85d3a]" /> SLA de 98%+</span>
+              <span className="flex items-center gap-2"><Check className="w-4 h-4 text-[#e85d3a]" /> Faturamento mensal</span>
             </div>
           </div>
 
-          {/* Hero card */}
+          {/* Tracking visual */}
           <div className="relative">
-            <div className="aspect-square bg-[#2d2d2d] rounded-3xl overflow-hidden border border-[#4a4a4a] relative">
-              <div className="absolute inset-0 bg-gradient-to-tr from-[#e85d3a]/20 to-transparent" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20">
-                <MapIcon className="w-52 h-52 text-[#e85d3a]" strokeWidth={0.5} />
-              </div>
+            <div className="aspect-[4/5] bg-[#161616] rounded-3xl overflow-hidden border border-[#2a2a2a] relative shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#e85d3a]/10 via-transparent to-transparent" />
 
-              <div className="absolute top-8 left-8 right-8 flex items-center justify-between">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1a1a1a]/80 border border-[#4a4a4a] backdrop-blur">
-                  <span className="flex h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-xs font-bold uppercase tracking-wider">
-                    Nova oferta · 1,2 km
-                  </span>
+              {/* Map dots */}
+              <div className="absolute inset-0 opacity-40" style={{
+                backgroundImage: 'radial-gradient(circle, #333 1px, transparent 1px)',
+                backgroundSize: '18px 18px',
+              }} />
+
+              {/* Route line */}
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 500" preserveAspectRatio="none">
+                <path d="M 50 400 Q 150 350, 200 250 T 350 80" stroke="#e85d3a" strokeWidth="2" fill="none" strokeDasharray="6 6" />
+                <circle cx="50" cy="400" r="8" fill="#e85d3a" />
+                <circle cx="350" cy="80" r="8" fill="#fff" />
+              </svg>
+
+              {/* Status pills */}
+              <div className="absolute top-6 left-6 right-6 flex justify-between">
+                <div className="bg-[#0f0f0f]/90 backdrop-blur border border-[#333] rounded-full px-3 py-1.5 flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-[#e85d3a]" />
+                  <span className="text-xs font-bold uppercase tracking-widest">Coleta · CD Guarulhos</span>
                 </div>
               </div>
 
-              <div className="absolute bottom-8 left-8 right-8 bg-[#1a1a1a]/95 p-6 rounded-2xl border border-[#4a4a4a] backdrop-blur">
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-xs text-[#9a9a9a] uppercase font-bold tracking-widest mb-1">
-                      Ganhos da semana
-                    </p>
-                    <p className="text-3xl text-[#e85d3a]" style={headingFont}>
-                      R$ 1.240,00
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">via PIX · 18 rotas</p>
-                  </div>
-                  <div className="h-14 w-24 flex items-end gap-1">
-                    <div className="flex-1 bg-[#4a4a4a] rounded-sm h-[40%]" />
-                    <div className="flex-1 bg-[#4a4a4a] rounded-sm h-[60%]" />
-                    <div className="flex-1 bg-[#e85d3a] rounded-sm h-[100%]" />
-                    <div className="flex-1 bg-[#4a4a4a] rounded-sm h-[80%]" />
-                  </div>
+              {/* Tracking card */}
+              <div className="absolute bottom-6 left-6 right-6 bg-[#0f0f0f]/95 backdrop-blur p-5 rounded-2xl border border-[#2a2a2a]">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs uppercase tracking-widest text-gray-500 font-bold">Pedido #BE-8241</span>
+                  <span className="text-xs uppercase tracking-widest text-[#e85d3a] font-bold flex items-center gap-1.5">
+                    <span className="flex h-1.5 w-1.5 rounded-full bg-[#e85d3a] animate-pulse" /> A caminho
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    { l: "Coletado no CD", t: "08:42", done: true },
+                    { l: "Em rota de entrega", t: "10:15", done: true },
+                    { l: "Entregue ao cliente", t: "chegando", done: false },
+                  ].map((s, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${s.done ? "bg-[#e85d3a]" : "bg-[#4a4a4a] animate-pulse"}`} />
+                      <span className={`text-sm flex-1 ${s.done ? "text-white" : "text-gray-500"}`}>{s.l}</span>
+                      <span className="text-xs text-gray-500 font-mono">{s.t}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 pt-4 border-t border-[#2a2a2a] flex justify-between items-center">
+                  <span className="text-xs text-gray-500 uppercase tracking-widest">Previsão</span>
+                  <span className="text-lg text-[#e85d3a]" style={headingFont}>11h48</span>
                 </div>
               </div>
             </div>
@@ -146,20 +174,17 @@ function Landing() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-12 border-y border-[#2d2d2d] bg-[#2d2d2d]/30">
+      {/* Stats bar */}
+      <section className="py-10 border-y border-[#242424] bg-[#141414]">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
           {[
-            { v: "+15k", l: "Entregadores PJ" },
-            { v: "500+", l: "Pacotes/dia" },
-            { v: "R$ 0", l: "Taxa de adesão" },
-            { v: "PIX", l: "Pagamento via PIX", accent: true },
+            { v: "2M+", l: "Entregas realizadas" },
+            { v: "98,4%", l: "SLA no prazo" },
+            { v: "120+", l: "Cidades atendidas" },
+            { v: "24h", l: "Suporte operacional", accent: true },
           ].map((s) => (
             <div key={s.l} className="text-center md:text-left">
-              <p
-                className={`text-4xl ${s.accent ? "text-[#e85d3a]" : "text-white"}`}
-                style={headingFont}
-              >
+              <p className={`text-4xl ${s.accent ? "text-[#e85d3a]" : "text-white"}`} style={headingFont}>
                 {s.v}
               </p>
               <p className="text-[#9a9a9a] uppercase text-xs font-bold tracking-widest mt-1">
@@ -170,61 +195,54 @@ function Landing() {
         </div>
       </section>
 
-      {/* Features entregador */}
-      <section id="entregadores" className="py-24 px-6">
+      {/* Serviços */}
+      <section id="servicos" className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-4">
             <div className="max-w-xl">
-              <h2
-                className="text-4xl md:text-5xl uppercase mb-4 leading-none"
-                style={headingFont}
-              >
-                Tudo que você
-                <br />
-                precisa para <span className="text-[#e85d3a]">rodar</span>
+              <span className="text-[#e85d3a] font-bold uppercase tracking-widest text-sm">Serviços</span>
+              <h2 className="text-4xl md:text-5xl uppercase mt-2 leading-none" style={headingFont}>
+                Modais para cada <span className="text-[#e85d3a]">urgência</span>
               </h2>
-              <p className="text-gray-400 text-lg">
-                Ferramentas pensadas para quem está no trecho todos os dias.
-              </p>
             </div>
-            <Link
-              to="/auth"
-              className="text-[#e85d3a] font-bold border-b border-[#e85d3a] pb-1 hover:text-white hover:border-white transition-all"
-            >
-              Criar minha conta
-            </Link>
+            <p className="text-gray-400 max-w-md">
+              Da coleta programada até a entrega same day, uma malha logística
+              montada para acompanhar o ritmo do seu e-commerce.
+            </p>
           </div>
+
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                icon: Wallet,
-                title: "Pagamento via PIX",
-                desc:
-                  "Receba seus ganhos via PIX direto na sua conta, com segurança e rastreabilidade.",
+                icon: Zap,
+                tag: "Same Day",
+                title: "Entrega no mesmo dia",
+                desc: "Coleta até 11h, entrega até 20h na mesma cidade. Ideal para marketplaces e food/pharma.",
               },
               {
-                icon: MapIcon,
-                title: "Rotas perto de você",
-                desc:
-                  "Ofertas filtradas pela sua região para você rodar menos quilômetros e ganhar mais por hora.",
+                icon: Truck,
+                tag: "Next Day",
+                title: "D+1 metropolitano",
+                desc: "Coleta programada e entrega no próximo dia útil em toda a região metropolitana.",
               },
               {
-                icon: ShieldCheck,
-                title: "Score que abre portas",
-                desc:
-                  "Boas entregas viram score. Score alto te dá acesso às melhores ofertas das empresas.",
+                icon: Package,
+                tag: "Fracionado",
+                title: "Encomendas fracionadas",
+                desc: "Envios de até 30kg para todo o Brasil, com consolidação no CD e prazos competitivos.",
               },
             ].map((f) => (
               <div
                 key={f.title}
-                className="p-8 rounded-3xl bg-[#2d2d2d] border border-[#4a4a4a] hover:border-[#e85d3a]/50 transition-colors group"
+                className="p-8 rounded-3xl bg-[#161616] border border-[#2a2a2a] hover:border-[#e85d3a]/60 transition-all group relative overflow-hidden"
               >
-                <div className="w-12 h-12 rounded-xl bg-[#4a4a4a] flex items-center justify-center mb-6 group-hover:bg-[#e85d3a] transition-colors">
+                <div className="absolute top-0 right-0 bg-[#e85d3a] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-bl-2xl">
+                  {f.tag}
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-[#242424] flex items-center justify-center mb-6 group-hover:bg-[#e85d3a] transition-colors">
                   <f.icon className="w-6 h-6 text-white" strokeWidth={2} />
                 </div>
-                <h3 className="text-xl uppercase mb-3" style={headingFont}>
-                  {f.title}
-                </h3>
+                <h3 className="text-xl uppercase mb-3" style={headingFont}>{f.title}</h3>
                 <p className="text-gray-400 leading-relaxed">{f.desc}</p>
               </div>
             ))}
@@ -232,145 +250,204 @@ function Landing() {
         </div>
       </section>
 
-      {/* Bloco empresas */}
-      <section id="empresas" className="py-24 px-6 bg-[#2d2d2d]">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
-          <div className="flex-1 order-2 md:order-1 w-full">
+      {/* Cobertura + Tecnologia */}
+      <section id="cobertura" className="py-24 px-6 bg-[#141414]">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
+          <div>
+            <span className="text-[#e85d3a] font-bold uppercase tracking-widest text-sm">Cobertura</span>
+            <h2 className="text-4xl md:text-5xl uppercase mt-2 leading-tight" style={headingFont}>
+              Uma malha que cobre <span className="text-[#e85d3a]">o Brasil</span>
+            </h2>
+            <p className="text-gray-400 text-lg mt-6 mb-8">
+              Operamos com CDs próprios em São Paulo, Rio, Minas e Sul, e uma rede
+              de mais de 15 mil entregadores PJ homologados atendendo capitais e
+              regiões metropolitanas do país inteiro.
+            </p>
             <div className="grid grid-cols-2 gap-4">
-              <div className="h-40 bg-[#1a1a1a] rounded-2xl flex flex-col items-center justify-center p-6 border border-[#4a4a4a]">
-                <span className="text-3xl text-[#e85d3a]" style={headingFont}>
-                  98%
-                </span>
-                <span className="text-xs uppercase tracking-widest text-[#9a9a9a] mt-1">
-                  Entregas no prazo
-                </span>
-              </div>
-              <div className="h-40 bg-[#e85d3a] rounded-2xl flex items-center justify-center p-6">
-                <span
-                  className="text-white text-lg text-center uppercase leading-tight"
-                  style={headingFont}
-                >
-                  500+ rotas
-                  <br />
-                  por dia
-                </span>
-              </div>
-              <div className="h-44 bg-[#1a1a1a] rounded-2xl col-span-2 border border-[#4a4a4a] overflow-hidden">
-                <div className="p-4 flex gap-2 border-b border-[#4a4a4a]">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="ml-3 text-xs text-[#9a9a9a] uppercase tracking-widest font-bold">
-                    Operação · Hoje
-                  </span>
+              {[
+                { r: "Sudeste", c: "SP · RJ · MG · ES" },
+                { r: "Sul", c: "PR · SC · RS" },
+                { r: "Nordeste", c: "BA · PE · CE · RN" },
+                { r: "Centro-Oeste", c: "DF · GO · MT · MS" },
+              ].map((r) => (
+                <div key={r.r} className="p-5 rounded-2xl bg-[#0f0f0f] border border-[#242424]">
+                  <p className="text-sm uppercase tracking-widest text-[#e85d3a] font-bold">{r.r}</p>
+                  <p className="text-sm text-gray-400 mt-1">{r.c}</p>
                 </div>
-                <div className="p-5 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 bg-[#e85d3a] rounded-full w-5/6" />
-                    <span className="text-xs text-[#9a9a9a]">Rota 01 · 87%</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 bg-[#4a4a4a] rounded-full w-3/5" />
-                    <span className="text-xs text-[#9a9a9a]">Rota 02 · 62%</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 bg-[#4a4a4a] rounded-full w-2/5" />
-                    <span className="text-xs text-[#9a9a9a]">Rota 03 · 40%</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 bg-[#4a4a4a] rounded-full w-1/4" />
-                    <span className="text-xs text-[#9a9a9a]">Rota 04 · 24%</span>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
-          <div className="flex-1 space-y-6 order-1 md:order-2">
-            <h2 className="text-4xl md:text-5xl uppercase leading-tight" style={headingFont}>
-              Para empresas:{" "}
-              <span className="text-[#e85d3a]">logística sem caos</span>
+          <div id="tecnologia" className="space-y-4">
+            {[
+              {
+                icon: MapPin,
+                title: "Rastreio ao vivo",
+                desc: "GPS a cada 15s durante rota. Seu cliente vê o entregador se aproximando em tempo real.",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Prova de entrega digital",
+                desc: "Foto, assinatura e geolocalização em cada entrega, com auditoria e exportação em Excel.",
+              },
+              {
+                icon: BarChart3,
+                title: "Dashboard operacional",
+                desc: "Métricas de SLA, ocorrências, custo por entrega e produtividade da malha em tempo real.",
+              },
+              {
+                icon: Building2,
+                title: "Integração via API",
+                desc: "Conecte seu ERP, WMS ou plataforma de e-commerce. Onboarding em até 48h.",
+              },
+            ].map((c) => (
+              <div key={c.title} className="p-6 rounded-2xl bg-[#0f0f0f] border border-[#242424] flex gap-5 items-start hover:border-[#e85d3a]/40 transition-colors">
+                <div className="w-11 h-11 rounded-xl bg-[#e85d3a]/10 border border-[#e85d3a]/30 flex items-center justify-center shrink-0">
+                  <c.icon className="w-5 h-5 text-[#e85d3a]" strokeWidth={2.2} />
+                </div>
+                <div>
+                  <h3 className="uppercase mb-1" style={headingFont}>{c.title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">{c.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Como funciona */}
+      <section className="py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-[#e85d3a] font-bold uppercase tracking-widest text-sm">Como funciona</span>
+            <h2 className="text-4xl md:text-5xl uppercase mt-2" style={headingFont}>
+              Do CD ao <span className="text-[#e85d3a]">porta a porta</span>
             </h2>
-            <p className="text-gray-400 text-lg">
-              Importe pacotes, divida rotas por bairro, encontre entregadores PJ na sua região
-              e acompanhe cada entrega em tempo real.
-            </p>
-            <ul className="space-y-4">
-              {[
-                "Entregadores PJ disponíveis em minutos",
-                "Painel de controle com rastreio ao vivo",
-                "Pagamento via PIX direto pela plataforma",
-                "Score de confiabilidade dos entregadores",
-              ].map((i) => (
-                <li key={i} className="flex items-center gap-3">
-                  <Check className="text-[#e85d3a] w-5 h-5" strokeWidth={3} />
-                  <span className="font-semibold">{i}</span>
-                </li>
-              ))}
-            </ul>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-6 relative">
+            {[
+              { n: "01", t: "Coleta", d: "Retiramos no seu CD ou você despacha no nosso." },
+              { n: "02", t: "Triagem", d: "Bipagem, roteirização inteligente e formação de rotas." },
+              { n: "03", t: "Última milha", d: "Entregadores PJ homologados fazem o porta a porta." },
+              { n: "04", t: "Prova digital", d: "Foto, assinatura e GPS registrados em cada entrega." },
+            ].map((s) => (
+              <div key={s.n} className="relative p-8 rounded-3xl bg-[#161616] border border-[#2a2a2a]">
+                <span className="text-5xl text-[#e85d3a]/30 absolute top-4 right-6" style={headingFont}>
+                  {s.n}
+                </span>
+                <h3 className="text-xl uppercase mb-3 relative" style={headingFont}>{s.t}</h3>
+                <p className="text-gray-400 text-sm relative">{s.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Entregador */}
+      <section id="entregador" className="py-24 px-6 bg-gradient-to-b from-[#141414] to-[#0f0f0f]">
+        <div className="max-w-5xl mx-auto text-center space-y-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#e85d3a]/10 border border-[#e85d3a]/30 text-sm">
+            <Truck className="w-4 h-4 text-[#e85d3a]" />
+            <span className="text-[#e85d3a] font-bold uppercase tracking-widest text-xs">Rede de entregadores</span>
+          </div>
+          <h2 className="text-4xl md:text-5xl uppercase leading-tight" style={headingFont}>
+            É entregador PJ? <span className="text-[#e85d3a]">Rode com a gente.</span>
+          </h2>
+          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            Rotas todos os dias, pagamento via PIX e score que abre as melhores
+            ofertas. Cadastre-se em minutos e comece a receber rotas na sua região.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
             <Link
               to="/auth"
-              className="inline-flex items-center gap-2 bg-white text-[#1a1a1a] px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-200 transition-all uppercase"
+              className="bg-[#e85d3a] px-8 py-4 rounded-xl font-bold text-lg hover:shadow-[0_0_30px_-5px_#e85d3a] transition-all inline-flex items-center justify-center gap-2 text-white uppercase tracking-wide"
             >
-              Cadastrar empresa <ArrowRight className="w-5 h-5" />
+              Cadastrar como entregador <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* CTA final */}
-      <section className="py-24 px-6">
-        <div className="max-w-4xl mx-auto text-center space-y-8 bg-gradient-to-b from-[#2d2d2d] to-transparent p-12 rounded-[3rem] border border-[#4a4a4a]">
-          <h2
-            className="text-4xl md:text-6xl uppercase tracking-tighter"
-            style={headingFont}
-          >
-            Pronto para
-            <br />
-            <span className="text-[#e85d3a]">acelerar</span> com a gente?
-          </h2>
-          <p className="text-xl text-gray-400">
-            Cadastro grátis. Comece a rodar ou publicar rotas em minutos.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              to="/auth"
-              className="bg-[#e85d3a] px-10 py-5 rounded-full font-bold text-xl shadow-[0_20px_40px_-10px_rgba(232,93,58,0.4)] hover:scale-105 transition-all text-white"
-            >
-              Criar conta grátis
-            </Link>
-            <Link
-              to="/auth"
-              className="bg-[#2d2d2d] border border-[#4a4a4a] px-10 py-5 rounded-full font-bold text-xl hover:bg-[#4a4a4a] transition-all"
-            >
-              Já tenho conta
-            </Link>
+      {/* CTA / Contato */}
+      <section id="contato" className="py-24 px-6">
+        <div className="max-w-6xl mx-auto bg-[#161616] border border-[#2a2a2a] rounded-[3rem] p-12 md:p-16 relative overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#e85d3a]/20 rounded-full blur-3xl" />
+          <div className="grid md:grid-cols-2 gap-12 items-center relative">
+            <div className="space-y-6">
+              <span className="text-[#e85d3a] font-bold uppercase tracking-widest text-sm">Vamos operar juntos</span>
+              <h2 className="text-4xl md:text-5xl uppercase leading-tight" style={headingFont}>
+                Pronto para escalar sua <span className="text-[#e85d3a]">operação</span>?
+              </h2>
+              <p className="text-gray-400 text-lg">
+                Fale com nosso time comercial e receba uma proposta customizada
+                para o volume e as regiões do seu negócio.
+              </p>
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-3 text-gray-300">
+                  <PhoneCall className="w-5 h-5 text-[#e85d3a]" />
+                  <span>0800 000 0000 · seg a sex, 8h-20h</span>
+                </div>
+                <div className="flex items-center gap-3 text-gray-300">
+                  <Clock className="w-5 h-5 text-[#e85d3a]" />
+                  <span>Onboarding em até 48h úteis</span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-[#0f0f0f] border border-[#242424] rounded-3xl p-8 space-y-4">
+              <h3 className="uppercase text-lg" style={headingFont}>Solicitar proposta</h3>
+              <input placeholder="Nome da empresa" className="w-full bg-[#161616] border border-[#2a2a2a] rounded-xl px-4 py-3 text-sm focus:border-[#e85d3a] outline-none" />
+              <input placeholder="E-mail corporativo" className="w-full bg-[#161616] border border-[#2a2a2a] rounded-xl px-4 py-3 text-sm focus:border-[#e85d3a] outline-none" />
+              <input placeholder="Volume mensal (envios)" className="w-full bg-[#161616] border border-[#2a2a2a] rounded-xl px-4 py-3 text-sm focus:border-[#e85d3a] outline-none" />
+              <button className="w-full bg-[#e85d3a] hover:bg-[#cf4d2d] transition-all text-white font-bold py-3 rounded-xl uppercase tracking-wide">
+                Quero uma proposta
+              </button>
+              <p className="text-xs text-gray-500 text-center">
+                Retornamos em até 1 dia útil.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-[#2d2d2d]">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-[#e85d3a] rounded flex items-center justify-center">
-              <Truck className="w-4 h-4 text-white" strokeWidth={2.5} />
+      <footer className="py-12 px-6 border-t border-[#242424] bg-[#0f0f0f]">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-8">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-[#e85d3a] rounded-lg flex items-center justify-center">
+                <Package className="w-4 h-4 text-white" strokeWidth={2.5} />
+              </div>
+              <span className="text-sm tracking-tight" style={headingFont}>
+                BAG<span className="text-[#e85d3a]"> ENVIOS</span>
+              </span>
             </div>
-            <span className="text-sm tracking-tighter" style={headingFont}>
-              TUENTREGA © 2026
-            </span>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Logística last mile para e-commerces que não podem atrasar.
+            </p>
           </div>
-          <div className="flex gap-8 text-xs font-bold uppercase tracking-widest text-[#9a9a9a]">
-            <a href="#" className="hover:text-white transition-colors">
-              Privacidade
-            </a>
-            <a href="#" className="hover:text-white transition-colors">
-              Termos
-            </a>
-            <a href="#" className="hover:text-white transition-colors">
-              Suporte
-            </a>
-          </div>
+          {[
+            { t: "Serviços", l: ["Same Day", "Next Day", "Fracionado", "Logística reversa"] },
+            { t: "Empresa", l: ["Sobre", "Cobertura", "Carreiras", "Blog"] },
+            { t: "Suporte", l: ["Central de ajuda", "Rastrear pedido", "Termos", "Privacidade"] },
+          ].map((c) => (
+            <div key={c.t}>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#e85d3a] mb-3">{c.t}</p>
+              <ul className="space-y-2">
+                {c.l.map((i) => (
+                  <li key={i}><a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">{i}</a></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div className="max-w-7xl mx-auto mt-10 pt-6 border-t border-[#242424] flex flex-col md:flex-row justify-between items-center gap-4">
+          <span className="text-xs text-gray-500 uppercase tracking-widest" style={headingFont}>
+            BAG ENVIOS © 2026 · CNPJ 00.000.000/0001-00
+          </span>
+          <span className="text-xs text-gray-500">
+            Feito com precisão para o último quilômetro.
+          </span>
         </div>
       </footer>
     </div>
