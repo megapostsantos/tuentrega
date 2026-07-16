@@ -172,8 +172,9 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
   }, [lancamentos, range]);
 
   // Alerta fiscal: entregadores PJ com pendente > R$500 no mês atual
-  const rangeFromIso = range.from.toISOString().slice(0, 10);
-  const rangeToIso = range.to.toISOString().slice(0, 10);
+  const now = new Date();
+  const rangeFromIso = format(startOfMonth(now), "yyyy-MM-dd");
+  const rangeToIso = format(endOfMonth(now), "yyyy-MM-dd");
   const { data: pjAlerts = [] } = useQuery({
     queryKey: ["financeiro-pj-alerts", empresaId, rangeFromIso, rangeToIso],
     queryFn: async () => {
@@ -222,6 +223,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
       });
       return Array.from(pendingByEnt.entries())
         .map(([id, valor]) => ({ id, nome: nameById.get(id) ?? "Entregador", valor }))
+        .filter(p => p.valor > 500)
         .sort((a, b) => b.valor - a.valor);
     },
   });
@@ -287,7 +289,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
 
       {/* Alertas fiscais — PJ com pendência > R$500 */}
       {pjAlerts.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50">
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
           <CardContent className="p-4 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
@@ -421,8 +423,8 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
                   labelFormatter={(l) => `Dia ${l}`}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="entradas" name="Entradas" fill="hsl(142 71% 45%)" cursor="pointer" />
-                <Bar dataKey="saidas" name="Saídas" fill="hsl(0 72% 51%)" cursor="pointer" />
+                <Bar dataKey="entradas" name="Entradas" fill="#16a34a" cursor="pointer" />
+                <Bar dataKey="saidas" name="Saídas" fill="#dc2626" cursor="pointer" />
               </BarChart>
             </ResponsiveContainer>
           </div>
