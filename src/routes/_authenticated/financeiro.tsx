@@ -423,8 +423,8 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
                   labelFormatter={(l) => `Dia ${l}`}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="entradas" name="Entradas" fill="hsl(142 71% 45%)" cursor="pointer" />
-                <Bar dataKey="saidas" name="Saídas" fill="hsl(0 72% 51%)" cursor="pointer" />
+                <Bar dataKey="entradas" name="Entradas" fill="#16a34a" cursor="pointer" />
+                <Bar dataKey="saidas" name="Saídas" fill="#dc2626" cursor="pointer" />
               </BarChart>
             </ResponsiveContainer>
           </div>
