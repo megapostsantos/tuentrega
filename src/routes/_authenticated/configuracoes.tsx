@@ -409,6 +409,11 @@ function EntregadorProfile() {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!f) return;
+    if (f.tipo_pessoa === "pj") {
+      if (!f.cnpj || !isValidCNPJ(f.cnpj)) {
+        return toast.error("Informe um CNPJ válido para conta PJ.");
+      }
+    }
     setSaving(true);
     const { error } = await supabase.from("entregadores").update({
       nome_completo: f.nome_completo,
@@ -420,7 +425,9 @@ function EntregadorProfile() {
       cep: f.cep, rua: f.rua, numero: f.numero, complemento: f.complemento,
       bairro: f.bairro, cidade: f.cidade, estado: f.estado,
       turnos: f.turnos, plataformas: f.plataformas,
-    }).eq("id", f.id);
+      tipo_pessoa: f.tipo_pessoa,
+      cnpj: f.tipo_pessoa === "pj" ? (f.cnpj ?? "") : null,
+    } as never).eq("id", f.id);
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Perfil atualizado");
