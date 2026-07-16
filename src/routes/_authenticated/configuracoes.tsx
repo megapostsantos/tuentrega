@@ -338,7 +338,7 @@ function EntregadorProfile() {
         pix_tipo: null, pix_chave: "", banco: "", data_nascimento: null, selfie_url: null,
         cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "",
         turnos: [], plataformas: [], plataforma_comprovante_url: null,
-        tipo_pessoa: "pf", cnpj: "",
+        tipo_pessoa: null, cnpj: null,
       };
       setF(row);
       if (row.selfie_url) {
