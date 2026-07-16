@@ -306,6 +306,7 @@ type EntregadorRow = {
   cep: string | null; rua: string | null; numero: string | null; complemento: string | null;
   bairro: string | null; cidade: string | null; estado: string | null;
   turnos: string[]; plataformas: string[]; plataforma_comprovante_url: string | null;
+  tipo_pessoa: "pf" | "pj" | null; cnpj: string | null;
 };
 
 const TURNOS = ["manha", "tarde", "noite", "madrugada"] as const;
