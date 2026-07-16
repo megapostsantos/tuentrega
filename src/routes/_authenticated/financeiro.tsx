@@ -223,6 +223,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
       });
       return Array.from(pendingByEnt.entries())
         .map(([id, valor]) => ({ id, nome: nameById.get(id) ?? "Entregador", valor }))
+        .filter(p => p.valor > 500)
         .sort((a, b) => b.valor - a.valor);
     },
   });
