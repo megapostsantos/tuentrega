@@ -765,6 +765,13 @@ function EntregadorFinanceiro() {
       (ents ?? []).forEach((e: any) => { em[e.oferta_id] = { id: e.id, nota_fiscal_url: e.nota_fiscal_url }; });
       setEntregas(em);
     }
+    // load pagamentos of this entregador (used by PJ "Informar NF")
+    const { data: pgs } = await sb.from("pagamentos")
+      .select("id, valor_total, data_pagamento, nf_numero, empresa_id")
+      .eq("entregador_id", user.id)
+      .order("data_pagamento", { ascending: false });
+    setPagamentos((pgs ?? []) as any);
+
     setLoading(false);
   }
 
