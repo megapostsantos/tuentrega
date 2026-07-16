@@ -540,6 +540,16 @@ function Step3Confirm({
       <div className="rounded-lg border p-4">
         <h3 className="mb-3 text-base font-semibold">Resumo da operação</h3>
         <dl className="grid grid-cols-2 gap-y-2 text-sm">
+          <dt className="text-muted-foreground">Tipo</dt>
+          <dd className="text-right font-medium">{tipoServico === "nex" ? "Nex (saca ML)" : "Flex"}</dd>
+          {tipoServico === "nex" && (
+            <>
+              <dt className="text-muted-foreground">NX</dt>
+              <dd className="text-right font-mono text-xs">{nxCode}</dd>
+              <dt className="text-muted-foreground">QR saca</dt>
+              <dd className="text-right font-mono text-xs truncate">{sacaQr}</dd>
+            </>
+          )}
           <dt className="text-muted-foreground">Data</dt>
           <dd className="text-right font-medium">{new Date(dataOperacao).toLocaleDateString("pt-BR")}</dd>
           <dt className="text-muted-foreground">Pacotes</dt>
