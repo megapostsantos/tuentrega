@@ -906,6 +906,7 @@ export type Database = {
           motivo_nao_entrega: string | null
           nome_recebedor: string | null
           numero_pacote: number
+          nx_code: string | null
           observacao_entrega: string | null
           oferta_id: string
           operacao_id: string | null
@@ -936,6 +937,7 @@ export type Database = {
           motivo_nao_entrega?: string | null
           nome_recebedor?: string | null
           numero_pacote: number
+          nx_code?: string | null
           observacao_entrega?: string | null
           oferta_id: string
           operacao_id?: string | null
@@ -966,6 +968,7 @@ export type Database = {
           motivo_nao_entrega?: string | null
           nome_recebedor?: string | null
           numero_pacote?: number
+          nx_code?: string | null
           observacao_entrega?: string | null
           oferta_id?: string
           operacao_id?: string | null
@@ -1241,6 +1244,7 @@ export type Database = {
           status: string
           tipo: string
           tipo_entrega: string | null
+          tipo_servico: string
           titulo: string
           updated_at: string
           valor: number
@@ -1281,6 +1285,7 @@ export type Database = {
           status?: string
           tipo?: string
           tipo_entrega?: string | null
+          tipo_servico?: string
           titulo: string
           updated_at?: string
           valor?: number
@@ -1321,6 +1326,7 @@ export type Database = {
           status?: string
           tipo?: string
           tipo_entrega?: string | null
+          tipo_servico?: string
           titulo?: string
           updated_at?: string
           valor?: number
@@ -1380,11 +1386,14 @@ export type Database = {
           empresa_id: string
           id: string
           metodo_divisao: string
+          nx_code: string | null
           observacoes: string | null
           origem: string | null
           pacotes_a_mais: number
           pacotes_faltando: number
+          saca_qr_code: string | null
           status: string
+          tipo_servico: string
           total_pacotes_contados: number
           total_pacotes_sistema: number
           total_paradas: number
@@ -1398,11 +1407,14 @@ export type Database = {
           empresa_id: string
           id?: string
           metodo_divisao?: string
+          nx_code?: string | null
           observacoes?: string | null
           origem?: string | null
           pacotes_a_mais?: number
           pacotes_faltando?: number
+          saca_qr_code?: string | null
           status?: string
+          tipo_servico?: string
           total_pacotes_contados?: number
           total_pacotes_sistema?: number
           total_paradas?: number
@@ -1416,11 +1428,14 @@ export type Database = {
           empresa_id?: string
           id?: string
           metodo_divisao?: string
+          nx_code?: string | null
           observacoes?: string | null
           origem?: string | null
           pacotes_a_mais?: number
           pacotes_faltando?: number
+          saca_qr_code?: string | null
           status?: string
+          tipo_servico?: string
           total_pacotes_contados?: number
           total_pacotes_sistema?: number
           total_paradas?: number
