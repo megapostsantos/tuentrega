@@ -864,16 +864,48 @@ function EntregadorFinanceiro() {
               <p className="font-semibold text-sm">Situação fiscal</p>
               {isPj ? (
                 <>
-                  <p className="text-xs mt-1">✅ Você é <strong>PJ</strong> — lembre de emitir NF para pagamentos acima de R$ 500.</p>
+                  <p className="text-xs mt-1">✅ Você é <strong>PJ</strong> — lembre-se de emitir NF para pagamentos recebidos.</p>
                   <Button size="sm" variant="link" className="p-0 h-auto mt-1" onClick={() => setShowHowToNf(true)}>
                     Como emitir NF →
                   </Button>
+                  {(() => {
+                    const now = new Date();
+                    const y = now.getFullYear(), m = now.getMonth();
+                    const pending = pagamentos.filter(p => {
+                      if (p.nf_numero) return false;
+                      const d = new Date(p.data_pagamento);
+                      return d.getFullYear() === y && d.getMonth() === m;
+                    });
+                    if (pending.length === 0) return null;
+                    return (
+                      <div className="mt-3 space-y-1.5">
+                        <p className="text-[11px] font-medium text-blue-900">
+                          Pagamentos deste mês sem NF ({pending.length}):
+                        </p>
+                        {pending.map(p => (
+                          <div key={p.id} className="flex items-center justify-between gap-2 bg-white/60 rounded-md border border-blue-100 p-2">
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium truncate">
+                                {empresas[p.empresa_id] ?? "Empresa"} · {brl(Number(p.valor_total))}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {new Date(p.data_pagamento).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                            <Button size="sm" variant="outline" className="h-7 text-xs"
+                              onClick={() => setInformarNf({ id: p.id, valor: Number(p.valor_total) })}>
+                              Informar NF
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </>
               ) : (
                 <>
-                  <p className="text-xs mt-1">ℹ️ Você é <strong>PF</strong> — não precisa emitir nota fiscal.</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Considere abrir um MEI para ter mais benefícios.
+                  <p className="text-xs mt-1">
+                    ℹ️ Você é <strong>PF</strong> — pagamentos acima de <strong>R$ 1.903,98/mês</strong> podem estar sujeitos a IR. Consulte um contador.
                   </p>
                 </>
               )}
