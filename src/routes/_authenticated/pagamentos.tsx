@@ -1054,10 +1054,10 @@ function EntregadorFinanceiro() {
         valor={informarNf?.valor ?? 0}
         onClose={() => setInformarNf(null)}
         onSave={async (numero) => {
-          if (!informarNf) return;
+          if (!informarNf) { return; }
           const { error } = await (supabase as any).from("pagamentos")
             .update({ nf_numero: numero }).eq("id", informarNf.id);
-          if (error) return toast.error(error.message);
+          if (error) { toast.error(error.message); return; }
           toast.success("NF informada");
           setInformarNf(null);
           load();
