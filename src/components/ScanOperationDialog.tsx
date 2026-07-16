@@ -48,7 +48,10 @@ function beep() {
 }
 
 export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Props) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
+  const [tipoServico, setTipoServico] = useState<"flex" | "nex">("flex");
+  const [nxCode, setNxCode] = useState("");
+  const [sacaQr, setSacaQr] = useState("");
   const [pkgs, setPkgs] = useState<PkgRow[]>([]);
   const [valorPorPacote, setValorPorPacote] = useState<number>(1.8);
   const [dataOperacao, setDataOperacao] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -57,7 +60,8 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
   const [submitting, setSubmitting] = useState(false);
 
   function reset() {
-    setStep(1); setPkgs([]); setValorPorPacote(1.8);
+    setStep(0); setTipoServico("flex"); setNxCode(""); setSacaQr("");
+    setPkgs([]); setValorPorPacote(1.8);
     setDataOperacao(new Date().toISOString().slice(0, 10));
     setPasteOpen(false); setPasteText(""); setSubmitting(false);
   }
