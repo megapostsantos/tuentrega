@@ -97,10 +97,15 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
     if (submitting) return;
     if (pkgs.length === 0) return;
     if (!(valorPorPacote > 0)) { toast.error("Informe um valor por pacote válido"); return; }
+    if (tipoServico === "nex" && (!nxCode.trim() || !sacaQr.trim())) {
+      toast.error("Informe o código NX e o QR code da saca");
+      return;
+    }
     setSubmitting(true);
     try {
       const total = pkgs.length;
       const valorTotal = total * valorPorPacote;
+      const tituloBase = tipoServico === "nex" ? "Operação Nex" : "Operação Scanner";
 
       const { data: op, error: opErr } = await supabase.from("operacoes").insert({
         empresa_id: empresaId,
@@ -111,12 +116,15 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         valor_por_pacote: valorPorPacote,
         metodo_divisao: "manual",
         status: "draft",
-      }).select("id").single();
+        tipo_servico: tipoServico,
+        nx_code: tipoServico === "nex" ? nxCode.trim() : null,
+        saca_qr_code: tipoServico === "nex" ? sacaQr.trim() : null,
+      } as any).select("id").single();
       if (opErr || !op) throw opErr ?? new Error("Falha ao criar operação");
 
       const { data: ofe, error: ofeErr } = await supabase.from("ofertas").insert({
         empresa_id: empresaId,
-        titulo: `Operação Scanner - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`,
+        titulo: `${tituloBase} - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`,
         valor: valorTotal,
         valor_por_pacote: valorPorPacote,
         quantidade_pacotes: total,
@@ -125,13 +133,14 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         operacao_id: op.id,
         status: "draft",
         tipo: "public",
-      }).select("id").single();
+        tipo_servico: tipoServico,
+      } as any).select("id").single();
       if (ofeErr || !ofe) throw ofeErr ?? new Error("Falha ao criar oferta");
 
       const { error: rotaErr } = await supabase.from("rotas_operacao").insert({
         operacao_id: op.id,
         empresa_id: empresaId,
-        nome: "Rota Scanner",
+        nome: tipoServico === "nex" ? `Saca ${nxCode.trim()}` : "Rota Scanner",
         quantidade_pacotes: total,
         quantidade_paradas: total,
         valor_total: valorTotal,
@@ -145,6 +154,7 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         operacao_id: op.id,
         numero_pacote: i + 1,
         codigo_pacote: p.code,
+        nx_code: tipoServico === "nex" ? p.code : null,
         endereco_entrega: p.endereco || null,
         status: "pending",
       }));
