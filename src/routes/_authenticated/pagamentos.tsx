@@ -575,7 +575,7 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={confirm} disabled={saving}>
+          <Button onClick={confirm} disabled={saving || (isPj && (!nfNumero.trim() || !nfFile))}>
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             Confirmar pagamento
           </Button>
