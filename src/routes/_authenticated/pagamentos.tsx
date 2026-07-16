@@ -91,6 +91,7 @@ function EmpresaFinanceiro() {
   const [loading, setLoading] = useState(true);
   const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [pessoas, setPessoas] = useState<Record<string, EntregadorInfo>>({});
+  const [nfUrlByOferta, setNfUrlByOferta] = useState<Record<string, { numero: string | null; url: string | null }>>({});
   const [mlValor, setMlValor] = useState(2.6);
   const [pacotesMl, setPacotesMl] = useState(0);
   const [empresaName, setEmpresaName] = useState("");
@@ -150,6 +151,23 @@ function EmpresaFinanceiro() {
       });
       setPessoas(map);
     } else setPessoas({});
+
+    // load pagamentos to expose NF number/url per oferta
+    const ofIds = list.map(o => o.id);
+    if (ofIds.length) {
+      const { data: pgs } = await sb.from("pagamentos")
+        .select("ofertas_ids, nf_numero, nf_url")
+        .eq("empresa_id", user.id)
+        .overlaps("ofertas_ids", ofIds);
+      const nfMap: Record<string, { numero: string | null; url: string | null }> = {};
+      (pgs ?? []).forEach((p: any) => {
+        (p.ofertas_ids ?? []).forEach((oid: string) => {
+          if (ofIds.includes(oid)) nfMap[oid] = { numero: p.nf_numero ?? null, url: p.nf_url ?? null };
+        });
+      });
+      setNfUrlByOferta(nfMap);
+    } else setNfUrlByOferta({});
+
     setLoading(false);
   }
 
@@ -302,12 +320,12 @@ function EmpresaFinanceiro() {
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Badge variant="outline" className="text-[10px]">{g.ofertas.length} rotas</Badge>
                         {g.tipo_pessoa === "pj" ? (
-                          <Badge className="text-[10px] bg-blue-500/15 text-blue-700 hover:bg-blue-500/15">
-                            PJ — Emite NF
+                          <Badge className="text-[10px] bg-orange-500/15 text-orange-700 hover:bg-orange-500/15">
+                            PJ
                           </Badge>
                         ) : (
                           <Badge className="text-[10px] bg-muted text-muted-foreground hover:bg-muted">
-                            PF — Sem NF
+                            PF
                           </Badge>
                         )}
                         {g.tipo_pessoa === "pj" && g.total_pendente > 500 && (
@@ -365,11 +383,24 @@ function EmpresaFinanceiro() {
                               <p className="text-[10px] text-amber-700">⚠️ Aguardando NF</p>
                             )}
                           </div>
-                          <div className="text-right shrink-0">
-                            <p className="font-semibold">{brl(Number(o.valor||0))}</p>
-                            <Badge variant={o.payment_status==="paid"?"secondary":"outline"} className="text-[10px]">
-                              {o.payment_status==="paid"?"Pago":"Pendente"}
-                            </Badge>
+                          <div className="text-right shrink-0 flex items-center gap-1">
+                            {g.tipo_pessoa === "pj" && o.payment_status === "paid" && nfUrlByOferta[o.id]?.url && (
+                              <a
+                                href={nfUrlByOferta[o.id].url!}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={`Ver NF${nfUrlByOferta[o.id].numero ? ` ${nfUrlByOferta[o.id].numero}` : ""}`}
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-md border text-muted-foreground hover:bg-muted"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                              </a>
+                            )}
+                            <div>
+                              <p className="font-semibold">{brl(Number(o.valor||0))}</p>
+                              <Badge variant={o.payment_status==="paid"?"secondary":"outline"} className="text-[10px]">
+                                {o.payment_status==="paid"?"Pago":"Pendente"}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -510,7 +541,7 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
             <div className="flex justify-between"><span className="text-muted-foreground">Nome</span>
               <span className="font-medium flex items-center gap-1">
                 {grupo.nome}
-                <Badge className={cn("text-[10px]", isPj ? "bg-blue-500/15 text-blue-700" : "bg-muted text-muted-foreground")}>
+                <Badge className={cn("text-[10px]", isPj ? "bg-orange-500/15 text-orange-700" : "bg-muted text-muted-foreground")}>
                   {isPj ? "PJ" : "PF"}
                 </Badge>
               </span>
@@ -695,6 +726,8 @@ function EntregadorFinanceiro() {
   const [receipt, setReceipt] = useState<Oferta | null>(null);
   const [showHowToNf, setShowHowToNf] = useState(false);
   const [nfUploadFor, setNfUploadFor] = useState<{ ofertaId: string; entregaId: string } | null>(null);
+  const [pagamentos, setPagamentos] = useState<Array<{ id: string; valor_total: number; data_pagamento: string; nf_numero: string | null; empresa_id: string }>>([]);
+  const [informarNf, setInformarNf] = useState<{ id: string; valor: number } | null>(null);
 
   async function load() {
     setLoading(true);
@@ -732,6 +765,13 @@ function EntregadorFinanceiro() {
       (ents ?? []).forEach((e: any) => { em[e.oferta_id] = { id: e.id, nota_fiscal_url: e.nota_fiscal_url }; });
       setEntregas(em);
     }
+    // load pagamentos of this entregador (used by PJ "Informar NF")
+    const { data: pgs } = await sb.from("pagamentos")
+      .select("id, valor_total, data_pagamento, nf_numero, empresa_id")
+      .eq("entregador_id", user.id)
+      .order("data_pagamento", { ascending: false });
+    setPagamentos((pgs ?? []) as any);
+
     setLoading(false);
   }
 
@@ -824,16 +864,48 @@ function EntregadorFinanceiro() {
               <p className="font-semibold text-sm">Situação fiscal</p>
               {isPj ? (
                 <>
-                  <p className="text-xs mt-1">✅ Você é <strong>PJ</strong> — lembre de emitir NF para pagamentos acima de R$ 500.</p>
+                  <p className="text-xs mt-1">✅ Você é <strong>PJ</strong> — lembre-se de emitir NF para pagamentos recebidos.</p>
                   <Button size="sm" variant="link" className="p-0 h-auto mt-1" onClick={() => setShowHowToNf(true)}>
                     Como emitir NF →
                   </Button>
+                  {(() => {
+                    const now = new Date();
+                    const y = now.getFullYear(), m = now.getMonth();
+                    const pending = pagamentos.filter(p => {
+                      if (p.nf_numero) return false;
+                      const d = new Date(p.data_pagamento);
+                      return d.getFullYear() === y && d.getMonth() === m;
+                    });
+                    if (pending.length === 0) return null;
+                    return (
+                      <div className="mt-3 space-y-1.5">
+                        <p className="text-[11px] font-medium text-blue-900">
+                          Pagamentos deste mês sem NF ({pending.length}):
+                        </p>
+                        {pending.map(p => (
+                          <div key={p.id} className="flex items-center justify-between gap-2 bg-white/60 rounded-md border border-blue-100 p-2">
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium truncate">
+                                {empresas[p.empresa_id] ?? "Empresa"} · {brl(Number(p.valor_total))}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {new Date(p.data_pagamento).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                            <Button size="sm" variant="outline" className="h-7 text-xs"
+                              onClick={() => setInformarNf({ id: p.id, valor: Number(p.valor_total) })}>
+                              Informar NF
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </>
               ) : (
                 <>
-                  <p className="text-xs mt-1">ℹ️ Você é <strong>PF</strong> — não precisa emitir nota fiscal.</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Considere abrir um MEI para ter mais benefícios.
+                  <p className="text-xs mt-1">
+                    ℹ️ Você é <strong>PF</strong> — pagamentos acima de <strong>R$ 1.903,98/mês</strong> podem estar sujeitos a IR. Consulte um contador.
                   </p>
                 </>
               )}
@@ -976,6 +1048,21 @@ function EntregadorFinanceiro() {
           </p>
         </DialogContent>
       </Dialog>
+
+      <InformarNfDialog
+        open={!!informarNf}
+        valor={informarNf?.valor ?? 0}
+        onClose={() => setInformarNf(null)}
+        onSave={async (numero) => {
+          if (!informarNf) { return; }
+          const { error } = await (supabase as any).from("pagamentos")
+            .update({ nf_numero: numero }).eq("id", informarNf.id);
+          if (error) { toast.error(error.message); return; }
+          toast.success("NF informada");
+          setInformarNf(null);
+          load();
+        }}
+      />
     </div>
   );
 }
@@ -1071,6 +1158,33 @@ function NfUploadDialog({ target, entregadorId, onClose, onDone }: {
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             Enviar
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function InformarNfDialog({ open, valor, onClose, onSave }: {
+  open: boolean; valor: number; onClose: () => void; onSave: (numero: string) => void | Promise<void>;
+}) {
+  const [numero, setNumero] = useState("");
+  useEffect(() => { if (!open) setNumero(""); }, [open]);
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Informar NF emitida</DialogTitle>
+          <DialogDescription>
+            Registre o número da NF emitida para este pagamento{valor ? ` de ${brl(valor)}` : ""}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Número da NF</p>
+          <Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex: 000123" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button disabled={!numero.trim()} onClick={() => onSave(numero.trim())}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -172,32 +172,57 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
   }, [lancamentos, range]);
 
   // Alerta fiscal: entregadores PJ com pendente > R$500 no mês atual
+  const rangeFromIso = range.from.toISOString().slice(0, 10);
+  const rangeToIso = range.to.toISOString().slice(0, 10);
   const { data: pjAlerts = [] } = useQuery({
-    queryKey: ["financeiro-pj-alerts", empresaId],
+    queryKey: ["financeiro-pj-alerts", empresaId, rangeFromIso, rangeToIso],
     queryFn: async () => {
-      const monthStart = startOfMonth(new Date()).toISOString().slice(0, 10);
-      const monthEnd = endOfMonth(new Date()).toISOString().slice(0, 10);
       const sb = supabase as any;
       const { data: ofs } = await sb.from("ofertas")
-        .select("entregador_id, valor, payment_status, exige_nota_fiscal, data_trabalho")
+        .select("id, entregador_id, valor, status, data_trabalho")
         .eq("empresa_id", empresaId)
-        .eq("payment_status", "pending")
-        .gte("data_trabalho", monthStart)
-        .lte("data_trabalho", monthEnd);
-      const byEnt = new Map<string, number>();
-      (ofs ?? []).forEach((o: any) => {
-        if (!o.entregador_id) return;
-        byEnt.set(o.entregador_id, (byEnt.get(o.entregador_id) ?? 0) + Number(o.valor || 0));
-      });
-      const ids = Array.from(byEnt.keys());
-      if (!ids.length) return [];
+        .in("status", ["completed", "closed"])
+        .gte("data_trabalho", rangeFromIso)
+        .lte("data_trabalho", rangeToIso);
+      const ofertas = (ofs ?? []) as Array<{ id: string; entregador_id: string | null; valor: number }>;
+      const entIds = Array.from(new Set(ofertas.map(o => o.entregador_id).filter(Boolean))) as string[];
+      if (!entIds.length) return [];
       const { data: ents } = await sb.from("entregadores")
-        .select("id, nome_completo, cnpj, tipo_pessoa").in("id", ids);
-      const pjList = (ents ?? [])
-        .filter((e: any) => e.tipo_pessoa === "pj" || (e.cnpj && e.cnpj.trim().length > 0))
-        .map((e: any) => ({ id: e.id, nome: e.nome_completo, valor: byEnt.get(e.id) ?? 0 }))
-        .filter((e: any) => e.valor > 500);
-      return pjList.sort((a: any, b: any) => b.valor - a.valor);
+        .select("id, nome_completo, cnpj, tipo_pessoa").in("id", entIds);
+      const pjIds = new Set(
+        (ents ?? [])
+          .filter((e: any) => e.tipo_pessoa === "pj" || (e.cnpj && String(e.cnpj).trim().length > 0))
+          .map((e: any) => e.id as string)
+      );
+      const nameById = new Map<string, string>((ents ?? []).map((e: any) => [e.id, e.nome_completo]));
+      if (!pjIds.size) return [];
+
+      // pagamentos for these PJ entregadores from this empresa
+      const { data: pgs } = await sb.from("pagamentos")
+        .select("entregador_id, ofertas_ids, nf_numero")
+        .eq("empresa_id", empresaId)
+        .in("entregador_id", Array.from(pjIds));
+      const paidOfertaIds = new Set<string>();
+      const nfByOferta = new Map<string, string | null>();
+      (pgs ?? []).forEach((p: any) => {
+        (p.ofertas_ids ?? []).forEach((oid: string) => {
+          paidOfertaIds.add(oid);
+          nfByOferta.set(oid, p.nf_numero ?? null);
+        });
+      });
+
+      const pendingByEnt = new Map<string, number>();
+      ofertas.forEach(o => {
+        if (!o.entregador_id || !pjIds.has(o.entregador_id)) return;
+        // "sem NF" = pagamento existe mas sem nf_numero, OU pagamento ainda não gerado
+        const hasNf = paidOfertaIds.has(o.id) && !!nfByOferta.get(o.id);
+        if (!hasNf) {
+          pendingByEnt.set(o.entregador_id, (pendingByEnt.get(o.entregador_id) ?? 0) + Number(o.valor || 0));
+        }
+      });
+      return Array.from(pendingByEnt.entries())
+        .map(([id, valor]) => ({ id, nome: nameById.get(id) ?? "Entregador", valor }))
+        .sort((a, b) => b.valor - a.valor);
     },
   });
   const pjAlertTotal = pjAlerts.reduce((s: number, p: any) => s + p.valor, 0);
@@ -396,8 +421,8 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
                   labelFormatter={(l) => `Dia ${l}`}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="entradas" name="Entradas" fill="#16a34a" cursor="pointer" />
-                <Bar dataKey="saidas" name="Saídas" fill="#dc2626" cursor="pointer" />
+                <Bar dataKey="entradas" name="Entradas" fill="hsl(142 71% 45%)" cursor="pointer" />
+                <Bar dataKey="saidas" name="Saídas" fill="hsl(0 72% 51%)" cursor="pointer" />
               </BarChart>
             </ResponsiveContainer>
           </div>

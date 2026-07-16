@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { fetchCEP, maskCEP, maskPhone, maskPlaca, onlyDigits } from "@/lib/validators";
+import { fetchCEP, isValidCNPJ, maskCEP, maskCNPJ, maskPhone, maskPlaca, onlyDigits } from "@/lib/validators";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: Settings,
@@ -306,6 +306,7 @@ type EntregadorRow = {
   cep: string | null; rua: string | null; numero: string | null; complemento: string | null;
   bairro: string | null; cidade: string | null; estado: string | null;
   turnos: string[]; plataformas: string[]; plataforma_comprovante_url: string | null;
+  tipo_pessoa: "pf" | "pj" | null; cnpj: string | null;
 };
 
 const TURNOS = ["manha", "tarde", "noite", "madrugada"] as const;
@@ -337,6 +338,7 @@ function EntregadorProfile() {
         pix_tipo: null, pix_chave: "", banco: "", data_nascimento: null, selfie_url: null,
         cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "",
         turnos: [], plataformas: [], plataforma_comprovante_url: null,
+        tipo_pessoa: "pf", cnpj: "",
       };
       setF(row);
       if (row.selfie_url) {
@@ -407,6 +409,11 @@ function EntregadorProfile() {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!f) return;
+    if (f.tipo_pessoa === "pj") {
+      if (!f.cnpj || !isValidCNPJ(f.cnpj)) {
+        return toast.error("Informe um CNPJ válido para conta PJ.");
+      }
+    }
     setSaving(true);
     const { error } = await supabase.from("entregadores").update({
       nome_completo: f.nome_completo,
@@ -418,7 +425,9 @@ function EntregadorProfile() {
       cep: f.cep, rua: f.rua, numero: f.numero, complemento: f.complemento,
       bairro: f.bairro, cidade: f.cidade, estado: f.estado,
       turnos: f.turnos, plataformas: f.plataformas,
-    }).eq("id", f.id);
+      tipo_pessoa: f.tipo_pessoa,
+      cnpj: f.tipo_pessoa === "pj" ? (f.cnpj ?? "") : null,
+    } as never).eq("id", f.id);
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Perfil atualizado");
@@ -469,6 +478,38 @@ function EntregadorProfile() {
             <Field label="Data de nascimento">
               <Input value={f.data_nascimento ?? ""} disabled />
             </Field>
+
+            <Field label="Tipo de pessoa">
+              <Select
+                value={f.tipo_pessoa ?? "pf"}
+                onValueChange={(v) => up("tipo_pessoa", v as "pf" | "pj")}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pf">PF — Pessoa Física</SelectItem>
+                  <SelectItem value="pj">PJ — Pessoa Jurídica (emite NF)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Empresas exigem NF de PJs para pagamentos.
+              </p>
+            </Field>
+
+            {f.tipo_pessoa === "pj" && (
+              <Field label="CNPJ">
+                <Input
+                  value={f.cnpj ?? ""}
+                  placeholder="00.000.000/0000-00"
+                  onChange={(e) => up("cnpj", maskCNPJ(e.target.value))}
+                  className={emptyClass(f.cnpj)}
+                />
+                {f.cnpj && !isValidCNPJ(f.cnpj) && (
+                  <p className="text-xs text-destructive">CNPJ inválido</p>
+                )}
+                <EmptyHint v={f.cnpj} />
+              </Field>
+            )}
+
 
             <Field label="WhatsApp">
               <Input value={f.whatsapp ?? ""} onChange={(e) => up("whatsapp", maskPhone(e.target.value))} className={emptyClass(f.whatsapp)} />
