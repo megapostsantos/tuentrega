@@ -864,7 +864,7 @@ function EntregadorFinanceiro() {
               <p className="font-semibold text-sm">Situação fiscal</p>
               {isPj ? (
                 <>
-                  <p className="text-xs mt-1">✅ Você é <strong>PJ</strong> — lembre-se de emitir NF para pagamentos recebidos.</p>
+                  <p className="text-xs mt-1">✅ Você é <strong>PJ</strong> — lembre-se de emitir NF para pagamentos acima de <strong>R$ 500</strong>.</p>
                   <Button size="sm" variant="link" className="p-0 h-auto mt-1" onClick={() => setShowHowToNf(true)}>
                     Como emitir NF →
                   </Button>
@@ -905,7 +905,7 @@ function EntregadorFinanceiro() {
               ) : (
                 <>
                   <p className="text-xs mt-1">
-                    ℹ️ Você é <strong>PF</strong> — pagamentos acima de <strong>R$ 1.903,98/mês</strong> podem estar sujeitos a IR. Consulte um contador.
+                    ℹ️ Você é <strong>PF</strong> — não precisa emitir nota fiscal. Considere abrir um <strong>MEI</strong> para ter mais benefícios.
                   </p>
                 </>
               )}
