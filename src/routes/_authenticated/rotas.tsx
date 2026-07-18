@@ -47,6 +47,15 @@ type Oferta = {
 async function ensurePackagesForOferta(oferta: Oferta) {
   if (!oferta.quantidade_pacotes || oferta.quantidade_pacotes <= 0) return;
 
+  // If pacotes exist with the same operacao_id but no oferta_id, link them.
+  if (oferta.operacao_id) {
+    await supabase
+      .from("entregas_pacotes")
+      .update({ oferta_id: oferta.id } as any)
+      .eq("operacao_id", oferta.operacao_id)
+      .is("oferta_id", null);
+  }
+
   const { count, error: countErr } = await supabase
     .from("entregas_pacotes")
     .select("id", { count: "exact", head: true })
@@ -66,6 +75,7 @@ async function ensurePackagesForOferta(oferta: Oferta) {
   const { error } = await supabase.from("entregas_pacotes").insert(rows as any);
   if (error) throw error;
 }
+
 
 // UI choices mapped to motivo + sub_motivo respecting the DB check constraint
 const RADIO_CHOICES: Array<{ key: string; label: string; motivo: string; sub?: string }> = [
