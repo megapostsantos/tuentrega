@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import bagLogo from "@/assets/bag-logo.jpg.asset.json";
+import bagLogo from "@/assets/bag-logo-transparent.png.asset.json";
 import {
   Truck,
   Package,
