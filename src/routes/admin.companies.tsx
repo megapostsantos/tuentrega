@@ -299,6 +299,7 @@ function CompaniesPage() {
                 <div className="rounded-lg bg-muted/50 p-3 text-center"><div className="text-2xl font-bold">{stats[detailsDialog.id]?.ofertas ?? 0}</div><div className="text-xs text-muted-foreground">Ofertas</div></div>
                 <div className="rounded-lg bg-muted/50 p-3 text-center"><div className="text-2xl font-bold">{stats[detailsDialog.id]?.entregas ?? 0}</div><div className="text-xs text-muted-foreground">Entregas</div></div>
               </div>
+              <FiliaisAdminSection empresaId={detailsDialog.id} />
             </div>
           )}
           <DialogFooter>
