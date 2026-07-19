@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export const Route = createFileRoute('/rastrear/$token')({
   head: ({ params }) => ({
     meta: [
-      { title: `Rastrear pacote ${params.token.slice(0, 8)} — TuEntrega` },
+      { title: `Rastrear pacote ${params.token.slice(0, 8)} — BAG Envios` },
       { name: 'description', content: 'Acompanhe o status da sua entrega em tempo real.' },
       { name: 'robots', content: 'noindex,nofollow' },
     ],
@@ -96,7 +96,7 @@ function TrackPage() {
             <Truck className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-base font-bold leading-tight">TuEntrega</p>
+            <p className="text-base font-bold leading-tight">BAG Envios</p>
             <p className="text-xs text-muted-foreground leading-tight">Rastreio de entrega</p>
           </div>
         </div>
@@ -235,7 +235,7 @@ function TrackPage() {
         </Card>
 
         <p className="pb-6 text-center text-xs text-muted-foreground">
-          Acompanhamento fornecido por TuEntrega
+          Acompanhamento fornecido por BAG Envios
         </p>
       </main>
     </div>
