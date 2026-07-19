@@ -158,21 +158,16 @@ function Landing() {
 
           {/* Floating logo illustration */}
           <div className="relative hidden lg:flex justify-center">
-            <div className="relative w-[380px] h-[380px] animate-[float_5s_ease-in-out_infinite]">
+            <div className="relative w-[420px] h-[420px] animate-[float_5s_ease-in-out_infinite]">
               <div
-                className="absolute inset-0 rounded-[3rem] blur-3xl opacity-40"
+                className="absolute inset-0 rounded-[3rem] blur-3xl opacity-50"
                 style={{ background: YELLOW }}
               />
-              <div
-                className="relative w-full h-full rounded-[3rem] flex items-center justify-center border-4 overflow-hidden"
-                style={{ background: `${YELLOW}18`, borderColor: `${YELLOW}55` }}
-              >
-                <img
-                  src={bagLogo.url}
-                  alt="BAG Envios — Rápido. Confiável. Sempre."
-                  className="w-72 h-72 object-contain drop-shadow-2xl"
-                />
-              </div>
+              <img
+                src={bagLogo.url}
+                alt="BAG Envios — envios & variedades"
+                className="relative w-full h-full object-contain drop-shadow-2xl"
+              />
             </div>
           </div>
         </div>
