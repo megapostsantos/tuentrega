@@ -140,7 +140,7 @@ function Landing() {
             </div>
           </div>
 
-          {/* Floating bag illustration */}
+          {/* Floating logo illustration */}
           <div className="relative hidden lg:flex justify-center">
             <div className="relative w-[380px] h-[380px] animate-[float_5s_ease-in-out_infinite]">
               <div
@@ -148,31 +148,14 @@ function Landing() {
                 style={{ background: YELLOW }}
               />
               <div
-                className="relative w-full h-full rounded-[3rem] flex items-center justify-center border-4"
+                className="relative w-full h-full rounded-[3rem] flex items-center justify-center border-4 overflow-hidden"
                 style={{ background: `${YELLOW}18`, borderColor: `${YELLOW}55` }}
               >
-                <svg viewBox="0 0 200 200" className="w-56 h-56" fill="none">
-                  {/* Handle */}
-                  <path d="M70 70 Q70 30 100 30 Q130 30 130 70" stroke={YELLOW} strokeWidth="10" strokeLinecap="round" />
-                  {/* Bag body */}
-                  <rect x="45" y="70" width="110" height="110" rx="12" fill={YELLOW} />
-                  {/* Label */}
-                  <rect x="70" y="95" width="60" height="35" rx="4" fill={NAVY} />
-                  <text x="100" y="118" textAnchor="middle" fill={YELLOW} fontFamily="Montserrat" fontWeight="900" fontSize="16">BAG</text>
-                  {/* Barcode */}
-                  <g fill={NAVY}>
-                    <rect x="65" y="145" width="3" height="20"/>
-                    <rect x="72" y="145" width="2" height="20"/>
-                    <rect x="78" y="145" width="4" height="20"/>
-                    <rect x="86" y="145" width="2" height="20"/>
-                    <rect x="92" y="145" width="3" height="20"/>
-                    <rect x="99" y="145" width="5" height="20"/>
-                    <rect x="108" y="145" width="2" height="20"/>
-                    <rect x="114" y="145" width="3" height="20"/>
-                    <rect x="121" y="145" width="4" height="20"/>
-                    <rect x="129" y="145" width="2" height="20"/>
-                  </g>
-                </svg>
+                <img
+                  src={bagLogo.url}
+                  alt="BAG Envios — Rápido. Confiável. Sempre."
+                  className="w-72 h-72 object-contain drop-shadow-2xl"
+                />
               </div>
             </div>
           </div>
