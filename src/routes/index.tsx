@@ -411,8 +411,8 @@ function Landing() {
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-widest text-[#0D1B2A]/60" style={heading}>Instagram</p>
-                  <a href="https://instagram.com/bag.envios" target="_blank" rel="noreferrer" className="text-base" style={heading}>
-                    @bag.envios
+                  <a href="https://instagram.com/bag_envios" target="_blank" rel="noreferrer" className="text-base" style={heading}>
+                    @bag_envios
                   </a>
                 </div>
               </div>
@@ -495,12 +495,12 @@ function Landing() {
             Envie · Retire · Compre
           </p>
           <a
-            href="https://instagram.com/bag.envios"
+            href="https://instagram.com/bag_envios"
             target="_blank"
             rel="noreferrer"
             className="text-white/70 hover:text-white text-sm md:text-right flex items-center gap-2 justify-center md:justify-end"
           >
-            <Instagram className="w-4 h-4" /> @bag.envios
+            <Instagram className="w-4 h-4" /> @bag_envios
           </a>
         </div>
         <p className="text-center text-white/40 text-xs mt-6">
