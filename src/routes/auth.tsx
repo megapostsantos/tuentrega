@@ -144,27 +144,115 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 }
 
 function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
-  const [role, setRole] = useState<Role>("empresa");
+  const [role, setRole] = useState<Role | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   if (pendingEmail) {
     return <VerifyEmail email={pendingEmail} onConfirmed={onSuccess} />;
   }
 
+  if (!confirmed) {
+    return (
+      <>
+        <h1 className="text-2xl font-bold">Como você quer usar a BAG Envios?</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Escolha o perfil que melhor descreve você.</p>
+
+        <div className="mt-6 space-y-3">
+          <BigRoleCard
+            active={role === "entregador"}
+            onClick={() => setRole("entregador")}
+            icon={Bike}
+            title="Sou Entregador"
+            desc="Quero fazer rotas, receber ofertas e ganhar por entrega"
+            variant="yellow"
+          />
+          <BigRoleCard
+            active={role === "empresa"}
+            onClick={() => setRole("empresa")}
+            icon={Building2}
+            title="Sou Empresa"
+            desc="Quero gerenciar minhas entregas e contratar entregadores"
+            variant="navy"
+          />
+        </div>
+
+        <Button
+          type="button"
+          onClick={() => role && setConfirmed(true)}
+          disabled={!role}
+          className="mt-6 w-full bg-primary text-primary-foreground hover:opacity-90"
+        >
+          Continuar <ArrowRight className="ml-1 h-4 w-4" />
+        </Button>
+      </>
+    );
+  }
+
   return (
     <>
-      <h1 className="text-2xl font-bold">Crie sua conta</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Escolha seu perfil para começar.</p>
-
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <RoleCard active={role === "empresa"} onClick={() => setRole("empresa")} icon={Building2} label="Empresa" desc="Gerencio entregas" />
-        <RoleCard active={role === "entregador"} onClick={() => setRole("entregador")} icon={Bike} label="Entregador PJ" desc="Quero entregar" />
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Crie sua conta</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Perfil: <strong className="text-foreground">{role === "empresa" ? "Empresa" : "Entregador"}</strong>
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => setConfirmed(false)}>
+          <ArrowLeft className="mr-1 h-4 w-4" /> Trocar
+        </Button>
       </div>
 
       {role === "empresa"
         ? <EmpresaForm onSuccess={(email) => setPendingEmail(email)} />
         : <EntregadorForm onSuccess={(email) => setPendingEmail(email)} />}
     </>
+  );
+}
+
+function BigRoleCard({
+  active, onClick, icon: Icon, title, desc, variant,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof Bike;
+  title: string;
+  desc: string;
+  variant: "yellow" | "navy";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "relative w-full rounded-2xl border-2 p-5 text-left transition-all press-scale",
+        active
+          ? "border-[#FFB700] shadow-lg ring-4 ring-[#FFB700]/20"
+          : "border-border hover:border-[#FFB700]/60",
+      )}
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className={cn(
+            "grid h-14 w-14 shrink-0 place-content-center rounded-xl",
+            variant === "yellow"
+              ? "bg-[#FFB700] text-[#0D1B2A]"
+              : "bg-[#0D1B2A] text-[#FFB700] border-2 border-[#FFB700]",
+          )}
+        >
+          <Icon className="h-7 w-7" strokeWidth={2.5} />
+        </div>
+        <div className="flex-1 pt-1">
+          <div className="text-base font-bold">{title}</div>
+          <p className="mt-1 text-sm text-muted-foreground leading-snug">{desc}</p>
+        </div>
+        {active && (
+          <div className="absolute right-4 top-4 grid h-6 w-6 place-content-center rounded-full bg-[#FFB700] text-[#0D1B2A]">
+            <Check className="h-4 w-4" strokeWidth={3} />
+          </div>
+        )}
+      </div>
+    </button>
   );
 }
 
