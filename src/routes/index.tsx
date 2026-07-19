@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import bagLogo from "@/assets/bag-logo.jpg.asset.json";
 import {
   Truck,
