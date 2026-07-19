@@ -403,6 +403,7 @@ function CreateOperation({
         status: "draft",
         observacoes: observacoes || null,
         origem: origemFinal,
+        filial_id: filialId === "none" ? null : filialId,
       } as any).select("id").single();
       if (opErr) throw opErr;
       const opId = (opRow as any).id as string;
