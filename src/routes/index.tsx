@@ -56,7 +56,7 @@ function Landing() {
         className="fixed top-0 inset-x-0 z-50 border-b border-white/10"
         style={{ background: NAVY }}
       >
-        <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between gap-3">
           <a href="#top" className="flex items-center gap-2 text-white">
             <img
               src={bagLogo.url}
@@ -68,17 +68,33 @@ function Landing() {
               <span className="hidden sm:inline text-white/70 font-medium"> & variedades</span>
             </span>
           </a>
-          <a
-            href={WHATSAPP}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-transform hover:scale-105"
-            style={{ background: YELLOW, color: NAVY, ...heading }}
-          >
-            <MessageCircle className="w-4 h-4" strokeWidth={2.8} />
-            <span className="hidden sm:inline">Falar pelo WhatsApp</span>
-            <span className="sm:hidden">WhatsApp</span>
-          </a>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <a
+              href={WHATSAPP}
+              target="_blank"
+              rel="noreferrer"
+              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-transform hover:scale-105"
+              style={{ background: YELLOW, color: NAVY, ...heading }}
+            >
+              <MessageCircle className="w-4 h-4" strokeWidth={2.8} />
+              Falar pelo WhatsApp
+            </a>
+            <Link
+              to="/auth"
+              className="hidden sm:inline-flex items-center px-4 py-2 rounded-full text-sm border-2 border-white/30 text-white hover:border-white hover:bg-white/5 transition-colors"
+              style={heading}
+            >
+              Entrar
+            </Link>
+            <Link
+              to="/auth"
+              className="inline-flex items-center px-4 py-2 rounded-full text-sm transition-transform hover:scale-105"
+              style={{ background: YELLOW, color: NAVY, ...heading }}
+            >
+              <span className="hidden sm:inline">Criar conta</span>
+              <span className="sm:hidden">Acessar</span>
+            </Link>
+          </div>
         </div>
       </nav>
 
