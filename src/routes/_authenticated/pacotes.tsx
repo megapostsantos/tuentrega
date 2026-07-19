@@ -565,6 +565,18 @@ function CreateOperation({
               )}
             </Field>
 
+            {filiais.length > 0 && (
+              <Field label="Filial (opcional)">
+                <Select value={filialId} onValueChange={setFilialId}>
+                  <SelectTrigger><SelectValue placeholder="Sem filial" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem filial (matriz)</SelectItem>
+                    {filiais.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Data da operação">
                 <Input type="date" value={dataOperacao} onChange={(e) => setDataOperacao(e.target.value)} />
