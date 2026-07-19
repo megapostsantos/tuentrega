@@ -58,12 +58,11 @@ function Landing() {
       >
         <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
           <a href="#top" className="flex items-center gap-2 text-white">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center"
-              style={{ background: YELLOW }}
-            >
-              <ShoppingBag className="w-5 h-5" style={{ color: NAVY }} strokeWidth={2.8} />
-            </div>
+            <img
+              src={bagLogo.url}
+              alt="BAG Envios"
+              className="w-9 h-9 rounded-lg object-cover border border-yellow-500/30"
+            />
             <span className="tracking-tight text-sm sm:text-base" style={heading}>
               BAG <span style={{ color: YELLOW }}>envios</span>
               <span className="hidden sm:inline text-white/70 font-medium"> & variedades</span>
@@ -217,7 +216,7 @@ function Landing() {
               { icon: Gift, t: "Presentes", d: "Embale e envie com carinho." },
               { icon: Sparkles, t: "Utilidades", d: "Variedades para o dia a dia." },
               { icon: Wrench, t: "Manutenções", d: "Pequenos reparos rápidos." },
-              { icon: ShoppingBag, t: "Personalizados", d: "Serviços sob medida." },
+              { icon: Briefcase, t: "Personalizados", d: "Serviços sob medida." },
             ].map((s) => (
               <div
                 key={s.t}
@@ -479,12 +478,11 @@ function Landing() {
       <footer className="py-8 px-5" style={{ background: "#060E17" }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-center text-center md:text-left">
           <div className="flex items-center gap-2 justify-center md:justify-start">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: YELLOW }}
-            >
-              <ShoppingBag className="w-4 h-4" style={{ color: NAVY }} strokeWidth={2.8} />
-            </div>
+            <img
+              src={bagLogo.url}
+              alt="BAG Envios"
+              className="w-8 h-8 rounded-lg object-cover border border-yellow-500/30"
+            />
             <span className="text-white text-sm" style={heading}>
               BAG <span style={{ color: YELLOW }}>envios</span>
             </span>
