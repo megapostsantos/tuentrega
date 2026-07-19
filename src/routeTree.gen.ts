@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LandingRouteImport } from './routes/landing'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
@@ -41,6 +42,11 @@ import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPacotesDistribuirAlocacaoIdRouteImport } from './routes/_authenticated/pacotes.distribuir.$alocacaoId'
 import { Route as AuthenticatedPacotesAlocarOperacaoIdRouteImport } from './routes/_authenticated/pacotes.alocar.$operacaoId'
 
+const LandingRoute = LandingRouteImport.update({
+  id: '/landing',
+  path: '/landing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -204,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/landing': typeof LandingRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/landing': typeof LandingRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -270,6 +278,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/landing': typeof LandingRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/landing'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/landing'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
@@ -369,6 +380,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/admin'
     | '/auth'
+    | '/landing'
     | '/_authenticated/agenda'
     | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
@@ -403,11 +415,19 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  LandingRoute: typeof LandingRoute
   RastrearTokenRoute: typeof RastrearTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/landing': {
+      id: '/landing'
+      path: '/landing'
+      fullPath: '/landing'
+      preLoaderRoute: typeof LandingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -722,6 +742,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  LandingRoute: LandingRoute,
   RastrearTokenRoute: RastrearTokenRoute,
 }
 export const routeTree = rootRouteImport
