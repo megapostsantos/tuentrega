@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import bagLogo from "@/assets/bag-logo.png.asset.json";
 import {
   Truck,
   Package,
@@ -7,7 +8,7 @@ import {
   Gift,
   Wrench,
   Sparkles,
-  ShoppingBag,
+  Briefcase,
   MessageCircle,
   MapPin,
   Phone,
@@ -57,12 +58,11 @@ function Landing() {
       >
         <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
           <a href="#top" className="flex items-center gap-2 text-white">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center"
-              style={{ background: YELLOW }}
-            >
-              <ShoppingBag className="w-5 h-5" style={{ color: NAVY }} strokeWidth={2.8} />
-            </div>
+            <img
+              src={bagLogo.url}
+              alt="BAG Envios"
+              className="w-9 h-9 rounded-lg object-cover border border-yellow-500/30"
+            />
             <span className="tracking-tight text-sm sm:text-base" style={heading}>
               BAG <span style={{ color: YELLOW }}>envios</span>
               <span className="hidden sm:inline text-white/70 font-medium"> & variedades</span>
@@ -140,7 +140,7 @@ function Landing() {
             </div>
           </div>
 
-          {/* Floating bag illustration */}
+          {/* Floating logo illustration */}
           <div className="relative hidden lg:flex justify-center">
             <div className="relative w-[380px] h-[380px] animate-[float_5s_ease-in-out_infinite]">
               <div
@@ -148,31 +148,14 @@ function Landing() {
                 style={{ background: YELLOW }}
               />
               <div
-                className="relative w-full h-full rounded-[3rem] flex items-center justify-center border-4"
+                className="relative w-full h-full rounded-[3rem] flex items-center justify-center border-4 overflow-hidden"
                 style={{ background: `${YELLOW}18`, borderColor: `${YELLOW}55` }}
               >
-                <svg viewBox="0 0 200 200" className="w-56 h-56" fill="none">
-                  {/* Handle */}
-                  <path d="M70 70 Q70 30 100 30 Q130 30 130 70" stroke={YELLOW} strokeWidth="10" strokeLinecap="round" />
-                  {/* Bag body */}
-                  <rect x="45" y="70" width="110" height="110" rx="12" fill={YELLOW} />
-                  {/* Label */}
-                  <rect x="70" y="95" width="60" height="35" rx="4" fill={NAVY} />
-                  <text x="100" y="118" textAnchor="middle" fill={YELLOW} fontFamily="Montserrat" fontWeight="900" fontSize="16">BAG</text>
-                  {/* Barcode */}
-                  <g fill={NAVY}>
-                    <rect x="65" y="145" width="3" height="20"/>
-                    <rect x="72" y="145" width="2" height="20"/>
-                    <rect x="78" y="145" width="4" height="20"/>
-                    <rect x="86" y="145" width="2" height="20"/>
-                    <rect x="92" y="145" width="3" height="20"/>
-                    <rect x="99" y="145" width="5" height="20"/>
-                    <rect x="108" y="145" width="2" height="20"/>
-                    <rect x="114" y="145" width="3" height="20"/>
-                    <rect x="121" y="145" width="4" height="20"/>
-                    <rect x="129" y="145" width="2" height="20"/>
-                  </g>
-                </svg>
+                <img
+                  src={bagLogo.url}
+                  alt="BAG Envios — Rápido. Confiável. Sempre."
+                  className="w-72 h-72 object-contain drop-shadow-2xl"
+                />
               </div>
             </div>
           </div>
@@ -216,7 +199,7 @@ function Landing() {
               { icon: Gift, t: "Presentes", d: "Embale e envie com carinho." },
               { icon: Sparkles, t: "Utilidades", d: "Variedades para o dia a dia." },
               { icon: Wrench, t: "Manutenções", d: "Pequenos reparos rápidos." },
-              { icon: ShoppingBag, t: "Personalizados", d: "Serviços sob medida." },
+              { icon: Briefcase, t: "Personalizados", d: "Serviços sob medida." },
             ].map((s) => (
               <div
                 key={s.t}
@@ -478,12 +461,11 @@ function Landing() {
       <footer className="py-8 px-5" style={{ background: "#060E17" }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-center text-center md:text-left">
           <div className="flex items-center gap-2 justify-center md:justify-start">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: YELLOW }}
-            >
-              <ShoppingBag className="w-4 h-4" style={{ color: NAVY }} strokeWidth={2.8} />
-            </div>
+            <img
+              src={bagLogo.url}
+              alt="BAG Envios"
+              className="w-8 h-8 rounded-lg object-cover border border-yellow-500/30"
+            />
             <span className="text-white text-sm" style={heading}>
               BAG <span style={{ color: YELLOW }}>envios</span>
             </span>
