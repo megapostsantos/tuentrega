@@ -269,6 +269,18 @@ function CreateOperation({
   const [totalParadas, setTotalParadas] = useState<number>(0);
   const [valorPorPacote, setValorPorPacote] = useState<number>(empresa?.tms_valor_padrao_pacote ?? 1.8);
   const [scanOpen, setScanOpen] = useState(false);
+  const [filialId, setFilialId] = useState<string>("none");
+  const [filiais, setFiliais] = useState<Array<{ id: string; nome: string }>>([]);
+
+  useEffect(() => {
+    (supabase as any).from("filiais")
+      .select("id, nome")
+      .eq("empresa_id", userId)
+      .eq("ativa", true)
+      .eq("pendente_aprovacao", false)
+      .order("nome")
+      .then(({ data }: any) => setFiliais(data ?? []));
+  }, [userId]);
 
   const origemFinal = origem === "Outro" ? origemCustom.trim() : origem;
   const mediaPorParada = totalParadas > 0 ? (totalPacotes / totalParadas) : 0;
