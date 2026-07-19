@@ -280,7 +280,7 @@ function CompaniesPage() {
       </Dialog>
 
       <Dialog open={!!detailsDialog} onOpenChange={(o) => !o && setDetailsDialog(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{detailsDialog?.nome_fantasia || detailsDialog?.razao_social}</DialogTitle></DialogHeader>
           {detailsDialog && (
             <div className="space-y-3 text-sm">
