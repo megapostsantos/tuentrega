@@ -269,6 +269,18 @@ function CreateOperation({
   const [totalParadas, setTotalParadas] = useState<number>(0);
   const [valorPorPacote, setValorPorPacote] = useState<number>(empresa?.tms_valor_padrao_pacote ?? 1.8);
   const [scanOpen, setScanOpen] = useState(false);
+  const [filialId, setFilialId] = useState<string>("none");
+  const [filiais, setFiliais] = useState<Array<{ id: string; nome: string }>>([]);
+
+  useEffect(() => {
+    (supabase as any).from("filiais")
+      .select("id, nome")
+      .eq("empresa_id", userId)
+      .eq("ativa", true)
+      .eq("pendente_aprovacao", false)
+      .order("nome")
+      .then(({ data }: any) => setFiliais(data ?? []));
+  }, [userId]);
 
   const origemFinal = origem === "Outro" ? origemCustom.trim() : origem;
   const mediaPorParada = totalParadas > 0 ? (totalPacotes / totalParadas) : 0;
@@ -391,6 +403,7 @@ function CreateOperation({
         status: "draft",
         observacoes: observacoes || null,
         origem: origemFinal,
+        filial_id: filialId === "none" ? null : filialId,
       } as any).select("id").single();
       if (opErr) throw opErr;
       const opId = (opRow as any).id as string;
@@ -551,6 +564,18 @@ function CreateOperation({
                 />
               )}
             </Field>
+
+            {filiais.length > 0 && (
+              <Field label="Filial (opcional)">
+                <Select value={filialId} onValueChange={setFilialId}>
+                  <SelectTrigger><SelectValue placeholder="Sem filial" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem filial (matriz)</SelectItem>
+                    {filiais.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Data da operação">

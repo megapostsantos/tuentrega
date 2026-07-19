@@ -1025,6 +1025,65 @@ export type Database = {
         }
         Relationships: []
       }
+      filiais: {
+        Row: {
+          ativa: boolean
+          cep: string | null
+          cidade: string | null
+          created_at: string
+          empresa_id: string
+          estado: string | null
+          id: string
+          nome: string
+          numero: string | null
+          pendente_aprovacao: boolean
+          responsavel: string | null
+          rua: string | null
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          ativa?: boolean
+          cep?: string | null
+          cidade?: string | null
+          created_at?: string
+          empresa_id: string
+          estado?: string | null
+          id?: string
+          nome: string
+          numero?: string | null
+          pendente_aprovacao?: boolean
+          responsavel?: string | null
+          rua?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          ativa?: boolean
+          cep?: string | null
+          cidade?: string | null
+          created_at?: string
+          empresa_id?: string
+          estado?: string | null
+          id?: string
+          nome?: string
+          numero?: string | null
+          pendente_aprovacao?: boolean
+          responsavel?: string | null
+          rua?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "filiais_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financeiro_lancamentos: {
         Row: {
           categoria: string
@@ -1224,6 +1283,7 @@ export type Database = {
           entregador_id: string | null
           exige_nota_fiscal: boolean
           expira_em: string | null
+          filial_id: string | null
           hora_fim: string | null
           hora_inicio: string | null
           id: string
@@ -1265,6 +1325,7 @@ export type Database = {
           entregador_id?: string | null
           exige_nota_fiscal?: boolean
           expira_em?: string | null
+          filial_id?: string | null
           hora_fim?: string | null
           hora_inicio?: string | null
           id?: string
@@ -1306,6 +1367,7 @@ export type Database = {
           entregador_id?: string | null
           exige_nota_fiscal?: boolean
           expira_em?: string | null
+          filial_id?: string | null
           hora_fim?: string | null
           hora_inicio?: string | null
           id?: string
@@ -1339,6 +1401,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ofertas_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
             referencedColumns: ["id"]
           },
         ]
@@ -1384,6 +1453,7 @@ export type Database = {
           created_at: string
           data_operacao: string
           empresa_id: string
+          filial_id: string | null
           id: string
           metodo_divisao: string
           nx_code: string | null
@@ -1405,6 +1475,7 @@ export type Database = {
           created_at?: string
           data_operacao?: string
           empresa_id: string
+          filial_id?: string | null
           id?: string
           metodo_divisao?: string
           nx_code?: string | null
@@ -1426,6 +1497,7 @@ export type Database = {
           created_at?: string
           data_operacao?: string
           empresa_id?: string
+          filial_id?: string | null
           id?: string
           metodo_divisao?: string
           nx_code?: string | null
@@ -1443,7 +1515,15 @@ export type Database = {
           valor_ml_por_pacote?: number
           valor_por_pacote?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "operacoes_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pagamentos: {
         Row: {

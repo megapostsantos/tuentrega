@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { setImpersonation } from "@/lib/impersonation";
+import { FiliaisAdminSection } from "@/components/FiliaisAdminSection";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
@@ -279,7 +280,7 @@ function CompaniesPage() {
       </Dialog>
 
       <Dialog open={!!detailsDialog} onOpenChange={(o) => !o && setDetailsDialog(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{detailsDialog?.nome_fantasia || detailsDialog?.razao_social}</DialogTitle></DialogHeader>
           {detailsDialog && (
             <div className="space-y-3 text-sm">
@@ -298,6 +299,7 @@ function CompaniesPage() {
                 <div className="rounded-lg bg-muted/50 p-3 text-center"><div className="text-2xl font-bold">{stats[detailsDialog.id]?.ofertas ?? 0}</div><div className="text-xs text-muted-foreground">Ofertas</div></div>
                 <div className="rounded-lg bg-muted/50 p-3 text-center"><div className="text-2xl font-bold">{stats[detailsDialog.id]?.entregas ?? 0}</div><div className="text-xs text-muted-foreground">Entregas</div></div>
               </div>
+              <FiliaisAdminSection empresaId={detailsDialog.id} />
             </div>
           )}
           <DialogFooter>
