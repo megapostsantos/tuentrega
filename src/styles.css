@@ -63,10 +63,10 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.012 264);
 
-  /* Orange primary #F97316 */
-  --primary: oklch(0.7 0.182 47);
-  --primary-foreground: oklch(1 0 0);
-  --primary-glow: oklch(0.66 0.19 45);       /* #EA6C0A */
+  /* Amber primary #FFB700 on navy #0D1B2A */
+  --primary: #FFB700;
+  --primary-foreground: #0D1B2A;
+  --primary-glow: #E5A400;
 
   /* Surface (#F8F9FA) used as secondary surface */
   --secondary: oklch(0.978 0.002 264);
@@ -76,8 +76,8 @@
   --muted: oklch(0.96 0.003 264);
   --muted-foreground: oklch(0.5 0.01 264);   /* #6B7280 */
 
-  --accent: oklch(0.96 0.04 55);
-  --accent-foreground: oklch(0.32 0.12 50);
+  --accent: #FFF4D6;
+  --accent-foreground: #0D1B2A;
 
   --destructive: oklch(0.63 0.22 27);        /* #EF4444 */
   --destructive-foreground: oklch(1 0 0);
@@ -90,24 +90,25 @@
 
   --border: oklch(0.92 0.004 264);           /* #E5E7EB */
   --input: oklch(0.92 0.004 264);
-  --ring: oklch(0.7 0.182 47);
+  --ring: #FFB700;
 
-  /* Sidebar kept (used on desktop layout fallback) */
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.18 0.012 264);
-  --sidebar-primary: oklch(0.7 0.182 47);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.96 0.003 264);
-  --sidebar-accent-foreground: oklch(0.18 0.012 264);
-  --sidebar-border: oklch(0.92 0.004 264);
-  --sidebar-ring: oklch(0.7 0.182 47);
+  /* Sidebar: navy background with amber accents */
+  --sidebar: #0D1B2A;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #FFB700;
+  --sidebar-primary-foreground: #0D1B2A;
+  --sidebar-accent: #17293D;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #1B2E44;
+  --sidebar-ring: #FFB700;
 
-  --gradient-primary: linear-gradient(135deg, #F97316, #EA6C0A);
+  --gradient-primary: linear-gradient(135deg, #FFB700, #E5A400);
   --shadow-glow: 0 8px 24px -6px color-mix(in oklab, var(--primary) 35%, transparent);
   --elev-1: 0 1px 3px rgba(0,0,0,0.08);
   --elev-2: 0 2px 8px rgba(0,0,0,0.10);
   --elev-3: 0 4px 16px rgba(0,0,0,0.12);
 }
+
 
 .dark {
   --background: oklch(0.14 0.005 264);
