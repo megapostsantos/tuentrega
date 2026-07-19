@@ -15,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { fetchCEP, isValidCNPJ, maskCEP, maskCNPJ, maskPhone, maskPlaca, onlyDigits } from "@/lib/validators";
+import { MinhasFiliaisCard } from "@/components/MinhasFiliaisCard";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: Settings,
