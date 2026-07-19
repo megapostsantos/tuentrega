@@ -57,7 +57,7 @@ function AdminLoginPage() {
           </span>
         </div>
         <h1 className="text-2xl font-bold tracking-tight">Acesso administrativo</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Acesso restrito ao time TuEntrega.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Acesso restrito ao time BAG Envios.</p>
 
         <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <div>

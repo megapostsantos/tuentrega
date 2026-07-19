@@ -80,7 +80,7 @@ function AuthPage() {
             Pacotes, rotas, pagamentos PIX e agenda — tudo em uma plataforma mobile-first.
           </p>
         </div>
-        <p className="text-sm text-secondary-foreground/60">© {new Date().getFullYear()} TuEntrega</p>
+        <p className="text-sm text-secondary-foreground/60">© {new Date().getFullYear()} BAG Envios</p>
       </div>
 
       <div className="flex items-center justify-center p-4 sm:p-6">
@@ -125,7 +125,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <>
       <h1 className="text-2xl font-bold">Bem-vindo de volta</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Acesse sua conta TuEntrega.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Acesse sua conta BAG Envios.</p>
       <form onSubmit={submit} className="mt-6 space-y-4">
         <div className="space-y-2">
           <Label>E-mail</Label>

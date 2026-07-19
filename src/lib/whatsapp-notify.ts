@@ -3,13 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 export type WhatsAppTipo = "alocacao" | "distribuicao" | "confirmacao" | "recusa" | "publicacao";
 export type DestinatarioTipo = "dispatcher" | "entregador" | "empresa";
 
-const APP_BASE = typeof window !== "undefined" ? window.location.origin : "https://tuentrega.lovable.app";
+const APP_BASE = typeof window !== "undefined" ? window.location.origin : "https://bagenvios.lovable.app";
 
 const brl = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 
 export const WA_TEMPLATES = {
   alocacao: (p: { dispatcherName: string; companyName: string; packages: number; stops: number; price: number; total: number; allocId: string; hours?: number }) =>
-`TuEntrega 📦
+`BAG Envios 📦
 Olá ${p.dispatcherName}!
 
 Você recebeu uma nova alocação!
@@ -26,7 +26,7 @@ ${APP_BASE}/pacotes/distribuir/${p.allocId}
 Você tem ${p.hours ?? 4} horas para distribuir.`,
 
   distribuicao: (p: { memberName: string; dispatcherName: string; packages: number; stops: number; price: number; total: number; offerId: string; date?: string }) =>
-`TuEntrega 🔒
+`BAG Envios 🔒
 Olá ${p.memberName}!
 
 ${p.dispatcherName} te enviou uma rota privada!
@@ -43,7 +43,7 @@ ${APP_BASE}/ofertas
 Se não conseguir, avise rápido!`,
 
   publicacao: (p: { dispatcherName: string; lines: string[] }) =>
-`TuEntrega ✅
+`BAG Envios ✅
 Olá ${p.dispatcherName}!
 
 Suas rotas foram publicadas!
@@ -54,7 +54,7 @@ Acompanhe em tempo real:
 ${APP_BASE}/pacotes`,
 
   confirmacao: (p: { dispatcherName: string; memberName: string; date: string; packages: number }) =>
-`TuEntrega ✅
+`BAG Envios ✅
 Olá ${p.dispatcherName}!
 
 ${p.memberName} confirmou presença!
@@ -67,7 +67,7 @@ ${p.memberName} confirmou presença!
 ${APP_BASE}/agenda`,
 
   recusa: (p: { dispatcherName: string; memberName: string; date: string }) =>
-`TuEntrega ❌
+`BAG Envios ❌
 Olá ${p.dispatcherName}!
 
 ${p.memberName} recusou o agendamento.
