@@ -8,6 +8,7 @@ import {
   Gift,
   Wrench,
   Sparkles,
+  Briefcase,
   MessageCircle,
   MapPin,
   Phone,
