@@ -158,9 +158,9 @@ function Landing() {
 
           {/* Floating logo illustration */}
           <div className="relative hidden lg:flex justify-center">
-            <div className="relative w-[420px] h-[420px] animate-[float_5s_ease-in-out_infinite]">
+            <div className="relative w-[380px] h-[380px] animate-[float_5s_ease-in-out_infinite]">
               <div
-                className="absolute inset-0 rounded-[3rem] blur-3xl opacity-50"
+                className="absolute inset-0 rounded-[3rem] blur-3xl opacity-30"
                 style={{ background: YELLOW }}
               />
               <img
