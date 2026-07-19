@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { setImpersonation } from "@/lib/impersonation";
+import { FiliaisAdminSection } from "@/components/FiliaisAdminSection";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
