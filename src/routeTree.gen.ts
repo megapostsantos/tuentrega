@@ -39,6 +39,9 @@ import { Route as AuthenticatedDevolucoesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
+import { Route as AuthenticatedNexSaidasRouteImport } from './routes/_authenticated/nex.saidas'
+import { Route as AuthenticatedNexMotoristasRouteImport } from './routes/_authenticated/nex.motoristas'
+import { Route as AuthenticatedNexHistoricoRouteImport } from './routes/_authenticated/nex.historico'
 import { Route as AuthenticatedPacotesDistribuirAlocacaoIdRouteImport } from './routes/_authenticated/pacotes.distribuir.$alocacaoId'
 import { Route as AuthenticatedPacotesAlocarOperacaoIdRouteImport } from './routes/_authenticated/pacotes.alocar.$operacaoId'
 
@@ -193,6 +196,23 @@ const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedNexSaidasRoute = AuthenticatedNexSaidasRouteImport.update({
+  id: '/nex/saidas',
+  path: '/nex/saidas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedNexMotoristasRoute =
+  AuthenticatedNexMotoristasRouteImport.update({
+    id: '/nex/motoristas',
+    path: '/nex/motoristas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedNexHistoricoRoute =
+  AuthenticatedNexHistoricoRouteImport.update({
+    id: '/nex/historico',
+    path: '/nex/historico',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPacotesDistribuirAlocacaoIdRoute =
   AuthenticatedPacotesDistribuirAlocacaoIdRouteImport.update({
     id: '/distribuir/$alocacaoId',
@@ -236,6 +256,9 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/rastrear/$token': typeof RastrearTokenRoute
+  '/nex/historico': typeof AuthenticatedNexHistoricoRoute
+  '/nex/motoristas': typeof AuthenticatedNexMotoristasRoute
+  '/nex/saidas': typeof AuthenticatedNexSaidasRoute
   '/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
 }
@@ -269,6 +292,9 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/rastrear/$token': typeof RastrearTokenRoute
+  '/nex/historico': typeof AuthenticatedNexHistoricoRoute
+  '/nex/motoristas': typeof AuthenticatedNexMotoristasRoute
+  '/nex/saidas': typeof AuthenticatedNexSaidasRoute
   '/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
 }
@@ -304,6 +330,9 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/rastrear/$token': typeof RastrearTokenRoute
+  '/_authenticated/nex/historico': typeof AuthenticatedNexHistoricoRoute
+  '/_authenticated/nex/motoristas': typeof AuthenticatedNexMotoristasRoute
+  '/_authenticated/nex/saidas': typeof AuthenticatedNexSaidasRoute
   '/_authenticated/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/_authenticated/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
 }
@@ -339,6 +368,9 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/auth/callback'
     | '/rastrear/$token'
+    | '/nex/historico'
+    | '/nex/motoristas'
+    | '/nex/saidas'
     | '/pacotes/alocar/$operacaoId'
     | '/pacotes/distribuir/$alocacaoId'
   fileRoutesByTo: FileRoutesByTo
@@ -372,6 +404,9 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/auth/callback'
     | '/rastrear/$token'
+    | '/nex/historico'
+    | '/nex/motoristas'
+    | '/nex/saidas'
     | '/pacotes/alocar/$operacaoId'
     | '/pacotes/distribuir/$alocacaoId'
   id:
@@ -406,6 +441,9 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/auth/callback'
     | '/rastrear/$token'
+    | '/_authenticated/nex/historico'
+    | '/_authenticated/nex/motoristas'
+    | '/_authenticated/nex/saidas'
     | '/_authenticated/pacotes/alocar/$operacaoId'
     | '/_authenticated/pacotes/distribuir/$alocacaoId'
   fileRoutesById: FileRoutesById
@@ -631,6 +669,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAgendaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/nex/saidas': {
+      id: '/_authenticated/nex/saidas'
+      path: '/nex/saidas'
+      fullPath: '/nex/saidas'
+      preLoaderRoute: typeof AuthenticatedNexSaidasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/nex/motoristas': {
+      id: '/_authenticated/nex/motoristas'
+      path: '/nex/motoristas'
+      fullPath: '/nex/motoristas'
+      preLoaderRoute: typeof AuthenticatedNexMotoristasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/nex/historico': {
+      id: '/_authenticated/nex/historico'
+      path: '/nex/historico'
+      fullPath: '/nex/historico'
+      preLoaderRoute: typeof AuthenticatedNexHistoricoRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/pacotes/distribuir/$alocacaoId': {
       id: '/_authenticated/pacotes/distribuir/$alocacaoId'
       path: '/distribuir/$alocacaoId'
@@ -679,6 +738,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
   AuthenticatedRotasRoute: typeof AuthenticatedRotasRoute
   AuthenticatedTimeRoute: typeof AuthenticatedTimeRoute
+  AuthenticatedNexHistoricoRoute: typeof AuthenticatedNexHistoricoRoute
+  AuthenticatedNexMotoristasRoute: typeof AuthenticatedNexMotoristasRoute
+  AuthenticatedNexSaidasRoute: typeof AuthenticatedNexSaidasRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -697,6 +759,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,
   AuthenticatedRotasRoute: AuthenticatedRotasRoute,
   AuthenticatedTimeRoute: AuthenticatedTimeRoute,
+  AuthenticatedNexHistoricoRoute: AuthenticatedNexHistoricoRoute,
+  AuthenticatedNexMotoristasRoute: AuthenticatedNexMotoristasRoute,
+  AuthenticatedNexSaidasRoute: AuthenticatedNexSaidasRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
