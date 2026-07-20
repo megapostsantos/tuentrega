@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/nex/historico")({
   component: HistoricoNexPage,
 });
 
-type Motorista = { id: string; nome: string; placa: string | null };
+type Entregador = { id: string; nome_completo: string | null; placa: string | null };
 type Row = {
   id: string;
   data_saida: string;
@@ -26,7 +26,7 @@ type Row = {
   codigo_nx: string;
   hora_saida: string | null;
   status: string;
-  motorista: Motorista | null;
+  entregador: Entregador | null;
   insucessos_count: number;
 };
 
@@ -34,34 +34,34 @@ function HistoricoNexPage() {
   const { role, loading } = useAuth();
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [motoristaId, setMotoristaId] = useState<string>("all");
+  const [entregadorId, setEntregadorId] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
   const [rows, setRows] = useState<Row[]>([]);
-  const [motoristas, setMotoristas] = useState<Motorista[]>([]);
+  const [entregadores, setEntregadores] = useState<Entregador[]>([]);
   const [busy, setBusy] = useState(false);
 
-  async function loadMotoristas() {
-    const { data } = await (supabase as any).from("motoristas_nex").select("id,nome,placa").order("nome");
-    setMotoristas(data ?? []);
+  async function loadEntregadores() {
+    const { data } = await (supabase as any).from("entregadores").select("id,nome_completo,placa").order("nome_completo");
+    setEntregadores(data ?? []);
   }
   async function refresh() {
     setBusy(true);
     let q = (supabase as any)
       .from("saidas_nex")
-      .select("*, motorista:motoristas_nex(id,nome,placa), insucessos_nex(id)")
+      .select("*, entregador:entregadores(id,nome_completo,placa), insucessos_nex(id)")
       .order("data_saida", { ascending: false })
       .order("hora_saida", { ascending: false })
       .limit(500);
     if (from) q = q.gte("data_saida", from);
     if (to) q = q.lte("data_saida", to);
-    if (motoristaId !== "all") q = q.eq("motorista_id", motoristaId);
+    if (entregadorId !== "all") q = q.eq("entregador_id", entregadorId);
     if (status !== "all") q = q.eq("status", status);
     const { data } = await q;
     setRows(((data ?? []) as any[]).map((s) => ({ ...s, insucessos_count: (s.insucessos_nex ?? []).length })));
     setBusy(false);
   }
   useEffect(() => {
-    if (role === "admin" || role === "empresa") { loadMotoristas(); refresh(); }
+    if (role === "admin" || role === "empresa") { loadEntregadores(); refresh(); }
   }, [role]);
 
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -77,8 +77,8 @@ function HistoricoNexPage() {
   function exportCsv() {
     const csvRows: SaidaExportRow[] = rows.map((s) => ({
       data_saida: s.data_saida,
-      motorista: s.motorista?.nome ?? "—",
-      placa: s.motorista?.placa ?? "—",
+      motorista: s.entregador?.nome_completo ?? "—",
+      placa: s.entregador?.placa ?? "—",
       qr_saca: s.qr_saca,
       codigo_nx: s.codigo_nx,
       hora_saida: s.hora_saida ?? "",
@@ -101,12 +101,12 @@ function HistoricoNexPage() {
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <div className="grid gap-1.5 min-w-[160px]">
-          <Label>Motorista</Label>
-          <Select value={motoristaId} onValueChange={setMotoristaId}>
+          <Label>Entregador</Label>
+          <Select value={entregadorId} onValueChange={setEntregadorId}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {motoristas.map((m) => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}
+              {entregadores.map((m) => <SelectItem key={m.id} value={m.id}>{m.nome_completo ?? "Sem nome"}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -142,7 +142,7 @@ function HistoricoNexPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
-                    <TableHead>Motorista</TableHead>
+                    <TableHead>Entregador</TableHead>
                     <TableHead>QR Saca</TableHead>
                     <TableHead>Código NX</TableHead>
                     <TableHead>Hora</TableHead>
@@ -155,8 +155,8 @@ function HistoricoNexPage() {
                     <TableRow key={s.id}>
                       <TableCell>{s.data_saida}</TableCell>
                       <TableCell>
-                        {s.motorista?.nome ?? "—"}
-                        {s.motorista?.placa ? <span className="text-xs text-muted-foreground"> · {s.motorista.placa}</span> : null}
+                        {s.entregador?.nome_completo ?? "—"}
+                        {s.entregador?.placa ? <span className="text-xs text-muted-foreground"> · {s.entregador.placa}</span> : null}
                       </TableCell>
                       <TableCell className="font-mono text-xs">{s.qr_saca}</TableCell>
                       <TableCell className="font-mono text-xs">{s.codigo_nx}</TableCell>

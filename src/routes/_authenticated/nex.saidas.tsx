@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Plus, Download, AlertTriangle, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,16 +20,16 @@ export const Route = createFileRoute("/_authenticated/nex/saidas")({
   component: SaidasNexPage,
 });
 
-type Motorista = { id: string; nome: string; placa: string | null; ativo: boolean };
+type Entregador = { id: string; nome_completo: string | null; placa: string | null };
 type Saida = {
   id: string;
   data_saida: string;
-  motorista_id: string | null;
+  entregador_id: string | null;
   qr_saca: string;
   codigo_nx: string;
   hora_saida: string | null;
   status: string;
-  motorista?: Motorista | null;
+  entregador?: Entregador | null;
   insucessos_count?: number;
 };
 
@@ -44,7 +44,7 @@ function SaidasNexPage() {
   const { role, loading } = useAuth();
   const [date, setDate] = useState(todayStr());
   const [saidas, setSaidas] = useState<Saida[]>([]);
-  const [motoristas, setMotoristas] = useState<Motorista[]>([]);
+  const [entregadores, setEntregadores] = useState<Entregador[]>([]);
   const [busy, setBusy] = useState(true);
   const [openNew, setOpenNew] = useState(false);
   const [insucessoTarget, setInsucessoTarget] = useState<Saida | null>(null);
@@ -54,10 +54,10 @@ function SaidasNexPage() {
     const [{ data: sd }, { data: md }] = await Promise.all([
       (supabase as any)
         .from("saidas_nex")
-        .select("*, motorista:motoristas_nex(id,nome,placa,ativo), insucessos_nex(id)")
+        .select("*, entregador:entregadores(id,nome_completo,placa), insucessos_nex(id)")
         .eq("data_saida", date)
         .order("hora_saida", { ascending: false }),
-      (supabase as any).from("motoristas_nex").select("id,nome,placa,ativo").eq("ativo", true).order("nome"),
+      (supabase as any).from("entregadores").select("id,nome_completo,placa").order("nome_completo"),
     ]);
     setSaidas(
       ((sd ?? []) as any[]).map((s) => ({
@@ -65,7 +65,7 @@ function SaidasNexPage() {
         insucessos_count: (s.insucessos_nex ?? []).length,
       })),
     );
-    setMotoristas((md as Motorista[]) ?? []);
+    setEntregadores((md as Entregador[]) ?? []);
     setBusy(false);
   }
 
@@ -86,8 +86,8 @@ function SaidasNexPage() {
   function exportCsv() {
     const rows: SaidaExportRow[] = saidas.map((s) => ({
       data_saida: s.data_saida,
-      motorista: s.motorista?.nome ?? "—",
-      placa: s.motorista?.placa ?? "—",
+      motorista: s.entregador?.nome_completo ?? "—",
+      placa: s.entregador?.placa ?? "—",
       qr_saca: s.qr_saca,
       codigo_nx: s.codigo_nx,
       hora_saida: s.hora_saida ?? "",
@@ -99,7 +99,7 @@ function SaidasNexPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <PageHeader title="Saídas do dia" description="Registro de saídas do serviço NEX" />
+      <PageHeader title="Saídas do dia" description="Registro de saídas do serviço NEX — motoristas são os entregadores cadastrados" />
       <div className="flex flex-wrap items-end gap-3">
         <div className="grid gap-1.5">
           <Label>Data</Label>
@@ -126,7 +126,7 @@ function SaidasNexPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Motorista</TableHead>
+                    <TableHead>Entregador</TableHead>
                     <TableHead>QR Saca</TableHead>
                     <TableHead>Código NX</TableHead>
                     <TableHead>Hora</TableHead>
@@ -139,8 +139,8 @@ function SaidasNexPage() {
                   {saidas.map((s) => (
                     <TableRow key={s.id}>
                       <TableCell className="font-medium">
-                        {s.motorista?.nome ?? "—"}
-                        {s.motorista?.placa ? <span className="text-xs text-muted-foreground"> · {s.motorista.placa}</span> : null}
+                        {s.entregador?.nome_completo ?? "—"}
+                        {s.entregador?.placa ? <span className="text-xs text-muted-foreground"> · {s.entregador.placa}</span> : null}
                       </TableCell>
                       <TableCell className="font-mono text-xs">{s.qr_saca}</TableCell>
                       <TableCell className="font-mono text-xs">{s.codigo_nx}</TableCell>
@@ -166,7 +166,7 @@ function SaidasNexPage() {
       <NovaSaidaDialog
         open={openNew}
         onClose={() => setOpenNew(false)}
-        motoristas={motoristas}
+        entregadores={entregadores}
         onDone={() => { setOpenNew(false); refresh(); }}
         date={date}
       />
@@ -186,11 +186,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function NovaSaidaDialog({
-  open, onClose, motoristas, onDone, date,
+  open, onClose, entregadores, onDone, date,
 }: {
-  open: boolean; onClose: () => void; motoristas: Motorista[]; onDone: () => void; date: string;
+  open: boolean; onClose: () => void; entregadores: Entregador[]; onDone: () => void; date: string;
 }) {
-  const [motoristaId, setMotoristaId] = useState<string>("");
+  const [entregadorId, setEntregadorId] = useState<string>("");
   const [qrSaca, setQrSaca] = useState("");
   const [codigoNx, setCodigoNx] = useState("");
   const [hora, setHora] = useState<string>(() => new Date().toTimeString().slice(0, 5));
@@ -198,18 +198,18 @@ function NovaSaidaDialog({
 
   useEffect(() => {
     if (open) {
-      setMotoristaId(""); setQrSaca(""); setCodigoNx("");
+      setEntregadorId(""); setQrSaca(""); setCodigoNx("");
       setHora(new Date().toTimeString().slice(0, 5));
     }
   }, [open]);
 
   async function submit() {
-    if (!motoristaId) { toast.error("Selecione o motorista"); return; }
+    if (!entregadorId) { toast.error("Selecione o entregador"); return; }
     if (!qrSaca.trim() || !codigoNx.trim()) { toast.error("Preencha QR da saca e código NX"); return; }
     setSaving(true);
     const { error } = await (supabase as any).from("saidas_nex").insert({
       data_saida: date,
-      motorista_id: motoristaId,
+      entregador_id: entregadorId,
       qr_saca: qrSaca.trim(),
       codigo_nx: codigoNx.trim(),
       hora_saida: hora,
@@ -227,13 +227,13 @@ function NovaSaidaDialog({
         <DialogHeader><DialogTitle>Registrar saída</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5">
-            <Label>Motorista</Label>
-            <Select value={motoristaId} onValueChange={setMotoristaId}>
+            <Label>Entregador</Label>
+            <Select value={entregadorId} onValueChange={setEntregadorId}>
               <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
               <SelectContent>
-                {motoristas.map((m) => (
+                {entregadores.map((m) => (
                   <SelectItem key={m.id} value={m.id}>
-                    {m.nome}{m.placa ? ` · ${m.placa}` : ""}
+                    {m.nome_completo ?? "Sem nome"}{m.placa ? ` · ${m.placa}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -296,7 +296,6 @@ function InsucessosDialog({ saida, onClose, onDone }: { saida: Saida | null; onC
     if (error) { toast.error(error.message); return; }
     setRows((r) => [...r, data]);
     setQr(""); setMotivo("");
-    // ensure saida is marked as retornou_insucessos if it was still 'saiu'
     if (saida!.status === "saiu") {
       await (supabase as any).from("saidas_nex").update({ status: "retornou_insucessos" }).eq("id", saida!.id);
     }
@@ -315,7 +314,7 @@ function InsucessosDialog({ saida, onClose, onDone }: { saida: Saida | null; onC
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Insucessos — {saida.motorista?.nome ?? "motorista"}</DialogTitle>
+          <DialogTitle>Insucessos — {saida.entregador?.nome_completo ?? "entregador"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-[1fr_1fr_auto] gap-2">

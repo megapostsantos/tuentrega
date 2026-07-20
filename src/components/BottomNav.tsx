@@ -23,7 +23,6 @@ const empresaMore: { label: string; to: string; icon: typeof Home; hint?: string
   { label: "Notas fiscais", to: "/notas", icon: FileText, hint: "NFs emitidas" },
   { label: "Entregadores", to: "/entregadores", icon: Users, hint: "Sua rede" },
   { label: "Agenda", to: "/agenda", icon: CalendarDays, hint: "Semana operacional" },
-  { label: "Motoristas NEX", to: "/nex/motoristas", icon: UserCog, hint: "Cadastro de motoristas" },
   { label: "Histórico NEX", to: "/nex/historico", icon: ClipboardList, hint: "Saídas anteriores" },
   { label: "Configurações", to: "/configuracoes", icon: User, hint: "Perfil e filiais" },
 ];

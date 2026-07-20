@@ -29,7 +29,6 @@ const empresaItems: Item[] = [
 ];
 
 const nexItems: Item[] = [
-  { title: "Motoristas NEX", url: "/nex/motoristas", icon: Users },
   { title: "Saídas do dia", url: "/nex/saidas", icon: Truck },
   { title: "Histórico NEX", url: "/nex/historico", icon: FileText },
 ];
