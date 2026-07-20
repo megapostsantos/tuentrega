@@ -15,7 +15,7 @@ import {
   Clock,
   CheckCircle2,
   Users,
-  Route,
+  Route as RouteIcon,
   Wallet,
   Activity,
   ArrowRight,
