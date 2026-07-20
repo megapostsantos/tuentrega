@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Package, Store, Map, CalendarDays, Wallet, Users, Building2,
-  Settings, LogOut, FileText, BarChart3,
+  Settings, LogOut, FileText, BarChart3, Truck,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -26,6 +26,12 @@ const empresaItems: Item[] = [
   { title: "Pagamentos PIX", url: "/pagamentos", icon: Wallet },
   { title: "Notas fiscais", url: "/notas", icon: FileText },
   { title: "Entregadores", url: "/entregadores", icon: Users },
+];
+
+const nexItems: Item[] = [
+  { title: "Motoristas NEX", url: "/nex/motoristas", icon: Users },
+  { title: "Saídas do dia", url: "/nex/saidas", icon: Truck },
+  { title: "Histórico NEX", url: "/nex/historico", icon: FileText },
 ];
 
 const entregadorItems: Item[] = [
