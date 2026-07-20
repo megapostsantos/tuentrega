@@ -1141,6 +1141,38 @@ export type Database = {
           },
         ]
       }
+      insucessos_nex: {
+        Row: {
+          id: string
+          motivo: string | null
+          qr_pacote: string
+          registrado_em: string
+          saida_id: string | null
+        }
+        Insert: {
+          id?: string
+          motivo?: string | null
+          qr_pacote: string
+          registrado_em?: string
+          saida_id?: string | null
+        }
+        Update: {
+          id?: string
+          motivo?: string | null
+          qr_pacote?: string
+          registrado_em?: string
+          saida_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insucessos_nex_saida_id_fkey"
+            columns: ["saida_id"]
+            isOneToOne: false
+            referencedRelation: "saidas_nex"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integracoes_ml: {
         Row: {
           access_token: string
@@ -1178,6 +1210,53 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: true
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      motoristas_nex: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          email: string | null
+          entregador_id: string | null
+          id: string
+          modelo_veiculo: string | null
+          nome: string
+          placa: string | null
+          telefone: string | null
+          tipo_veiculo: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          email?: string | null
+          entregador_id?: string | null
+          id?: string
+          modelo_veiculo?: string | null
+          nome: string
+          placa?: string | null
+          telefone?: string | null
+          tipo_veiculo?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          email?: string | null
+          entregador_id?: string | null
+          id?: string
+          modelo_veiculo?: string | null
+          nome?: string
+          placa?: string | null
+          telefone?: string | null
+          tipo_veiculo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "motoristas_nex_entregador_id_fkey"
+            columns: ["entregador_id"]
+            isOneToOne: false
+            referencedRelation: "entregadores"
             referencedColumns: ["id"]
           },
         ]
@@ -1721,6 +1800,47 @@ export type Database = {
             columns: ["oferta_id"]
             isOneToOne: false
             referencedRelation: "ofertas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saidas_nex: {
+        Row: {
+          codigo_nx: string
+          created_at: string
+          data_saida: string
+          hora_saida: string | null
+          id: string
+          motorista_id: string | null
+          qr_saca: string
+          status: string
+        }
+        Insert: {
+          codigo_nx: string
+          created_at?: string
+          data_saida?: string
+          hora_saida?: string | null
+          id?: string
+          motorista_id?: string | null
+          qr_saca: string
+          status?: string
+        }
+        Update: {
+          codigo_nx?: string
+          created_at?: string
+          data_saida?: string
+          hora_saida?: string | null
+          id?: string
+          motorista_id?: string | null
+          qr_saca?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saidas_nex_motorista_id_fkey"
+            columns: ["motorista_id"]
+            isOneToOne: false
+            referencedRelation: "motoristas_nex"
             referencedColumns: ["id"]
           },
         ]

@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Package, Store, Map, CalendarDays, Wallet, Users, Building2,
-  Settings, LogOut, FileText, BarChart3,
+  Settings, LogOut, FileText, BarChart3, Truck,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -26,6 +26,12 @@ const empresaItems: Item[] = [
   { title: "Pagamentos PIX", url: "/pagamentos", icon: Wallet },
   { title: "Notas fiscais", url: "/notas", icon: FileText },
   { title: "Entregadores", url: "/entregadores", icon: Users },
+];
+
+const nexItems: Item[] = [
+  { title: "Motoristas NEX", url: "/nex/motoristas", icon: Users },
+  { title: "Saídas do dia", url: "/nex/saidas", icon: Truck },
+  { title: "Histórico NEX", url: "/nex/historico", icon: FileText },
 ];
 
 const entregadorItems: Item[] = [
@@ -94,6 +100,26 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {moduleItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <Link to={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {(role === "admin" || role === "empresa") && (
+          <SidebarGroup>
+            <SidebarGroupLabel>NEX</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {nexItems.map((item) => (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={isActive(item.url)}>
                       <Link to={item.url}>
