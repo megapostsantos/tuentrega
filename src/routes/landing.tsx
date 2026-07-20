@@ -336,7 +336,7 @@ function LandingPage() {
                 icon: Users,
                 text: "Cadastro e gestão de entregadores parceiros",
               },
-              { icon: Route, text: "Criação e otimização de rotas de entrega" },
+              { icon: RouteIcon, text: "Criação e otimização de rotas de entrega" },
               {
                 icon: Wallet,
                 text: "Controle financeiro e pagamento dos entregadores",
