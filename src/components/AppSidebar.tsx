@@ -114,6 +114,26 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
           </SidebarGroup>
         )}
 
+        {(role === "admin" || role === "empresa") && (
+          <SidebarGroup>
+            <SidebarGroupLabel>NEX</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {nexItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <Link to={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
