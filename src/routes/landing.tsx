@@ -1,27 +1,50 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  Truck, Package, Send, RotateCcw, Gift, Wrench, Settings2, Sparkles,
-  MapPin, Phone, Instagram, MessageCircle, Clock, Users, Route as RouteIcon,
-  Radar, DollarSign, LayoutDashboard, ArrowRight, ExternalLink, CheckCircle2,
-  BarChart3, UserCheck, CreditCard,
+  Package,
+  PackageOpen,
+  Send,
+  Undo2,
+  Gift,
+  ShoppingBag,
+  Wrench,
+  Sparkles,
+  MessageCircle,
+  MapPin,
+  Phone,
+  Instagram,
+  Clock,
+  CheckCircle2,
+  Users,
+  Route,
+  Wallet,
+  Activity,
+  ArrowRight,
 } from "lucide-react";
 
 export const Route = createFileRoute("/landing")({
   head: () => ({
     meta: [
       { title: "BAG Envios & Variedades — Last Mile na Baixada Santista" },
-      { name: "description", content: "Especialistas em last mile em Santos e região. Entregas, retiradas, envios e devoluções para pessoas e empresas. Ponto oficial Mercado Livre." },
+      {
+        name: "description",
+        content:
+          "Especialistas em entregas last mile em Santos e região. Contrate entregas, use nosso sistema de gestão ou seja um entregador BAG.",
+      },
       { property: "og:title", content: "BAG Envios & Variedades" },
-      { property: "og:description", content: "Levamos seu pacote do ponto de origem até a porta do destinatário com agilidade, segurança e eficiência em Santos, SP." },
+      {
+        property: "og:description",
+        content:
+          "Entregas, retiradas, envios e devoluções na Baixada Santista.",
+      },
     ],
   }),
   component: LandingPage,
 });
 
 const NAVY = "#0D1B2A";
-const NAVY_2 = "#132639";
-const NAVY_DEEP = "#060E17";
+const NAVY_LIGHT = "#152A42";
 const YELLOW = "#FFB700";
+const DARK = "#060E17";
 const WA = "https://wa.me/5513991105065";
 
 function LandingPage() {
@@ -29,36 +52,41 @@ function LandingPage() {
 
   return (
     <div
-      style={{ backgroundColor: NAVY, fontFamily: "Montserrat, system-ui, sans-serif" }}
-      className="min-h-screen text-white font-bold"
+      className="min-h-screen font-[Montserrat] text-white"
+      style={{ backgroundColor: NAVY, fontFamily: "Montserrat, sans-serif" }}
     >
-      {/* NAV */}
+      {/* 1. NAV */}
       <nav
-        className="sticky top-0 z-50 border-b border-white/10 backdrop-blur"
+        className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 backdrop-blur"
         style={{ backgroundColor: `${NAVY}ee` }}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-          <a href="#top" className="flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-white">BAG</span>
-            <span
-              className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: YELLOW }}
-            >
-              envios & variedades
-            </span>
-          </a>
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-8">
           <div className="flex items-center gap-2">
-            <a
-              href="#entregador"
-              className="hidden rounded-full border border-white/30 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/10 sm:inline-flex"
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-md font-black"
+              style={{ backgroundColor: YELLOW, color: NAVY }}
+            >
+              B
+            </div>
+            <div className="hidden text-sm font-bold leading-tight sm:block">
+              BAG Envios
+              <div className="text-[10px] font-medium text-white/60">
+                & Variedades
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 md:gap-3">
+            <button
+              onClick={() => navigate({ to: "/auth" })}
+              className="rounded-md border border-white/30 px-3 py-2 text-xs font-bold hover:bg-white/10 md:px-4 md:text-sm"
             >
               Seja Entregador
-            </a>
+            </button>
             <a
               href={WA}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-black transition hover:brightness-95"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-bold md:px-4 md:text-sm"
               style={{ backgroundColor: YELLOW, color: NAVY }}
             >
               <MessageCircle className="h-4 w-4" />
@@ -69,156 +97,212 @@ function LandingPage() {
         </div>
       </nav>
 
-      {/* HERO */}
-      <section id="top" className="relative overflow-hidden">
-        <div className="mx-auto max-w-5xl px-4 py-20 text-center md:py-28">
-          <span
-            className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider"
-            style={{ backgroundColor: `${YELLOW}22`, color: YELLOW }}
+      {/* 2. HERO */}
+      <section className="px-4 pt-32 pb-20 md:px-8 md:pt-40 md:pb-28">
+        <div className="mx-auto max-w-5xl text-center">
+          <div
+            className="mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-bold"
+            style={{ borderColor: YELLOW, color: YELLOW }}
           >
-            <MapPin className="h-3 w-3" /> Santos · Baixada Santista
-          </span>
-          <h1 className="mt-6 text-5xl font-black leading-[1.02] tracking-tight text-white md:text-7xl">
-            Especialistas em <span style={{ color: YELLOW }}>Last Mile</span> na Baixada Santista
+            <Sparkles className="h-3.5 w-3.5" />
+            LAST MILE · SANTOS · SP
+          </div>
+          <h1 className="text-4xl font-black leading-tight md:text-6xl lg:text-7xl">
+            Especialistas em{" "}
+            <span style={{ color: YELLOW }}>Last Mile</span> na Baixada
+            Santista
           </h1>
-          <p className="mx-auto mt-6 max-w-3xl text-lg font-medium text-white/75 md:text-xl">
-            A BAG Envios é uma empresa de entregas focada na última milha — levamos seu pacote
-            do ponto de origem até a porta do destinatário com agilidade, segurança e eficiência.
-            Atendemos Santos e região.
+          <p className="mx-auto mt-6 max-w-3xl text-base text-white/70 md:text-lg">
+            A BAG Envios é uma empresa de entregas focada na última milha —
+            levamos seu pacote do ponto de origem até a porta do destinatário
+            com agilidade, segurança e eficiência. Atendemos Santos e região.
           </p>
-          <div className="mt-10 flex flex-wrap justify-center gap-3">
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
               href="#empresas"
-              className="inline-flex items-center gap-2 rounded-full px-6 py-3 font-black shadow-lg transition hover:brightness-95"
+              className="flex w-full items-center justify-center gap-2 rounded-md px-6 py-3.5 text-sm font-black sm:w-auto"
               style={{ backgroundColor: YELLOW, color: NAVY }}
             >
-              Quero contratar <ArrowRight className="h-4 w-4" />
+              Quero contratar
+              <ArrowRight className="h-4 w-4" />
             </a>
             <a
               href="#servicos"
-              className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3 font-bold text-white transition hover:bg-white/10"
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-white/30 px-6 py-3.5 text-sm font-black hover:bg-white/10 sm:w-auto"
             >
               Ver nossos serviços
             </a>
           </div>
         </div>
-
-        <style>{`
-          @keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        `}</style>
       </section>
 
-      {/* TICKER */}
-      <div className="overflow-hidden py-4" style={{ backgroundColor: YELLOW }}>
-        <div className="flex whitespace-nowrap" style={{ animation: "tickerScroll 25s linear infinite" }}>
-          {Array.from({ length: 2 }).map((_, k) => (
+      {/* 3. TICKER */}
+      <div
+        className="overflow-hidden border-y py-4"
+        style={{ backgroundColor: YELLOW, borderColor: `${NAVY}22` }}
+      >
+        <div className="ticker flex whitespace-nowrap">
+          {Array.from({ length: 4 }).map((_, i) => (
             <div
-              key={k}
-              className="flex shrink-0 items-center gap-6 px-6 text-lg font-black uppercase tracking-wider"
+              key={i}
+              className="flex shrink-0 items-center gap-8 pr-8 text-lg font-black md:text-xl"
               style={{ color: NAVY }}
             >
-              {["Entregas", "Retiradas", "Envios", "Devoluções", "Last Mile", "Santos", "SP"].flatMap((w, i) => [
-                <span key={`w-${k}-${i}`}>{w}</span>,
-                <span key={`d-${k}-${i}`} className="opacity-60">·</span>,
-              ])}
+              <span>ENTREGAS</span>
+              <span>·</span>
+              <span>RETIRADAS</span>
+              <span>·</span>
+              <span>ENVIOS</span>
+              <span>·</span>
+              <span>DEVOLUÇÕES</span>
+              <span>·</span>
+              <span>LAST MILE</span>
+              <span>·</span>
+              <span>SANTOS</span>
+              <span>·</span>
+              <span>SP</span>
+              <span>·</span>
             </div>
           ))}
         </div>
+        <style>{`
+          @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+          .ticker { animation: ticker 30s linear infinite; }
+        `}</style>
       </div>
 
-      {/* SERVIÇOS */}
-      <section id="servicos" className="py-20" style={{ backgroundColor: NAVY }}>
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mx-auto mb-14 max-w-2xl text-center">
-            <span className="text-xs font-black uppercase tracking-wider" style={{ color: YELLOW }}>
-              Serviços
-            </span>
-            <h2 className="mt-2 text-4xl font-black text-white md:text-5xl">
+      {/* 4. SERVIÇOS */}
+      <section id="servicos" className="px-4 py-20 md:px-8 md:py-28">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-14 text-center">
+            <h2 className="text-3xl font-black md:text-5xl">
               O que a BAG faz por você
             </h2>
-            <p className="mt-4 text-base font-medium text-white/70 md:text-lg">
+            <p className="mx-auto mt-4 max-w-2xl text-white/70">
               Para pessoas físicas, lojas e empresas que precisam de entregas
               pontuais na região de Santos.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
-              { icon: Truck, name: "Entregas", desc: "Buscamos e entregamos seu pacote no destino final com rapidez." },
-              { icon: Package, name: "Retiradas", desc: "Receba seus pedidos aqui na BAG — seu pacote fica guardado com segurança." },
-              { icon: Send, name: "Envios", desc: "Envie encomendas para qualquer destino com praticidade e rastreamento." },
-              { icon: RotateCcw, name: "Devoluções", desc: "Devolver ficou fácil — cuidamos de todo o processo reverso por você." },
-              { icon: Gift, name: "Presentes", desc: "Embalamos e entregamos seus presentes com cuidado especial." },
-              { icon: Sparkles, name: "Utilidades", desc: "Produtos do dia a dia disponíveis aqui na nossa loja." },
-              { icon: Wrench, name: "Manutenções", desc: "Assistência técnica com profissionais de confiança." },
-              { icon: Settings2, name: "Personalizados", desc: "Canecas, camisetas e produtos com a sua marca ou mensagem." },
+              {
+                icon: Package,
+                name: "Entregas",
+                desc: "Buscamos e entregamos seu pacote no destino final com rapidez",
+              },
+              {
+                icon: PackageOpen,
+                name: "Retiradas",
+                desc: "Receba seus pedidos aqui na BAG — seu pacote fica guardado com segurança",
+              },
+              {
+                icon: Send,
+                name: "Envios",
+                desc: "Envie encomendas para qualquer destino com praticidade e rastreamento",
+              },
+              {
+                icon: Undo2,
+                name: "Devoluções",
+                desc: "Devolver ficou fácil — cuidamos de todo o processo reverso por você",
+              },
+              {
+                icon: Gift,
+                name: "Presentes",
+                desc: "Embalamos e entregamos seus presentes com cuidado especial",
+              },
+              {
+                icon: ShoppingBag,
+                name: "Utilidades",
+                desc: "Produtos do dia a dia disponíveis aqui na nossa loja",
+              },
+              {
+                icon: Wrench,
+                name: "Manutenções",
+                desc: "Assistência técnica com profissionais de confiança",
+              },
+              {
+                icon: Sparkles,
+                name: "Personalizados",
+                desc: "Canecas, camisetas e produtos com a sua marca ou mensagem",
+              },
             ].map((s) => (
               <div
                 key={s.name}
-                className="group rounded-2xl border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-white/30 hover:bg-white/10"
+                className="group rounded-xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-[color:var(--y)] hover:bg-white/[0.06]"
+                style={{ ["--y" as string]: YELLOW }}
               >
                 <div
-                  className="flex h-12 w-12 items-center justify-center rounded-xl transition group-hover:scale-110"
-                  style={{ backgroundColor: `${YELLOW}22` }}
+                  className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: `${YELLOW}22`, color: YELLOW }}
                 >
-                  <s.icon className="h-6 w-6" style={{ color: YELLOW }} />
+                  <s.icon className="h-5 w-5" />
                 </div>
-                <div className="mt-4 text-lg font-black text-white">{s.name}</div>
-                <div className="mt-1 text-sm font-medium text-white/60">{s.desc}</div>
+                <h3 className="text-base font-black">{s.name}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-white/60">
+                  {s.desc}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* EMPRESAS CONTRATANTES */}
-      <section id="empresas" className="py-20" style={{ backgroundColor: NAVY_2 }}>
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mx-auto max-w-3xl text-center">
-            <span className="text-xs font-black uppercase tracking-wider" style={{ color: YELLOW }}>
-              Para empresas
-            </span>
-            <h2 className="mt-3 text-4xl font-black text-white md:text-5xl">
+      {/* 5. EMPRESAS CONTRATANTES */}
+      <section
+        id="empresas"
+        className="px-4 py-20 md:px-8 md:py-28"
+        style={{ backgroundColor: NAVY_LIGHT }}
+      >
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 max-w-3xl">
+            <div
+              className="mb-4 inline-block rounded-full px-3 py-1 text-[11px] font-black"
+              style={{ backgroundColor: `${YELLOW}22`, color: YELLOW }}
+            >
+              PARA EMPRESAS CONTRATANTES
+            </div>
+            <h2 className="text-3xl font-black leading-tight md:text-5xl">
               Você tem uma empresa e precisa fazer entregas todo dia?
             </h2>
-            <p className="mt-5 text-lg font-medium text-white/75">
-              Farmácias, lojas, e-commerces, restaurantes — qualquer negócio que
-              precisa despachar mercadorias regularmente pode contratar a BAG Envios.
-              Cadastre sua empresa, solicite entregas pelo painel e nós cuidamos do resto.
+            <p className="mt-5 text-white/70 md:text-lg">
+              Farmácias, lojas, e-commerces, restaurantes — qualquer negócio
+              que precisa despachar mercadorias regularmente pode contratar a
+              BAG Envios. Cadastre sua empresa, solicite entregas pelo painel
+              e nós cuidamos do resto.
             </p>
           </div>
-
-          <div className="mt-12 grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {[
-              { icon: LayoutDashboard, title: "Painel completo", desc: "Solicite entregas direto pelo painel, sem precisar ligar." },
-              { icon: Radar, title: "Rastreio em tempo real", desc: "Acompanhe cada entrega em tempo real." },
-              { icon: CreditCard, title: "Pagamento flexível", desc: "Pague por entrega ou feche um plano mensal." },
+              "Solicite entregas direto pelo painel, sem precisar ligar",
+              "Acompanhe cada entrega em tempo real",
+              "Pague por entrega ou feche um plano mensal",
             ].map((b) => (
-              <div key={b.title} className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <div
-                  className="flex h-12 w-12 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: `${YELLOW}22` }}
-                >
-                  <b.icon className="h-6 w-6" style={{ color: YELLOW }} />
-                </div>
-                <div className="mt-4 text-xl font-black text-white">{b.title}</div>
-                <div className="mt-2 text-sm font-medium text-white/70">{b.desc}</div>
+              <div
+                key={b}
+                className="rounded-xl border border-white/10 bg-white/[0.03] p-6"
+              >
+                <CheckCircle2
+                  className="mb-4 h-6 w-6"
+                  style={{ color: YELLOW }}
+                />
+                <p className="text-sm font-bold leading-relaxed">{b}</p>
               </div>
             ))}
           </div>
-
-          <div className="mt-10 flex flex-wrap justify-center gap-3">
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <a
               href={`${WA}?text=${encodeURIComponent("Olá, quero contratar a BAG Envios para minha empresa")}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-full px-6 py-3 font-black transition hover:brightness-95"
+              className="flex items-center justify-center gap-2 rounded-md px-6 py-3.5 text-sm font-black"
               style={{ backgroundColor: YELLOW, color: NAVY }}
             >
-              <MessageCircle className="h-4 w-4" /> Falar com comercial
+              <MessageCircle className="h-4 w-4" />
+              Falar com comercial
             </a>
             <button
               onClick={() => navigate({ to: "/auth" })}
-              className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3 font-bold text-white transition hover:bg-white/10"
+              className="rounded-md border border-white/30 px-6 py-3.5 text-sm font-black hover:bg-white/10"
             >
               Cadastrar minha empresa
             </button>
@@ -226,290 +310,291 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* SAAS - EMPRESAS DE LAST MILE */}
-      <section className="py-20" style={{ backgroundColor: NAVY }}>
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mx-auto max-w-3xl text-center">
-            <span
-              className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider"
+      {/* 6. SAAS LAST MILE */}
+      <section className="px-4 py-20 md:px-8 md:py-28">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 max-w-3xl">
+            <div
+              className="mb-4 inline-block rounded-full px-3 py-1 text-[11px] font-black"
               style={{ backgroundColor: YELLOW, color: NAVY }}
             >
-              Sistema de Gestão
-            </span>
-            <h2 className="mt-4 text-4xl font-black text-white md:text-5xl">
+              SISTEMA DE GESTÃO
+            </div>
+            <h2 className="text-3xl font-black leading-tight md:text-5xl">
               Você também opera entregas? Use o sistema da BAG.
             </h2>
-            <p className="mt-5 text-lg font-medium text-white/75">
-              Oferecemos nosso sistema de gestão logística para outras empresas de last mile.
-              Gerencie seus entregadores, crie e distribua rotas, controle pagamentos e tenha
-              visibilidade total da sua operação — tudo em um só lugar.
+            <p className="mt-5 text-white/70 md:text-lg">
+              Oferecemos nosso sistema de gestão logística para outras
+              empresas de last mile. Gerencie seus entregadores, crie e
+              distribua rotas, controle pagamentos e tenha visibilidade total
+              da sua operação — tudo em um só lugar.
             </p>
           </div>
-
-          <div className="mx-auto mt-12 grid max-w-4xl gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {[
-              { icon: UserCheck, title: "Entregadores parceiros", desc: "Cadastro e gestão de entregadores parceiros." },
-              { icon: RouteIcon, title: "Rotas otimizadas", desc: "Criação e otimização de rotas de entrega." },
-              { icon: DollarSign, title: "Financeiro integrado", desc: "Controle financeiro e pagamento dos entregadores." },
-              { icon: BarChart3, title: "Painel em tempo real", desc: "Painel em tempo real com rastreamento de rotas." },
+              {
+                icon: Users,
+                text: "Cadastro e gestão de entregadores parceiros",
+              },
+              { icon: Route, text: "Criação e otimização de rotas de entrega" },
+              {
+                icon: Wallet,
+                text: "Controle financeiro e pagamento dos entregadores",
+              },
+              {
+                icon: Activity,
+                text: "Painel em tempo real com rastreamento de rotas",
+              },
             ].map((f) => (
-              <div key={f.title} className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+              <div
+                key={f.text}
+                className="flex items-start gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-6"
+              >
                 <div
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: `${YELLOW}22` }}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: `${YELLOW}22`, color: YELLOW }}
                 >
-                  <f.icon className="h-6 w-6" style={{ color: YELLOW }} />
+                  <f.icon className="h-5 w-5" />
                 </div>
-                <div>
-                  <div className="text-lg font-black text-white">{f.title}</div>
-                  <div className="mt-1 text-sm font-medium text-white/70">{f.desc}</div>
-                </div>
+                <p className="text-sm font-bold leading-relaxed">{f.text}</p>
               </div>
             ))}
           </div>
-
-          <div className="mt-10 flex justify-center">
+          <div className="mt-10">
             <a
               href={`${WA}?text=${encodeURIComponent("Olá, quero conhecer o sistema de gestão da BAG Envios")}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-full px-6 py-3 font-black transition hover:brightness-95"
+              className="inline-flex items-center gap-2 rounded-md px-6 py-3.5 text-sm font-black"
               style={{ backgroundColor: YELLOW, color: NAVY }}
             >
-              Quero conhecer o sistema <ArrowRight className="h-4 w-4" />
+              Quero conhecer o sistema
+              <ArrowRight className="h-4 w-4" />
             </a>
           </div>
         </div>
       </section>
 
-      {/* MERCADO LIVRE */}
-      <section className="py-16" style={{ backgroundColor: NAVY_2 }}>
-        <div className="mx-auto max-w-5xl px-4">
-          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-            <div className="grid gap-6 p-8 md:grid-cols-[auto_1fr_auto] md:items-center md:p-10">
-              <div
-                className="flex h-20 w-32 items-center justify-center rounded-2xl text-sm font-black"
-                style={{ backgroundColor: YELLOW, color: NAVY }}
-              >
-                Mercado Livre
-              </div>
-              <div>
-                <div className="text-xs font-black uppercase tracking-wider" style={{ color: YELLOW }}>
-                  Ponto oficial
-                </div>
-                <h3 className="mt-2 text-2xl font-black text-white md:text-3xl">
-                  Ponto oficial Mercado Livre em Santos
-                </h3>
-                <p className="mt-2 text-sm font-medium text-white/70 md:text-base">
-                  Retire, devolva e envie seus pedidos do Mercado Livre aqui na BAG Envios.
-                  Sem complicação, sem fila, com atendimento presencial de qualidade.
-                </p>
-              </div>
-              <a
-                href={`${WA}?text=${encodeURIComponent("Olá, quero saber como funciona o ponto Mercado Livre da BAG")}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-black transition hover:brightness-95"
-                style={{ backgroundColor: YELLOW, color: NAVY }}
-              >
-                Como funciona <MessageCircle className="h-4 w-4" />
-              </a>
+      {/* 7. MERCADO LIVRE */}
+      <section
+        className="px-4 py-16 md:px-8 md:py-20"
+        style={{ backgroundColor: NAVY_LIGHT }}
+      >
+        <div className="mx-auto max-w-5xl">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 md:p-12">
+            <div
+              className="mb-6 inline-block rounded-md px-3 py-1.5 text-xs font-black"
+              style={{ backgroundColor: YELLOW, color: NAVY }}
+            >
+              Mercado Livre
             </div>
+            <h2 className="text-2xl font-black md:text-4xl">
+              Ponto oficial Mercado Livre em Santos
+            </h2>
+            <p className="mt-4 max-w-2xl text-white/70">
+              Retire, devolva e envie seus pedidos do Mercado Livre aqui na
+              BAG Envios. Sem complicação, sem fila, com atendimento
+              presencial de qualidade.
+            </p>
+            <a
+              href={`${WA}?text=${encodeURIComponent("Olá, como funciona o ponto Mercado Livre da BAG?")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-6 inline-flex items-center gap-2 rounded-md border border-white/30 px-5 py-3 text-sm font-black hover:bg-white/10"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Como funciona
+            </a>
           </div>
         </div>
       </section>
 
-      {/* ENTREGADOR */}
-      <section id="entregador" className="py-20" style={{ backgroundColor: YELLOW }}>
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mx-auto max-w-3xl text-center">
-            <span className="text-xs font-black uppercase tracking-wider" style={{ color: NAVY }}>
-              Seja entregador
-            </span>
-            <h2 className="mt-3 text-5xl font-black md:text-6xl" style={{ color: NAVY }}>
+      {/* 8. SEJA ENTREGADOR */}
+      <section
+        id="entregador"
+        className="px-4 py-20 md:px-8 md:py-28"
+        style={{ backgroundColor: YELLOW, color: NAVY }}
+      >
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 max-w-3xl">
+            <h2 className="text-3xl font-black leading-tight md:text-5xl">
               Trabalhe com a BAG Envios.
             </h2>
-            <p className="mt-5 text-lg font-semibold" style={{ color: `${NAVY}cc` }}>
-              Somos uma plataforma que conecta entregadores a empresas que precisam de
-              rotas diárias. Cadastre-se, escolha suas rotas e receba pelo seu trabalho
-              de forma rápida e transparente.
+            <p className="mt-5 text-base font-medium md:text-lg">
+              Somos uma plataforma que conecta entregadores a empresas que
+              precisam de rotas diárias. Cadastre-se, escolha suas rotas e
+              receba pelo seu trabalho de forma rápida e transparente.
             </p>
           </div>
-
-          <div className="mt-12 grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {[
-              { icon: RouteIcon, title: "Rotas na sua região", desc: "Rotas diárias disponíveis na sua região." },
-              { icon: DollarSign, title: "Pagamento transparente", desc: "Pagamento rápido e transparente pelo app." },
-              { icon: Users, title: "Suporte próximo", desc: "Suporte da equipe BAG em cada etapa." },
-            ].map((c) => (
-              <div key={c.title} className="rounded-2xl p-6" style={{ backgroundColor: NAVY }}>
-                <div
-                  className="flex h-12 w-12 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: `${YELLOW}22` }}
-                >
-                  <c.icon className="h-6 w-6" style={{ color: YELLOW }} />
-                </div>
-                <div className="mt-4 text-xl font-black text-white">{c.title}</div>
-                <div className="mt-2 text-sm font-medium text-white/70">{c.desc}</div>
+              "Rotas diárias disponíveis na sua região",
+              "Pagamento rápido e transparente pelo app",
+              "Suporte da equipe BAG em cada etapa",
+            ].map((v) => (
+              <div
+                key={v}
+                className="rounded-xl p-6"
+                style={{ backgroundColor: NAVY, color: "white" }}
+              >
+                <CheckCircle2
+                  className="mb-4 h-6 w-6"
+                  style={{ color: YELLOW }}
+                />
+                <p className="text-sm font-bold leading-relaxed">{v}</p>
               </div>
             ))}
           </div>
-
-          <div className="mt-10 flex justify-center">
-            <button
-              onClick={() => navigate({ to: "/auth" })}
-              className="inline-flex items-center gap-2 rounded-full px-8 py-4 text-lg font-black text-white shadow-2xl transition hover:brightness-125"
-              style={{ backgroundColor: NAVY }}
-            >
-              Quero me cadastrar como entregador <ArrowRight className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            onClick={() => navigate({ to: "/auth" })}
+            className="mt-10 inline-flex items-center gap-2 rounded-md px-8 py-4 text-base font-black text-white"
+            style={{ backgroundColor: NAVY }}
+          >
+            Quero me cadastrar como entregador
+            <ArrowRight className="h-5 w-5" />
+          </button>
         </div>
       </section>
 
-      {/* LOCALIZAÇÃO */}
-      <section className="py-20" style={{ backgroundColor: NAVY }}>
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mb-12 text-center">
-            <span className="text-xs font-black uppercase tracking-wider" style={{ color: YELLOW }}>
-              Onde estamos
-            </span>
-            <h2 className="mt-2 text-4xl font-black text-white md:text-5xl">
+      {/* 9. LOCALIZAÇÃO */}
+      <section className="px-4 py-20 md:px-8 md:py-28">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 md:grid-cols-2 md:items-center">
+          <div>
+            <h2 className="text-3xl font-black md:text-5xl">
               Venha nos visitar
             </h2>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-              <div className="space-y-6">
-                <InfoRow icon={MapPin} label="Endereço">
-                  <div className="font-black text-white">Rua Carvalho de Mendonça, 71</div>
-                  <div className="font-medium text-white/70">Santos — SP</div>
-                </InfoRow>
-                <InfoRow icon={Phone} label="Telefone">
-                  <div className="font-black text-white">(13) 99110-5065</div>
-                </InfoRow>
-                <InfoRow icon={Instagram} label="Instagram">
-                  <a
-                    href="https://instagram.com/bag.envios"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-black text-white hover:underline"
-                  >
-                    @bag.envios
-                  </a>
-                </InfoRow>
-                <InfoRow icon={Clock} label="Horário">
-                  <div className="font-black text-white">Seg a Sex: 8h–18h</div>
-                  <div className="font-medium text-white/70">Sáb: 8h–13h</div>
-                </InfoRow>
-                <a
-                  href={WA}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full px-6 py-3 font-black transition hover:brightness-95"
-                  style={{ backgroundColor: YELLOW, color: NAVY }}
-                >
-                  <MessageCircle className="h-4 w-4" /> Falar pelo WhatsApp
-                </a>
+            <div className="mt-8 space-y-4">
+              <div className="flex items-start gap-3">
+                <MapPin className="mt-0.5 h-5 w-5 shrink-0" style={{ color: YELLOW }} />
+                <div>
+                  <div className="text-xs font-bold uppercase text-white/50">
+                    Endereço
+                  </div>
+                  <div className="text-sm font-bold">
+                    Rua Carvalho de Mendonça, 71 — Santos, SP
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Phone className="mt-0.5 h-5 w-5 shrink-0" style={{ color: YELLOW }} />
+                <div>
+                  <div className="text-xs font-bold uppercase text-white/50">
+                    Telefone
+                  </div>
+                  <div className="text-sm font-bold">(13) 99110-5065</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Instagram className="mt-0.5 h-5 w-5 shrink-0" style={{ color: YELLOW }} />
+                <div>
+                  <div className="text-xs font-bold uppercase text-white/50">
+                    Instagram
+                  </div>
+                  <div className="text-sm font-bold">@bag.envios</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Clock className="mt-0.5 h-5 w-5 shrink-0" style={{ color: YELLOW }} />
+                <div>
+                  <div className="text-xs font-bold uppercase text-white/50">
+                    Horário
+                  </div>
+                  <div className="text-sm font-bold">
+                    Seg a Sex: 8h–18h · Sáb: 8h–13h
+                  </div>
+                </div>
               </div>
             </div>
+            <a
+              href={WA}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-8 inline-flex items-center gap-2 rounded-md px-6 py-3.5 text-sm font-black"
+              style={{ backgroundColor: YELLOW, color: NAVY }}
+            >
+              <MessageCircle className="h-4 w-4" />
+              Falar pelo WhatsApp
+            </a>
+          </div>
 
+          <div className="relative h-80 overflow-hidden rounded-2xl border border-white/10 md:h-96">
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `
+                  linear-gradient(rgba(255,183,0,0.08) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(255,183,0,0.08) 1px, transparent 1px)
+                `,
+                backgroundSize: "40px 40px",
+                backgroundColor: NAVY_LIGHT,
+              }}
+            />
+            <div className="absolute left-1/4 top-1/3 h-1 w-1/2 rounded-full bg-white/10" />
+            <div className="absolute left-1/3 top-2/3 h-1 w-1/3 rounded-full bg-white/10" />
+            <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
+              <div className="relative">
+                <div
+                  className="absolute inset-0 animate-ping rounded-full"
+                  style={{ backgroundColor: `${YELLOW}55` }}
+                />
+                <div
+                  className="relative flex h-14 w-14 items-center justify-center rounded-full shadow-lg"
+                  style={{ backgroundColor: YELLOW }}
+                >
+                  <MapPin className="h-7 w-7" style={{ color: NAVY }} />
+                </div>
+              </div>
+              <div
+                className="mt-3 rounded-md px-3 py-1.5 text-xs font-black shadow-lg"
+                style={{ backgroundColor: NAVY, color: "white" }}
+              >
+                BAG Envios · Santos
+              </div>
+            </div>
             <a
               href="https://maps.google.com/?q=Rua+Carvalho+de+Mendonça+71+Santos+SP"
               target="_blank"
               rel="noreferrer"
-              className="group relative flex min-h-[380px] items-center justify-center overflow-hidden rounded-3xl border border-white/10"
-              style={{
-                backgroundImage: `
-                  radial-gradient(circle at 30% 40%, ${YELLOW}15 0%, transparent 40%),
-                  linear-gradient(135deg, #1a2a3f 0%, #0d1b2a 100%)
-                `,
-              }}
+              className="absolute bottom-4 right-4 rounded-md bg-white/95 px-4 py-2 text-xs font-black shadow-lg"
+              style={{ color: NAVY }}
             >
-              <svg className="absolute inset-0 h-full w-full opacity-20" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#grid)" />
-                <path d="M 0 220 Q 200 160 400 240 T 800 260" stroke={YELLOW} strokeWidth="2" fill="none" opacity="0.5" />
-                <path d="M 120 0 L 170 400" stroke="white" strokeWidth="1" opacity="0.3" />
-                <path d="M 320 0 L 270 400" stroke="white" strokeWidth="1" opacity="0.3" />
-              </svg>
-
-              <div className="relative z-10 flex flex-col items-center">
-                <div className="relative">
-                  <span className="absolute inset-0 animate-ping rounded-full" style={{ backgroundColor: `${YELLOW}66` }} />
-                  <div
-                    className="relative flex h-16 w-16 items-center justify-center rounded-full shadow-2xl"
-                    style={{ backgroundColor: YELLOW }}
-                  >
-                    <MapPin className="h-8 w-8" style={{ color: NAVY }} strokeWidth={2.5} />
-                  </div>
-                </div>
-                <span className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2 text-sm font-black text-white backdrop-blur transition group-hover:bg-white/20">
-                  Abrir no Google Maps <ExternalLink className="h-4 w-4" />
-                </span>
-              </div>
+              Abrir no Google Maps →
             </a>
           </div>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="py-8" style={{ backgroundColor: NAVY_DEEP }}>
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 text-center md:grid-cols-3 md:text-left">
-          <div className="flex items-baseline justify-center gap-2 md:justify-start">
-            <span className="text-xl font-black text-white">BAG</span>
-            <span
-              className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: YELLOW }}
+      {/* 10. RODAPÉ */}
+      <footer
+        className="px-4 py-10 md:px-8"
+        style={{ backgroundColor: DARK }}
+      >
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
+          <div className="flex items-center gap-2">
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-md font-black"
+              style={{ backgroundColor: YELLOW, color: NAVY }}
             >
-              envios & variedades
-            </span>
+              B
+            </div>
+            <div className="text-sm font-bold leading-tight">
+              BAG Envios
+              <div className="text-[10px] font-medium text-white/60">
+                & Variedades
+              </div>
+            </div>
           </div>
-          <div className="flex items-center justify-center gap-3 text-xs font-black uppercase tracking-widest text-white/60">
-            <span>Envie</span><span style={{ color: YELLOW }}>·</span>
-            <span>Retire</span><span style={{ color: YELLOW }}>·</span>
-            <span>Compre</span>
+          <div
+            className="text-xs font-black tracking-widest"
+            style={{ color: YELLOW }}
+          >
+            ENVIE · RETIRE · COMPRE
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm font-medium text-white/70 md:justify-end">
-            <a
-              href="https://instagram.com/bag.envios"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 hover:text-white"
-            >
-              <Instagram className="h-4 w-4" style={{ color: YELLOW }} />
-              @bag.envios
-            </a>
-            <span style={{ color: YELLOW }}>·</span>
-            <span>(13) 99110-5065</span>
+          <div className="text-xs font-bold text-white/70">
+            @bag.envios · (13) 99110-5065
           </div>
         </div>
       </footer>
-    </div>
-  );
-}
-
-function InfoRow({
-  icon: Icon,
-  label,
-  children,
-}: {
-  icon: typeof MapPin;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex gap-4">
-      <Icon className="h-6 w-6 shrink-0" style={{ color: YELLOW }} />
-      <div>
-        <div className="text-xs font-black uppercase tracking-wider text-white/50">{label}</div>
-        <div className="mt-1">{children}</div>
-      </div>
     </div>
   );
 }
