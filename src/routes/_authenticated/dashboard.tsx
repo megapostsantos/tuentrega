@@ -370,6 +370,25 @@ function EmpresaDashboard({ userId }: { userId?: string }) {
         </div>
       </Link>
 
+      {/* Atalho NEX */}
+      <Link
+        to="/nex/saidas"
+        className="block rounded-2xl border-l-4 border-yellow-400 bg-gradient-to-r from-yellow-400/10 to-transparent p-4 elev-1 press-scale"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-yellow-400/20 text-yellow-700 flex items-center justify-center">
+              <Truck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">NEX · Saídas do dia</p>
+              <p className="text-xs text-muted-foreground">Motoristas, sacas e insucessos</p>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </Link>
+
       {/* Quick actions */}
       <div>
         <h2 className="mb-2 text-sm font-semibold text-foreground">Ações rápidas</h2>
