@@ -1214,53 +1214,6 @@ export type Database = {
           },
         ]
       }
-      motoristas_nex: {
-        Row: {
-          ativo: boolean
-          created_at: string
-          email: string | null
-          entregador_id: string | null
-          id: string
-          modelo_veiculo: string | null
-          nome: string
-          placa: string | null
-          telefone: string | null
-          tipo_veiculo: string | null
-        }
-        Insert: {
-          ativo?: boolean
-          created_at?: string
-          email?: string | null
-          entregador_id?: string | null
-          id?: string
-          modelo_veiculo?: string | null
-          nome: string
-          placa?: string | null
-          telefone?: string | null
-          tipo_veiculo?: string | null
-        }
-        Update: {
-          ativo?: boolean
-          created_at?: string
-          email?: string | null
-          entregador_id?: string | null
-          id?: string
-          modelo_veiculo?: string | null
-          nome?: string
-          placa?: string | null
-          telefone?: string | null
-          tipo_veiculo?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "motoristas_nex_entregador_id_fkey"
-            columns: ["entregador_id"]
-            isOneToOne: false
-            referencedRelation: "entregadores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notificacoes_destinatario: {
         Row: {
           created_at: string
@@ -1809,9 +1762,9 @@ export type Database = {
           codigo_nx: string
           created_at: string
           data_saida: string
+          entregador_id: string | null
           hora_saida: string | null
           id: string
-          motorista_id: string | null
           qr_saca: string
           status: string
         }
@@ -1819,9 +1772,9 @@ export type Database = {
           codigo_nx: string
           created_at?: string
           data_saida?: string
+          entregador_id?: string | null
           hora_saida?: string | null
           id?: string
-          motorista_id?: string | null
           qr_saca: string
           status?: string
         }
@@ -1829,18 +1782,18 @@ export type Database = {
           codigo_nx?: string
           created_at?: string
           data_saida?: string
+          entregador_id?: string | null
           hora_saida?: string | null
           id?: string
-          motorista_id?: string | null
           qr_saca?: string
           status?: string
         }
         Relationships: [
           {
-            foreignKeyName: "saidas_nex_motorista_id_fkey"
-            columns: ["motorista_id"]
+            foreignKeyName: "saidas_nex_entregador_id_fkey"
+            columns: ["entregador_id"]
             isOneToOne: false
-            referencedRelation: "motoristas_nex"
+            referencedRelation: "entregadores"
             referencedColumns: ["id"]
           },
         ]
