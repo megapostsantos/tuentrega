@@ -179,7 +179,11 @@ function ListaEntregadores() {
         onClose={() => setDispatcherTarget(null)}
         onDone={() => { setDispatcherTarget(null); fetchList(); }}
       />
-      <InviteEntregadorDialog open={inviteOpen} onClose={() => setInviteOpen(false)} />
+      <RegisterEntregadorDialog
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        onCreated={fetchList}
+      />
     </div>
   );
 }
