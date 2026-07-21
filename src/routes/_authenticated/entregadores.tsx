@@ -54,6 +54,7 @@ function ListaEntregadores() {
   const [list, setList] = useState<Ent[]>([]);
   const [load, setLoad] = useState(true);
   const [detail, setDetail] = useState<Ent | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [dispatcherTarget, setDispatcherTarget] = useState<Ent | null>(null);
   const [dispatcherIds, setDispatcherIds] = useState<Set<string>>(new Set());
 
