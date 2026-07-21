@@ -890,6 +890,7 @@ export type Database = {
           assinatura_url: string | null
           codigo_pacote: string | null
           created_at: string
+          data_agendada: string | null
           destinatario_email: string | null
           destinatario_nome: string | null
           destinatario_telefone: string | null
@@ -921,6 +922,7 @@ export type Database = {
           assinatura_url?: string | null
           codigo_pacote?: string | null
           created_at?: string
+          data_agendada?: string | null
           destinatario_email?: string | null
           destinatario_nome?: string | null
           destinatario_telefone?: string | null
@@ -952,6 +954,7 @@ export type Database = {
           assinatura_url?: string | null
           codigo_pacote?: string | null
           created_at?: string
+          data_agendada?: string | null
           destinatario_email?: string | null
           destinatario_nome?: string | null
           destinatario_telefone?: string | null
@@ -985,6 +988,68 @@ export type Database = {
             columns: ["operacao_id"]
             isOneToOne: false
             referencedRelation: "operacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eventos_agenda: {
+        Row: {
+          cor: string | null
+          created_at: string
+          created_by: string | null
+          data_fim: string | null
+          data_inicio: string
+          descricao: string | null
+          empresa_id: string | null
+          entregador_id: string | null
+          id: string
+          referencia_id: string | null
+          referencia_tabela: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_fim?: string | null
+          data_inicio: string
+          descricao?: string | null
+          empresa_id?: string | null
+          entregador_id?: string | null
+          id?: string
+          referencia_id?: string | null
+          referencia_tabela?: string | null
+          tipo: string
+          titulo: string
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string | null
+          empresa_id?: string | null
+          entregador_id?: string | null
+          id?: string
+          referencia_id?: string | null
+          referencia_tabela?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_agenda_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
         ]
@@ -1307,6 +1372,7 @@ export type Database = {
           closed_at: string | null
           closing_notes: string | null
           created_at: string
+          data_agendada: string | null
           data_trabalho: string | null
           descricao: string | null
           dispatcher_id: string | null
@@ -1349,6 +1415,7 @@ export type Database = {
           closed_at?: string | null
           closing_notes?: string | null
           created_at?: string
+          data_agendada?: string | null
           data_trabalho?: string | null
           descricao?: string | null
           dispatcher_id?: string | null
@@ -1391,6 +1458,7 @@ export type Database = {
           closed_at?: string | null
           closing_notes?: string | null
           created_at?: string
+          data_agendada?: string | null
           data_trabalho?: string | null
           descricao?: string | null
           dispatcher_id?: string | null
