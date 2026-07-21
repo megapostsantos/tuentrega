@@ -1241,3 +1241,188 @@ function DeliveryReport({ oferta }: { oferta: Oferta }) {
     </div>
   );
 }
+
+/* ===========================  EDIT & SHARE  =========================== */
+
+function EditOfertaDialog({
+  o, onClose, onSaved,
+}: { o: Oferta; onClose: () => void; onSaved: () => void }) {
+  const [f, setF] = useState({
+    titulo: o.titulo ?? "",
+    descricao: o.descricao ?? "",
+    bairro: o.bairro ?? "",
+    valor: String(o.valor ?? ""),
+    valor_por_pacote: o.valor_por_pacote != null ? String(o.valor_por_pacote) : "",
+    quantidade_pacotes: o.quantidade_pacotes != null ? String(o.quantidade_pacotes) : "",
+    data_trabalho: o.data_trabalho ?? "",
+    hora_inicio: o.hora_inicio ?? "",
+    hora_fim: o.hora_fim ?? "",
+    expira_em: o.expira_em ? new Date(o.expira_em).toISOString().slice(0, 16) : "",
+    exige_nota_fiscal: !!o.exige_nota_fiscal,
+    endereco_coleta: o.endereco_coleta ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const payload: Record<string, unknown> = {
+      titulo: f.titulo || "Oferta sem título",
+      descricao: f.descricao || null,
+      bairro: f.bairro || null,
+      valor: Number(f.valor) || 0,
+      valor_por_pacote: f.valor_por_pacote ? Number(f.valor_por_pacote) : null,
+      quantidade_pacotes: f.quantidade_pacotes ? Number(f.quantidade_pacotes) : null,
+      data_trabalho: f.data_trabalho || null,
+      hora_inicio: f.hora_inicio || null,
+      hora_fim: f.hora_fim || null,
+      expira_em: f.expira_em ? new Date(f.expira_em).toISOString() : null,
+      exige_nota_fiscal: f.exige_nota_fiscal,
+      endereco_coleta: f.endereco_coleta || null,
+    };
+    const { error } = await supabase.from("ofertas").update(payload as any).eq("id", o.id);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Oferta atualizada!");
+    onSaved();
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle>Editar oferta</DialogTitle></DialogHeader>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <Label>Título</Label>
+            <Input value={f.titulo} onChange={(e) => setF({ ...f, titulo: e.target.value })} />
+          </div>
+          <div>
+            <Label>Descrição</Label>
+            <Textarea value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} rows={2} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>Bairro</Label>
+              <Input value={f.bairro} onChange={(e) => setF({ ...f, bairro: e.target.value })} />
+            </div>
+            <div>
+              <Label>Endereço de coleta</Label>
+              <Input value={f.endereco_coleta} onChange={(e) => setF({ ...f, endereco_coleta: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label>Valor total (R$)</Label>
+              <Input type="number" step="0.01" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} />
+            </div>
+            <div>
+              <Label>Por pacote</Label>
+              <Input type="number" step="0.01" value={f.valor_por_pacote} onChange={(e) => setF({ ...f, valor_por_pacote: e.target.value })} />
+            </div>
+            <div>
+              <Label>Pacotes</Label>
+              <Input type="number" value={f.quantidade_pacotes} onChange={(e) => setF({ ...f, quantidade_pacotes: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label>Data</Label>
+              <Input type="date" value={f.data_trabalho} onChange={(e) => setF({ ...f, data_trabalho: e.target.value })} />
+            </div>
+            <div>
+              <Label>Início</Label>
+              <Input type="time" value={f.hora_inicio} onChange={(e) => setF({ ...f, hora_inicio: e.target.value })} />
+            </div>
+            <div>
+              <Label>Fim</Label>
+              <Input type="time" value={f.hora_fim} onChange={(e) => setF({ ...f, hora_fim: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <Label>Expira em</Label>
+            <Input type="datetime-local" value={f.expira_em} onChange={(e) => setF({ ...f, expira_em: e.target.value })} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={f.exige_nota_fiscal} onCheckedChange={(v) => setF({ ...f, exige_nota_fiscal: v })} />
+            <Label className="mb-0">Exige nota fiscal</Label>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={saving} className="bg-primary text-primary-foreground hover:opacity-90">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ShareOfertaDialog({ o, onClose }: { o: Oferta; onClose: () => void }) {
+  const base = typeof window !== "undefined" ? window.location.origin : "https://bagenvios.lovable.app";
+  const brl = (n: number | null | undefined) =>
+    `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
+
+  const lines: string[] = [];
+  lines.push(`🚚 BAG Envios — ${o.titulo}`);
+  if (o.data_trabalho) {
+    lines.push(
+      `📅 ${new Date(o.data_trabalho).toLocaleDateString("pt-BR")}${o.hora_inicio ? ` · ${o.hora_inicio.slice(0, 5)}` : ""}${o.hora_fim ? ` - ${o.hora_fim.slice(0, 5)}` : ""}`,
+    );
+  }
+  if (o.bairro) lines.push(`📍 ${o.bairro}`);
+  if (o.quantidade_pacotes) lines.push(`📦 ${o.quantidade_pacotes} pacotes`);
+  lines.push(`💵 Total: ${brl(o.valor)}${o.valor_por_pacote ? ` (${brl(o.valor_por_pacote)}/pacote)` : ""}`);
+  if (o.exige_nota_fiscal) lines.push(`🧾 Exige nota fiscal`);
+  if (o.descricao) lines.push(`\n${o.descricao}`);
+  lines.push(`\nAceite no app: ${base}/ofertas`);
+  const message = lines.join("\n");
+  const subject = `BAG Envios — ${o.titulo}`;
+
+  const waHref = `https://wa.me/?text=${encodeURIComponent(message)}`;
+  const mailHref = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+
+  async function copyMsg() {
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success("Mensagem copiada!");
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Compartilhar oferta</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="rounded-md border bg-muted/40 p-3 text-xs whitespace-pre-wrap max-h-56 overflow-auto">
+            {message}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-[#25D366] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            >
+              <Share2 className="h-4 w-4" /> WhatsApp
+            </a>
+            <a
+              href={mailHref}
+              className="inline-flex items-center justify-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+            >
+              <Mail className="h-4 w-4" /> E-mail
+            </a>
+            <Button variant="outline" onClick={copyMsg} className="gap-2">
+              <Copy className="h-4 w-4" /> Copiar
+            </Button>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
