@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
 import { useEffect, useMemo, useState } from "react";
 import {
   Store, Plus, FileText, MapPin, Loader2, Clock, Package, Copy,
-  Bike, Car, Truck, Footprints, Zap, Bike as Motorcycle, X,
+  Bike, Car, Truck, Footprints, Zap, Bike as Motorcycle, X, Pencil, Share2, Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
