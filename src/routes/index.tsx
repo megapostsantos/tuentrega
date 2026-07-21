@@ -191,6 +191,65 @@ function Landing() {
         <style>{`@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
       </div>
 
+      {/* SEJA ENTREGADOR */}
+      <section className="py-20 px-5" style={{ background: NAVY }}>
+        <div className="max-w-7xl mx-auto text-white">
+          <div className="text-center mb-14 space-y-3">
+            <span className="text-sm uppercase tracking-widest" style={{ color: YELLOW, ...heading }}>
+              Seja entregador BAG
+            </span>
+            <h2 className="text-4xl md:text-5xl uppercase" style={heading}>
+              Cadastre-se com o seu <span style={{ color: YELLOW }}>modal</span>
+            </h2>
+            <p className="text-white/70 max-w-2xl mx-auto pt-2">
+              Aceitamos entregadores de qualquer modalidade. Escolha o seu e
+              comece a receber rotas na Baixada Santista.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {[
+              { e: "🚶", t: "A pé" },
+              { e: "🚲", t: "Bike" },
+              { e: "⚡", t: "Bike elétrica" },
+              { e: "🏍️", t: "Moto" },
+              { e: "🚗", t: "Carro" },
+            ].map((m) => (
+              <div
+                key={m.t}
+                className="p-6 rounded-3xl border border-white/10 text-center transition-all hover:-translate-y-1 hover:border-[color:var(--y)]"
+                style={{ background: "rgba(255,255,255,0.04)", ["--y" as string]: YELLOW }}
+              >
+                <div className="text-5xl mb-3 leading-none">{m.e}</div>
+                <p className="text-sm uppercase tracking-wide" style={heading}>
+                  {m.t}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              to="/auth"
+              className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-full uppercase tracking-wide transition-transform hover:scale-[1.03]"
+              style={{ background: YELLOW, color: NAVY, ...heading }}
+            >
+              Quero me cadastrar <ArrowRight className="w-5 h-5" />
+            </Link>
+            <a
+              href={`${WHATSAPP}?text=${encodeURIComponent("Olá! Quero ser entregador da BAG.")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-full uppercase tracking-wide border-2 border-white/25 text-white hover:border-white transition-colors"
+              style={heading}
+            >
+              <MessageCircle className="w-5 h-5" strokeWidth={2.8} /> Falar no WhatsApp
+            </a>
+          </div>
+        </div>
+      </section>
+
+
       {/* SERVIÇOS */}
       <section id="servicos" className="py-20 px-5">
         <div className="max-w-7xl mx-auto">
@@ -370,64 +429,6 @@ function Landing() {
                 </a>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SEJA ENTREGADOR */}
-      <section className="py-20 px-5" style={{ background: NAVY }}>
-        <div className="max-w-7xl mx-auto text-white">
-          <div className="text-center mb-14 space-y-3">
-            <span className="text-sm uppercase tracking-widest" style={{ color: YELLOW, ...heading }}>
-              Seja entregador BAG
-            </span>
-            <h2 className="text-4xl md:text-5xl uppercase" style={heading}>
-              Cadastre-se com o seu <span style={{ color: YELLOW }}>modal</span>
-            </h2>
-            <p className="text-white/70 max-w-2xl mx-auto pt-2">
-              Aceitamos entregadores de qualquer modalidade. Escolha o seu e
-              comece a receber rotas na Baixada Santista.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {[
-              { e: "🚶", t: "A pé" },
-              { e: "🚲", t: "Bike" },
-              { e: "⚡", t: "Bike elétrica" },
-              { e: "🏍️", t: "Moto" },
-              { e: "🚗", t: "Carro" },
-            ].map((m) => (
-              <div
-                key={m.t}
-                className="p-6 rounded-3xl border border-white/10 text-center transition-all hover:-translate-y-1 hover:border-[color:var(--y)]"
-                style={{ background: "rgba(255,255,255,0.04)", ["--y" as string]: YELLOW }}
-              >
-                <div className="text-5xl mb-3 leading-none">{m.e}</div>
-                <p className="text-sm uppercase tracking-wide" style={heading}>
-                  {m.t}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-12 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              to="/auth"
-              className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-full uppercase tracking-wide transition-transform hover:scale-[1.03]"
-              style={{ background: YELLOW, color: NAVY, ...heading }}
-            >
-              Quero me cadastrar <ArrowRight className="w-5 h-5" />
-            </Link>
-            <a
-              href={`${WHATSAPP}?text=${encodeURIComponent("Olá! Quero ser entregador da BAG.")}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-full uppercase tracking-wide border-2 border-white/25 text-white hover:border-white transition-colors"
-              style={heading}
-            >
-              <MessageCircle className="w-5 h-5" strokeWidth={2.8} /> Falar no WhatsApp
-            </a>
           </div>
         </div>
       </section>
