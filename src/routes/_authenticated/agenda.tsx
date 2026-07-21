@@ -210,13 +210,12 @@ function AgendaContent({ userId, isAdmin }: { userId: string; isAdmin: boolean }
       }
 
       for (const p of pg.data ?? []) {
-        const [y, m, d] = String(p.data_prevista).split("-").map(Number);
-        const inicio = new Date(y, m - 1, d, 10, 0);
+        const inicio = new Date(p.data_pagamento);
         out.push({
           id: `pg-${p.id}`,
           tipo: "pagamento",
-          titulo: `Pagamento R$ ${Number(p.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-          descricao: `Status: ${p.status ?? "—"}`,
+          titulo: `Pagamento R$ ${Number(p.valor_total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+          descricao: undefined,
           inicio,
           fim: null,
           cor: TIPO_COR.pagamento,
