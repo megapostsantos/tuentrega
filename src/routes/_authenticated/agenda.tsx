@@ -151,10 +151,9 @@ function AgendaContent({ userId, isAdmin }: { userId: string; isAdmin: boolean }
 
       const pagamentosQ = sb
         .from("pagamentos")
-        .select("id, valor, data_prevista, status, entregador_id, empresa_id")
-        .not("data_prevista", "is", null)
-        .gte("data_prevista", startDate)
-        .lt("data_prevista", endDate);
+        .select("id, valor_total, data_pagamento, entregador_id, empresa_id")
+        .gte("data_pagamento", startIso)
+        .lt("data_pagamento", endIso);
       if (!isAdmin) pagamentosQ.eq("empresa_id", userId);
 
       const [ev, of, pk, pg] = await Promise.all([eventosQ, ofertasQ, pacotesQ, pagamentosQ]);
