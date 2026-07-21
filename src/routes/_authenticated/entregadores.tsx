@@ -146,7 +146,17 @@ function ListaEntregadores() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {e.suspended_at ? <Badge variant="destructive">Suspenso</Badge> : <Badge variant="outline">{e.status}</Badge>}
+                          {e.suspended_at || e.status === "suspenso" ? (
+                            <Badge variant="destructive">Suspenso</Badge>
+                          ) : e.status === "inativo" ? (
+                            <Badge variant="secondary">Inativo</Badge>
+                          ) : e.activated_at ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Ativo</Badge>
+                          ) : e.invited_at ? (
+                            <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Convite enviado</Badge>
+                          ) : (
+                            <Badge variant="outline">{e.status}</Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-right" onClick={(ev) => ev.stopPropagation()}>
                           {dispatcherIds.has(e.id) ? (
