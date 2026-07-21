@@ -8,6 +8,8 @@ import { ActiveRouteBanner } from "@/components/ActiveRouteBanner";
 import { TopAppBar } from "@/components/TopAppBar";
 import { BottomNav } from "@/components/BottomNav";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -31,27 +33,42 @@ function AuthenticatedLayout() {
 
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background">
-      <ImpersonationBanner />
-      <ActiveRouteBanner />
-      <TopAppBar />
-      <OfflineBanner />
-      <main className="flex-1 pb-24">
-        <div className="mx-auto w-full max-w-2xl">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-background">
+        <div className="hidden md:block">
+          <AppSidebar role={role} />
         </div>
-      </main>
-      <BottomNav role={role} />
-    </div>
+        <div className="flex min-h-screen flex-1 flex-col">
+          <ImpersonationBanner />
+          <ActiveRouteBanner />
+          <div className="flex items-center gap-2 md:hidden">
+            <TopAppBar />
+          </div>
+          <div className="hidden items-center gap-2 border-b bg-background px-4 py-2 md:flex">
+            <SidebarTrigger />
+            <div className="flex-1"><TopAppBar /></div>
+          </div>
+          <OfflineBanner />
+          <main className="flex-1 pb-24 md:pb-6">
+            <div className="mx-auto w-full max-w-2xl md:max-w-6xl">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={pathname}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                >
+                  <Outlet />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </main>
+          <div className="md:hidden">
+            <BottomNav role={role} />
+          </div>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
