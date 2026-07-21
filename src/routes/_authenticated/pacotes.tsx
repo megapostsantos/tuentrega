@@ -1730,3 +1730,84 @@ function OptimizeRouteButton({ operacaoId, ofertaIds }: { operacaoId: string; of
     </>
   );
 }
+
+function SharePublishedOffers({
+  offers,
+  onDone,
+}: {
+  offers: Array<{ id: string; titulo: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number; valor_por_pacote: number }>;
+  onDone: () => void;
+}) {
+  const base = typeof window !== "undefined" ? window.location.origin : "https://bagenvios.lovable.app";
+  const brl = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
+
+  const buildMessage = () => {
+    const lines = offers.map(
+      (o) =>
+        `• ${o.titulo}\n  📦 ${o.quantidade_pacotes} pacotes · 🗺️ ${o.quantidade_paradas} paradas · 💰 ${brl(o.valor_por_pacote)}/pacote · 💵 ${brl(o.valor_total)}`,
+    );
+    return (
+      `🚚 BAG Envios — Novas ofertas disponíveis!\n\n` +
+      lines.join("\n\n") +
+      `\n\nVeja e aceite no app:\n${base}/ofertas`
+    );
+  };
+
+  const message = buildMessage();
+  const subject = `BAG Envios — ${offers.length} nova(s) oferta(s) disponível(is)`;
+
+  const waHref = `https://wa.me/?text=${encodeURIComponent(message)}`;
+  const mailHref = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+
+  async function copyToClipboard() {
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success("Mensagem copiada!");
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  }
+
+  return (
+    <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Share2 className="h-5 w-5 text-primary" />
+        <h3 className="font-semibold">Compartilhar ofertas com entregadores</h3>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Envie o resumo das {offers.length} oferta(s) publicada(s) para o seu time.
+      </p>
+
+      <div className="rounded-md border bg-background p-3 text-xs whitespace-pre-wrap max-h-40 overflow-auto">
+        {message}
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        <a
+          href={waHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-[#25D366] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+        >
+          <Share2 className="h-4 w-4" />
+          WhatsApp
+        </a>
+        <a
+          href={mailHref}
+          className="inline-flex items-center justify-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+        >
+          <Mail className="h-4 w-4" />
+          E-mail
+        </a>
+        <Button variant="outline" onClick={copyToClipboard} className="gap-2">
+          <Copy className="h-4 w-4" />
+          Copiar
+        </Button>
+      </div>
+
+      <div className="flex justify-end pt-1">
+        <Button variant="ghost" size="sm" onClick={onDone}>Concluir</Button>
+      </div>
+    </div>
+  );
+}
