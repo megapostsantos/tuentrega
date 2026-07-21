@@ -710,6 +710,8 @@ function OfertaCard({
   const VIcon = o.veiculo_necessario && VEHICLE_MAP[o.veiculo_necessario]?.icon;
   const st = STATUS[o.status] ?? STATUS.open;
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   async function cancel() {
     if (!confirm("Cancelar esta oferta?")) return;
@@ -720,6 +722,9 @@ function OfertaCard({
     toast.success("Oferta cancelada");
     reload();
   }
+
+  const canEdit = role === "empresa" && o.status === "open";
+  const canShare = role === "empresa" && ["open", "accepted", "in_progress"].includes(o.status);
 
   return (
     <Card>
@@ -751,15 +756,31 @@ function OfertaCard({
         {o.expira_em && o.status === "open" && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" /> {timeLeft(o.expira_em)}</p>
         )}
-        <div className="flex gap-2 pt-2">
-          <Button size="sm" variant="outline" onClick={onDetails} className="flex-1">Ver detalhes</Button>
+        <div className="flex flex-wrap gap-2 pt-2">
+          <Button size="sm" variant="outline" onClick={onDetails} className="flex-1 min-w-[120px]">Ver detalhes</Button>
+          {canShare && (
+            <Button size="sm" variant="outline" onClick={() => setSharing(true)} title="Compartilhar">
+              <Share2 className="h-4 w-4" />
+            </Button>
+          )}
+          {canEdit && (
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)} title="Editar">
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
           {role === "empresa" && o.status === "open" && (
-            <Button size="sm" variant="ghost" onClick={cancel} disabled={busy} className="text-destructive">
+            <Button size="sm" variant="ghost" onClick={cancel} disabled={busy} className="text-destructive" title="Cancelar">
               <X className="h-4 w-4" />
             </Button>
           )}
         </div>
       </CardContent>
+      {editing && (
+        <EditOfertaDialog o={o} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); reload(); }} />
+      )}
+      {sharing && (
+        <ShareOfertaDialog o={o} onClose={() => setSharing(false)} />
+      )}
     </Card>
   );
 }
