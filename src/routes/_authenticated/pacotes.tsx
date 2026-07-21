@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Package, Plus, Trash2, ArrowLeft, CheckCircle2, AlertTriangle, Eye, Users, Map as MapIcon, ScanLine, Sparkles, Save } from "lucide-react";
+import { Loader2, Package, Plus, Trash2, ArrowLeft, CheckCircle2, AlertTriangle, Eye, Users, Map as MapIcon, ScanLine, Sparkles, Save, Share2, Mail, Copy } from "lucide-react";
 import { ScanOperationDialog } from "@/components/ScanOperationDialog";
 import { geocodeAddress, geocodeMultiple } from "@/lib/geocoding";
 import { optimizeRoute, formatDuration, type Stop } from "@/lib/route-optimizer";
@@ -386,6 +386,10 @@ function CreateOperation({
   const [submitting, setSubmitting] = useState(false);
   const [createdOpId, setCreatedOpId] = useState<string | null>(null);
   const [createdRotaIds, setCreatedRotaIds] = useState<string[]>([]);
+  const [publishedOffers, setPublishedOffers] = useState<Array<{
+    id: string; titulo: string; quantidade_pacotes: number; quantidade_paradas: number;
+    valor_total: number; valor_por_pacote: number;
+  }>>([]);
 
   async function createOperation() {
     if (!origemFinal) { toast.error("Informe a origem."); return; }
@@ -482,13 +486,15 @@ function CreateOperation({
       if (!user) throw new Error("Sessão expirada. Faça login novamente.");
       await ensureEmpresa(user.id);
 
+      const published: typeof publishedOffers = [];
       for (let i = 0; i < rotas.length; i++) {
         const r = rotas[i];
         const rotaId = createdRotaIds[i];
         const vp = vpEfetivo(r);
+        const titulo = `${origemFinal} · ${r.nome} - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`;
         const { data: of, error: ofErr } = await supabase.from("ofertas").insert({
           empresa_id: user.id,
-          titulo: `${origemFinal} · ${r.nome} - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`,
+          titulo,
           descricao: observacoes || null,
           quantidade_pacotes: r.quantidade_pacotes,
           quantidade_paradas: r.quantidade_paradas,
@@ -504,10 +510,17 @@ function CreateOperation({
         const ofertaId = (of as any).id as string;
         await createPlaceholderPackages(ofertaId, createdOpId, r.quantidade_pacotes);
         await supabase.from("rotas_operacao").update({ oferta_id: ofertaId, status: "open" }).eq("id", rotaId);
+        published.push({
+          id: ofertaId, titulo,
+          quantidade_pacotes: r.quantidade_pacotes,
+          quantidade_paradas: r.quantidade_paradas,
+          valor_total: r.valor_total,
+          valor_por_pacote: vp,
+        });
       }
       await supabase.from("operacoes").update({ status: "published" } as any).eq("id", createdOpId);
+      setPublishedOffers(published);
       toast.success(`🎉 ${rotas.length} oferta(s) publicada(s)!`);
-      onDone();
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao publicar.");
     } finally {
@@ -515,13 +528,14 @@ function CreateOperation({
     }
   }
 
+
   function resetAll() {
     setStep(1); setOrigem("Mercado Livre"); setOrigemCustom("");
     setDataOperacao(new Date().toISOString().slice(0, 10));
     setTotalPacotes(0); setTotalParadas(0);
     setValorPorPacote(empresa?.tms_valor_padrao_pacote ?? 1.8);
     setDivisionMode("auto"); setNumRotas(3); setManualRotas([]); setRotas([]);
-    setObservacoes(""); setCreatedOpId(null); setCreatedRotaIds([]);
+    setObservacoes(""); setCreatedOpId(null); setCreatedRotaIds([]); setPublishedOffers([]);
   }
 
   const step1Valid = !!origemFinal && totalPacotes > 0 && totalParadas > 0 && valorPorPacote > 0;
@@ -874,6 +888,10 @@ function CreateOperation({
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />Publicando ofertas...
               </div>
+            )}
+
+            {publishedOffers.length > 0 && (
+              <SharePublishedOffers offers={publishedOffers} onDone={onDone} />
             )}
           </CardContent>
         </Card>
@@ -1710,5 +1728,86 @@ function OptimizeRouteButton({ operacaoId, ofertaIds }: { operacaoId: string; of
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function SharePublishedOffers({
+  offers,
+  onDone,
+}: {
+  offers: Array<{ id: string; titulo: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number; valor_por_pacote: number }>;
+  onDone: () => void;
+}) {
+  const base = typeof window !== "undefined" ? window.location.origin : "https://bagenvios.lovable.app";
+  const brl = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
+
+  const buildMessage = () => {
+    const lines = offers.map(
+      (o) =>
+        `• ${o.titulo}\n  📦 ${o.quantidade_pacotes} pacotes · 🗺️ ${o.quantidade_paradas} paradas · 💰 ${brl(o.valor_por_pacote)}/pacote · 💵 ${brl(o.valor_total)}`,
+    );
+    return (
+      `🚚 BAG Envios — Novas ofertas disponíveis!\n\n` +
+      lines.join("\n\n") +
+      `\n\nVeja e aceite no app:\n${base}/ofertas`
+    );
+  };
+
+  const message = buildMessage();
+  const subject = `BAG Envios — ${offers.length} nova(s) oferta(s) disponível(is)`;
+
+  const waHref = `https://wa.me/?text=${encodeURIComponent(message)}`;
+  const mailHref = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+
+  async function copyToClipboard() {
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success("Mensagem copiada!");
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  }
+
+  return (
+    <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Share2 className="h-5 w-5 text-primary" />
+        <h3 className="font-semibold">Compartilhar ofertas com entregadores</h3>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Envie o resumo das {offers.length} oferta(s) publicada(s) para o seu time.
+      </p>
+
+      <div className="rounded-md border bg-background p-3 text-xs whitespace-pre-wrap max-h-40 overflow-auto">
+        {message}
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        <a
+          href={waHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-[#25D366] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+        >
+          <Share2 className="h-4 w-4" />
+          WhatsApp
+        </a>
+        <a
+          href={mailHref}
+          className="inline-flex items-center justify-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+        >
+          <Mail className="h-4 w-4" />
+          E-mail
+        </a>
+        <Button variant="outline" onClick={copyToClipboard} className="gap-2">
+          <Copy className="h-4 w-4" />
+          Copiar
+        </Button>
+      </div>
+
+      <div className="flex justify-end pt-1">
+        <Button variant="ghost" size="sm" onClick={onDone}>Concluir</Button>
+      </div>
+    </div>
   );
 }
