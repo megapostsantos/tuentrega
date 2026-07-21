@@ -41,12 +41,13 @@ function AuthenticatedLayout() {
         <div className="flex min-h-screen flex-1 flex-col">
           <ImpersonationBanner />
           <ActiveRouteBanner />
-          <div className="flex items-center gap-2 md:hidden">
-            <TopAppBar />
-          </div>
-          <div className="hidden items-center gap-2 border-b bg-background px-4 py-2 md:flex">
-            <SidebarTrigger />
-            <div className="flex-1"><TopAppBar /></div>
+          <div className="flex items-center gap-2 border-b bg-background md:px-2">
+            <div className="hidden md:block">
+              <SidebarTrigger />
+            </div>
+            <div className="flex-1">
+              <TopAppBar />
+            </div>
           </div>
           <OfflineBanner />
           <main className="flex-1 pb-24 md:pb-6">
