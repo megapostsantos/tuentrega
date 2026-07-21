@@ -144,7 +144,7 @@ function AgendaContent({ userId, isAdmin }: { userId: string; isAdmin: boolean }
 
       const pacotesQ = sb
         .from("entregas_pacotes")
-        .select("id, codigo_rastreio, endereco, data_agendada, oferta_id")
+        .select("id, codigo_pacote, endereco_entrega, data_agendada, oferta_id")
         .not("data_agendada", "is", null)
         .gte("data_agendada", startDate)
         .lt("data_agendada", endDate);
