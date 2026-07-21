@@ -311,7 +311,9 @@ function EmpresaDashboard({ userId }: { userId?: string }) {
 
   return (
     <div className="space-y-5 p-4">
+      <DashboardOverview role="empresa" userId={userId} />
       {/* Operation status */}
+
       {opActive ? (
         <Link
           to="/pacotes"
