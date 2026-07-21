@@ -200,8 +200,8 @@ function AgendaContent({ userId, isAdmin }: { userId: string; isAdmin: boolean }
         out.push({
           id: `pk-${p.id}`,
           tipo: "coleta",
-          titulo: `Coleta ${p.codigo_rastreio ?? ""}`.trim(),
-          descricao: p.endereco ?? undefined,
+          titulo: `Coleta ${p.codigo_pacote ?? ""}`.trim(),
+          descricao: p.endereco_entrega ?? undefined,
           inicio,
           fim: null,
           cor: TIPO_COR.coleta,
