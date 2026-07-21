@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Package, Plus, Trash2, ArrowLeft, CheckCircle2, AlertTriangle, Eye, Users, Map as MapIcon, ScanLine, Sparkles, Save } from "lucide-react";
+import { Loader2, Package, Plus, Trash2, ArrowLeft, CheckCircle2, AlertTriangle, Eye, Users, Map as MapIcon, ScanLine, Sparkles, Save, Share2, Mail, Copy } from "lucide-react";
 import { ScanOperationDialog } from "@/components/ScanOperationDialog";
 import { geocodeAddress, geocodeMultiple } from "@/lib/geocoding";
 import { optimizeRoute, formatDuration, type Stop } from "@/lib/route-optimizer";
