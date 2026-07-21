@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus, Copy, Share2 } from "lucide-react";
+import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
 import { EntregadoresStats } from "@/components/summaries/EntregadoresStats";
+import { RegisterEntregadorDialog } from "@/components/RegisterEntregadorDialog";
 
 import { EmptyModule } from "@/components/EmptyModule";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ type Ent = {
   id: string; nome_completo: string; whatsapp: string | null; tipo_veiculo: string | null;
   status: string; reliability_score: number | null; reliability_level: string | null;
   suspended_at: string | null; suspension_reason: string | null;
+  tipo_operacao?: string | null; invited_at?: string | null; activated_at?: string | null;
 };
 
 const LEVELS: Record<string, { label: string; color: string; stars: number }> = {
