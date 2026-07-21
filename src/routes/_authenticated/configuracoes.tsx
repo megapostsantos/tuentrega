@@ -226,7 +226,7 @@ function EmpresaProfile() {
           </form>
         </CardContent>
       </Card>
-      <TmsSettings empresaId={f.id} />
+      
       <MinhasFiliaisCard empresaId={f.id} />
     </>
   );
