@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog } from "lucide-react";
+import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus, Copy, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -54,6 +54,7 @@ function ListaEntregadores() {
   const [list, setList] = useState<Ent[]>([]);
   const [load, setLoad] = useState(true);
   const [detail, setDetail] = useState<Ent | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [dispatcherTarget, setDispatcherTarget] = useState<Ent | null>(null);
   const [dispatcherIds, setDispatcherIds] = useState<Set<string>>(new Set());
 
@@ -96,11 +97,21 @@ function ListaEntregadores() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <PageHeader title="Entregadores" description="Score de confiabilidade e gestão" />
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <PageHeader title="Entregadores" description="Score de confiabilidade e gestão" />
+        <Button onClick={() => setInviteOpen(true)} className="shrink-0">
+          <UserPlus className="h-4 w-4 mr-2" /> Novo entregador
+        </Button>
+      </div>
       <EntregadoresStats />
 
       <Card>
-        <CardHeader><CardTitle>Lista de entregadores</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Lista de entregadores</CardTitle>
+          <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" /> Convidar
+          </Button>
+        </CardHeader>
         <CardContent>
           {load ? (
             <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
@@ -166,7 +177,54 @@ function ListaEntregadores() {
         onClose={() => setDispatcherTarget(null)}
         onDone={() => { setDispatcherTarget(null); fetchList(); }}
       />
+      <InviteEntregadorDialog open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
+  );
+}
+
+function InviteEntregadorDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const link = typeof window !== "undefined"
+    ? `${window.location.origin}/auth?role=entregador`
+    : "/auth?role=entregador";
+  const msg = `Olá! Você foi convidado para se cadastrar como entregador na BAG Envios. Faça seu cadastro em: ${link}`;
+
+  function copyLink() {
+    navigator.clipboard.writeText(link);
+    toast.success("Link copiado!");
+  }
+  function shareWhats() {
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Convidar novo entregador</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Entregadores fazem o próprio cadastro para preencher dados pessoais, CPF, PIX e documentos.
+            Envie o link abaixo para que ele se registre e apareça automaticamente na sua lista.
+          </p>
+          <div className="space-y-2">
+            <Label>Link de cadastro</Label>
+            <div className="flex gap-2">
+              <Input readOnly value={link} className="font-mono text-xs" />
+              <Button variant="outline" size="icon" onClick={copyLink}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <Button className="w-full" onClick={shareWhats}>
+            <Share2 className="h-4 w-4 mr-2" /> Compartilhar via WhatsApp
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
