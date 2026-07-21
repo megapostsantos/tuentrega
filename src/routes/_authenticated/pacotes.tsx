@@ -486,13 +486,15 @@ function CreateOperation({
       if (!user) throw new Error("Sessão expirada. Faça login novamente.");
       await ensureEmpresa(user.id);
 
+      const published: typeof publishedOffers = [];
       for (let i = 0; i < rotas.length; i++) {
         const r = rotas[i];
         const rotaId = createdRotaIds[i];
         const vp = vpEfetivo(r);
+        const titulo = `${origemFinal} · ${r.nome} - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`;
         const { data: of, error: ofErr } = await supabase.from("ofertas").insert({
           empresa_id: user.id,
-          titulo: `${origemFinal} · ${r.nome} - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`,
+          titulo,
           descricao: observacoes || null,
           quantidade_pacotes: r.quantidade_pacotes,
           quantidade_paradas: r.quantidade_paradas,
@@ -508,16 +510,24 @@ function CreateOperation({
         const ofertaId = (of as any).id as string;
         await createPlaceholderPackages(ofertaId, createdOpId, r.quantidade_pacotes);
         await supabase.from("rotas_operacao").update({ oferta_id: ofertaId, status: "open" }).eq("id", rotaId);
+        published.push({
+          id: ofertaId, titulo,
+          quantidade_pacotes: r.quantidade_pacotes,
+          quantidade_paradas: r.quantidade_paradas,
+          valor_total: r.valor_total,
+          valor_por_pacote: vp,
+        });
       }
       await supabase.from("operacoes").update({ status: "published" } as any).eq("id", createdOpId);
+      setPublishedOffers(published);
       toast.success(`🎉 ${rotas.length} oferta(s) publicada(s)!`);
-      onDone();
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao publicar.");
     } finally {
       setSubmitting(false);
     }
   }
+
 
   function resetAll() {
     setStep(1); setOrigem("Mercado Livre"); setOrigemCustom("");
