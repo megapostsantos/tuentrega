@@ -666,6 +666,7 @@ export type Database = {
       }
       entregadores: {
         Row: {
+          activated_at: string | null
           bairro: string | null
           bairros: string[]
           banco: string | null
@@ -673,11 +674,14 @@ export type Database = {
           cidade: string | null
           cnpj: string | null
           complemento: string | null
-          cpf: string
+          cpf: string | null
           created_at: string
           data_nascimento: string | null
+          email: string | null
           estado: string | null
           id: string
+          invited_at: string | null
+          modelo_veiculo: string | null
           nome_completo: string
           numero: string | null
           pix_chave: string | null
@@ -692,6 +696,7 @@ export type Database = {
           status: string
           suspended_at: string | null
           suspension_reason: string | null
+          tipo_operacao: string
           tipo_pessoa: string
           tipo_veiculo: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos: string[]
@@ -699,6 +704,7 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          activated_at?: string | null
           bairro?: string | null
           bairros?: string[]
           banco?: string | null
@@ -706,11 +712,14 @@ export type Database = {
           cidade?: string | null
           cnpj?: string | null
           complemento?: string | null
-          cpf: string
+          cpf?: string | null
           created_at?: string
           data_nascimento?: string | null
+          email?: string | null
           estado?: string | null
           id: string
+          invited_at?: string | null
+          modelo_veiculo?: string | null
           nome_completo: string
           numero?: string | null
           pix_chave?: string | null
@@ -725,6 +734,7 @@ export type Database = {
           status?: string
           suspended_at?: string | null
           suspension_reason?: string | null
+          tipo_operacao?: string
           tipo_pessoa?: string
           tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos?: string[]
@@ -732,6 +742,7 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          activated_at?: string | null
           bairro?: string | null
           bairros?: string[]
           banco?: string | null
@@ -739,11 +750,14 @@ export type Database = {
           cidade?: string | null
           cnpj?: string | null
           complemento?: string | null
-          cpf?: string
+          cpf?: string | null
           created_at?: string
           data_nascimento?: string | null
+          email?: string | null
           estado?: string | null
           id?: string
+          invited_at?: string | null
+          modelo_veiculo?: string | null
           nome_completo?: string
           numero?: string | null
           pix_chave?: string | null
@@ -758,6 +772,7 @@ export type Database = {
           status?: string
           suspended_at?: string | null
           suspension_reason?: string | null
+          tipo_operacao?: string
           tipo_pessoa?: string
           tipo_veiculo?: Database["public"]["Enums"]["veiculo_tipo"] | null
           turnos?: string[]
