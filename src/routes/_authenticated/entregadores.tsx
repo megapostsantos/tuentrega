@@ -97,11 +97,21 @@ function ListaEntregadores() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <PageHeader title="Entregadores" description="Score de confiabilidade e gestão" />
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <PageHeader title="Entregadores" description="Score de confiabilidade e gestão" />
+        <Button onClick={() => setInviteOpen(true)} className="shrink-0">
+          <UserPlus className="h-4 w-4 mr-2" /> Novo entregador
+        </Button>
+      </div>
       <EntregadoresStats />
 
       <Card>
-        <CardHeader><CardTitle>Lista de entregadores</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Lista de entregadores</CardTitle>
+          <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" /> Convidar
+          </Button>
+        </CardHeader>
         <CardContent>
           {load ? (
             <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
