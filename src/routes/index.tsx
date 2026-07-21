@@ -191,6 +191,58 @@ function Landing() {
         <style>{`@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
       </div>
 
+      {/* LAST MILE */}
+      <section className="py-20 px-5" style={{ background: YELLOW }}>
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6" style={{ color: NAVY }}>
+            <span className="text-sm uppercase tracking-widest" style={heading}>Last Mile</span>
+            <h2 className="text-4xl md:text-5xl uppercase leading-[0.95]" style={heading}>
+              Last Mile é o que nos <span className="underline decoration-4 underline-offset-4">move.</span>
+            </h2>
+            <p className="text-lg leading-relaxed max-w-lg" style={{ color: `${NAVY}cc` }}>
+              A última etapa da entrega é a mais importante — e a que a gente
+              faz melhor. Rota curta, cliente feliz, marca fortalecida.
+            </p>
+            <a
+              href={WHATSAPP}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-7 py-4 rounded-full uppercase tracking-wide text-white transition-transform hover:scale-[1.03]"
+              style={{ background: NAVY, ...heading }}
+            >
+              Solicitar entrega <ArrowRight className="w-5 h-5" />
+            </a>
+          </div>
+          <div
+            className="rounded-3xl p-8 md:p-10 space-y-4"
+            style={{ background: NAVY }}
+          >
+            {[
+              { t: "Mais Eficiência", d: "Rotas planejadas para reduzir tempo e custo." },
+              { t: "Clientes Satisfeitos", d: "Entrega no prazo, comunicação clara." },
+              { t: "Resultados que Impulsionam", d: "Sua operação escala com a gente." },
+            ].map((it, i) => (
+              <div
+                key={it.t}
+                className="p-5 rounded-2xl border border-white/10 flex items-start gap-4"
+                style={{ background: "rgba(255,255,255,0.04)" }}
+              >
+                <span
+                  className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-sm"
+                  style={{ background: YELLOW, color: NAVY, ...heading }}
+                >
+                  0{i + 1}
+                </span>
+                <div>
+                  <h4 className="text-white uppercase mb-1" style={heading}>{it.t}</h4>
+                  <p className="text-white/60 text-sm">{it.d}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* SEJA ENTREGADOR */}
       <section className="py-20 px-5" style={{ background: NAVY }}>
         <div className="max-w-7xl mx-auto text-white">
@@ -248,7 +300,6 @@ function Landing() {
           </div>
         </div>
       </section>
-
 
       {/* SERVIÇOS */}
       <section id="servicos" className="py-20 px-5">
@@ -333,58 +384,6 @@ function Landing() {
         </div>
       </section>
 
-      {/* LAST MILE */}
-      <section className="py-20 px-5" style={{ background: YELLOW }}>
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6" style={{ color: NAVY }}>
-            <span className="text-sm uppercase tracking-widest" style={heading}>Last Mile</span>
-            <h2 className="text-4xl md:text-5xl uppercase leading-[0.95]" style={heading}>
-              Last Mile é o que nos <span className="underline decoration-4 underline-offset-4">move.</span>
-            </h2>
-            <p className="text-lg leading-relaxed max-w-lg" style={{ color: `${NAVY}cc` }}>
-              A última etapa da entrega é a mais importante — e a que a gente
-              faz melhor. Rota curta, cliente feliz, marca fortalecida.
-            </p>
-            <a
-              href={WHATSAPP}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-7 py-4 rounded-full uppercase tracking-wide text-white transition-transform hover:scale-[1.03]"
-              style={{ background: NAVY, ...heading }}
-            >
-              Solicitar entrega <ArrowRight className="w-5 h-5" />
-            </a>
-          </div>
-          <div
-            className="rounded-3xl p-8 md:p-10 space-y-4"
-            style={{ background: NAVY }}
-          >
-            {[
-              { t: "Mais Eficiência", d: "Rotas planejadas para reduzir tempo e custo." },
-              { t: "Clientes Satisfeitos", d: "Entrega no prazo, comunicação clara." },
-              { t: "Resultados que Impulsionam", d: "Sua operação escala com a gente." },
-            ].map((it, i) => (
-              <div
-                key={it.t}
-                className="p-5 rounded-2xl border border-white/10 flex items-start gap-4"
-                style={{ background: "rgba(255,255,255,0.04)" }}
-              >
-                <span
-                  className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-sm"
-                  style={{ background: YELLOW, color: NAVY, ...heading }}
-                >
-                  0{i + 1}
-                </span>
-                <div>
-                  <h4 className="text-white uppercase mb-1" style={heading}>{it.t}</h4>
-                  <p className="text-white/60 text-sm">{it.d}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* MERCADO LIVRE */}
       <section className="py-20 px-5">
         <div className="max-w-5xl mx-auto">
@@ -432,6 +431,7 @@ function Landing() {
           </div>
         </div>
       </section>
+
 
       {/* LOCALIZAÇÃO */}
 
