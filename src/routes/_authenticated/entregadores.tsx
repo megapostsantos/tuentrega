@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus, Copy, Share2 } from "lucide-react";
+import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
 import { EntregadoresStats } from "@/components/summaries/EntregadoresStats";
+import { RegisterEntregadorDialog } from "@/components/RegisterEntregadorDialog";
 
 import { EmptyModule } from "@/components/EmptyModule";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ type Ent = {
   id: string; nome_completo: string; whatsapp: string | null; tipo_veiculo: string | null;
   status: string; reliability_score: number | null; reliability_level: string | null;
   suspended_at: string | null; suspension_reason: string | null;
+  tipo_operacao?: string | null; invited_at?: string | null; activated_at?: string | null;
 };
 
 const LEVELS: Record<string, { label: string; color: string; stars: number }> = {
@@ -144,7 +146,17 @@ function ListaEntregadores() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {e.suspended_at ? <Badge variant="destructive">Suspenso</Badge> : <Badge variant="outline">{e.status}</Badge>}
+                          {e.suspended_at || e.status === "suspenso" ? (
+                            <Badge variant="destructive">Suspenso</Badge>
+                          ) : e.status === "inativo" ? (
+                            <Badge variant="secondary">Inativo</Badge>
+                          ) : e.activated_at ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Ativo</Badge>
+                          ) : e.invited_at ? (
+                            <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Convite enviado</Badge>
+                          ) : (
+                            <Badge variant="outline">{e.status}</Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-right" onClick={(ev) => ev.stopPropagation()}>
                           {dispatcherIds.has(e.id) ? (
@@ -177,56 +189,15 @@ function ListaEntregadores() {
         onClose={() => setDispatcherTarget(null)}
         onDone={() => { setDispatcherTarget(null); fetchList(); }}
       />
-      <InviteEntregadorDialog open={inviteOpen} onClose={() => setInviteOpen(false)} />
+      <RegisterEntregadorDialog
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        onCreated={fetchList}
+      />
     </div>
   );
 }
 
-function InviteEntregadorDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const link = typeof window !== "undefined"
-    ? `${window.location.origin}/auth?role=entregador`
-    : "/auth?role=entregador";
-  const msg = `Olá! Você foi convidado para se cadastrar como entregador na BAG Envios. Faça seu cadastro em: ${link}`;
-
-  function copyLink() {
-    navigator.clipboard.writeText(link);
-    toast.success("Link copiado!");
-  }
-  function shareWhats() {
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Convidar novo entregador</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Entregadores fazem o próprio cadastro para preencher dados pessoais, CPF, PIX e documentos.
-            Envie o link abaixo para que ele se registre e apareça automaticamente na sua lista.
-          </p>
-          <div className="space-y-2">
-            <Label>Link de cadastro</Label>
-            <div className="flex gap-2">
-              <Input readOnly value={link} className="font-mono text-xs" />
-              <Button variant="outline" size="icon" onClick={copyLink}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <Button className="w-full" onClick={shareWhats}>
-            <Share2 className="h-4 w-4 mr-2" /> Compartilhar via WhatsApp
-          </Button>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Fechar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function DispatcherDialog({ ent, onClose, onDone }: { ent: Ent | null; onClose: () => void; onDone: () => void }) {
   const [valor, setValor] = useState("2.00");
