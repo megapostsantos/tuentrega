@@ -184,51 +184,6 @@ function ListaEntregadores() {
   );
 }
 
-function InviteEntregadorDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const link = typeof window !== "undefined"
-    ? `${window.location.origin}/auth?role=entregador`
-    : "/auth?role=entregador";
-  const msg = `Olá! Você foi convidado para se cadastrar como entregador na BAG Envios. Faça seu cadastro em: ${link}`;
-
-  function copyLink() {
-    navigator.clipboard.writeText(link);
-    toast.success("Link copiado!");
-  }
-  function shareWhats() {
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Convidar novo entregador</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Entregadores fazem o próprio cadastro para preencher dados pessoais, CPF, PIX e documentos.
-            Envie o link abaixo para que ele se registre e apareça automaticamente na sua lista.
-          </p>
-          <div className="space-y-2">
-            <Label>Link de cadastro</Label>
-            <div className="flex gap-2">
-              <Input readOnly value={link} className="font-mono text-xs" />
-              <Button variant="outline" size="icon" onClick={copyLink}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <Button className="w-full" onClick={shareWhats}>
-            <Share2 className="h-4 w-4 mr-2" /> Compartilhar via WhatsApp
-          </Button>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Fechar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function DispatcherDialog({ ent, onClose, onDone }: { ent: Ent | null; onClose: () => void; onDone: () => void }) {
   const [valor, setValor] = useState("2.00");
