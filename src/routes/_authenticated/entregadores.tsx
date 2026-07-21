@@ -95,6 +95,8 @@ function ListaEntregadores() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader title="Entregadores" description="Score de confiabilidade e gestão" />
+      <EntregadoresStats />
+
       <Card>
         <CardHeader><CardTitle>Lista de entregadores</CardTitle></CardHeader>
         <CardContent>

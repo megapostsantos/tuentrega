@@ -287,6 +287,10 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
         }
       />
 
+      <FinanceiroStats empresaId={userId ?? undefined} />
+
+
+
       {/* Alertas fiscais — PJ com pendência > R$500 */}
       {pjAlerts.length > 0 && (
         <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">

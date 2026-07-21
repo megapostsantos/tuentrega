@@ -231,15 +231,11 @@ function startOfTodayISO() {
 function AdminDashboard() {
   return (
     <div className="p-4 space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard icon={BarChart3} label="MRR" value="R$ 0" />
-        <StatCard icon={Building2} label="Empresas" value="0" />
-        <StatCard icon={Users} label="Entregadores" value="0" />
-        <StatCard icon={Truck} label="Entregas" value="0" />
-      </div>
+      <DashboardOverview role="admin" userId={undefined} />
     </div>
   );
 }
+
 
 /* ----------------- EMPRESA ----------------- */
 

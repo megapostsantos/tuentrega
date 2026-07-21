@@ -100,6 +100,8 @@ function SaidasNexPage() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader title="Saídas do dia" description="Registro de saídas do serviço NEX — motoristas são os entregadores cadastrados" />
+      <NexStats />
+
       <div className="flex flex-wrap items-end gap-3">
         <div className="grid gap-1.5">
           <Label>Data</Label>

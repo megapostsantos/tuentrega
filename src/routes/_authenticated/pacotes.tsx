@@ -130,6 +130,8 @@ function EmpresaTms({ userId }: { userId: string }) {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader title="Pacotes (TMS)" description="Gerencie suas operações de entrega" />
+      <DistribuicaoStats empresaId={user?.id} />
+
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
