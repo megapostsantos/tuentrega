@@ -348,9 +348,8 @@ function WeekGrid({ start, events }: { start: Date; events: AgendaEvent[] }) {
         })}
 
         {hours.map((h) => (
-          <>
+          <Fragment key={`row-${h}`}>
             <div
-              key={`h-${h}`}
               className="border-b border-r border-border p-1 text-[10px] text-muted-foreground"
               style={{ height: ROW_H }}
             >
@@ -383,7 +382,7 @@ function WeekGrid({ start, events }: { start: Date; events: AgendaEvent[] }) {
                   })}
               </div>
             ))}
-          </>
+          </Fragment>
         ))}
       </div>
     </div>
