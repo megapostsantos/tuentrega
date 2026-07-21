@@ -1,0 +1,1 @@
+CREATE POLICY "empresa view all entregadores" ON public.entregadores FOR SELECT TO authenticated USING (has_role(auth.uid(), 'empresa'::app_role));
