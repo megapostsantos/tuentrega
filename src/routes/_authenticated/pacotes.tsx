@@ -535,7 +535,7 @@ function CreateOperation({
     setTotalPacotes(0); setTotalParadas(0);
     setValorPorPacote(empresa?.tms_valor_padrao_pacote ?? 1.8);
     setDivisionMode("auto"); setNumRotas(3); setManualRotas([]); setRotas([]);
-    setObservacoes(""); setCreatedOpId(null); setCreatedRotaIds([]);
+    setObservacoes(""); setCreatedOpId(null); setCreatedRotaIds([]); setPublishedOffers([]);
   }
 
   const step1Valid = !!origemFinal && totalPacotes > 0 && totalParadas > 0 && valorPorPacote > 0;
