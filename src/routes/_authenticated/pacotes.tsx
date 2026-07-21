@@ -889,6 +889,10 @@ function CreateOperation({
                 <Loader2 className="h-4 w-4 animate-spin" />Publicando ofertas...
               </div>
             )}
+
+            {publishedOffers.length > 0 && (
+              <SharePublishedOffers offers={publishedOffers} onDone={onDone} />
+            )}
           </CardContent>
         </Card>
       )}
