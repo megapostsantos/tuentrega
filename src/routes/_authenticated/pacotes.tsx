@@ -9,6 +9,8 @@ const RouteMap = lazy(() => import("@/components/RouteMap").then((m) => ({ defau
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
+import { DistribuicaoStats } from "@/components/summaries/DistribuicaoStats";
+
 import { EmptyModule } from "@/components/EmptyModule";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,7 +132,7 @@ function EmpresaTms({ userId }: { userId: string }) {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader title="Pacotes (TMS)" description="Gerencie suas operações de entrega" />
-      <DistribuicaoStats empresaId={user?.id} />
+      <DistribuicaoStats empresaId={userId} />
 
 
       <div className="flex flex-col gap-2 sm:flex-row">

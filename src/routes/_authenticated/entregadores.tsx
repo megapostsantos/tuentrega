@@ -5,6 +5,8 @@ import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog } from "lucide-reac
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
+import { EntregadoresStats } from "@/components/summaries/EntregadoresStats";
+
 import { EmptyModule } from "@/components/EmptyModule";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

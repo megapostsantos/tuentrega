@@ -5,6 +5,8 @@ import { Loader2, Plus, Download, AlertTriangle, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
+import { NexStats } from "@/components/summaries/NexStats";
+
 import { EmptyModule } from "@/components/EmptyModule";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

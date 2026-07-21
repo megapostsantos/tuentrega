@@ -11,6 +11,8 @@ import { StatCard } from "@/components/StatCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { PendingAllocationBanner } from "@/components/PendingAllocationBanner";
+import { DashboardOverview } from "@/components/summaries/DashboardOverview";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,

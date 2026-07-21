@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
+import { FinanceiroStats } from "@/components/summaries/FinanceiroStats";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -287,7 +289,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
         }
       />
 
-      <FinanceiroStats empresaId={userId ?? undefined} />
+      <FinanceiroStats empresaId={empresaId} />
 
 
 
