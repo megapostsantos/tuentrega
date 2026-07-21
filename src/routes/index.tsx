@@ -143,17 +143,18 @@ function Landing() {
             <div className="grid grid-cols-3 gap-4 pt-6 border-t border-white/10 max-w-lg">
               {[
                 { v: "8+", l: "Serviços" },
-                { v: "ML", l: "Parceiro" },
+                { v: "Mercado Livre", l: "Parceiro" },
                 { v: "100%", l: "Compromisso" },
               ].map((s) => (
                 <div key={s.l}>
-                  <p className="text-3xl" style={{ color: YELLOW, ...heading }}>{s.v}</p>
+                  <p className="text-2xl md:text-3xl" style={{ color: YELLOW, ...heading }}>{s.v}</p>
                   <p className="text-xs uppercase tracking-widest text-white/60 mt-1" style={heading}>
                     {s.l}
                   </p>
                 </div>
               ))}
             </div>
+
           </div>
 
           {/* Floating logo illustration */}
@@ -206,7 +207,7 @@ function Landing() {
               { icon: Truck, t: "Entregas", d: "Rota rápida até o destino final." },
               { icon: Package, t: "Retiradas", d: "Buscamos no endereço indicado." },
               { icon: Send, t: "Envios", d: "Despache seu pacote com facilidade." },
-              { icon: RotateCcw, t: "Devoluções", d: "Ponto oficial de devolução ML." },
+              { icon: RotateCcw, t: "Devoluções", d: "Ponto oficial de devolução Mercado Livre." },
               { icon: Gift, t: "Presentes", d: "Embale e envie com carinho." },
               { icon: Sparkles, t: "Utilidades", d: "Variedades para o dia a dia." },
               { icon: Wrench, t: "Manutenções", d: "Pequenos reparos rápidos." },
@@ -335,11 +336,16 @@ function Landing() {
             <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30" style={{ background: YELLOW }} />
             <div className="relative flex flex-col md:flex-row gap-8 items-center">
               <div
-                className="shrink-0 w-24 h-24 md:w-28 md:h-28 rounded-3xl flex items-center justify-center"
+                className="shrink-0 w-24 h-24 md:w-28 md:h-28 rounded-3xl flex items-center justify-center p-3"
                 style={{ background: YELLOW }}
               >
-                <span className="text-3xl" style={{ color: NAVY, ...heading }}>ML</span>
+                <img
+                  src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/6.6.100/mercadolibre/logo__large_plus.png"
+                  alt="Mercado Livre"
+                  className="w-full h-full object-contain"
+                />
               </div>
+
               <div className="flex-1 text-white space-y-4 text-center md:text-left">
                 <span
                   className="inline-block px-3 py-1 rounded-full text-xs uppercase tracking-widest"

@@ -382,11 +382,23 @@ function LandingPage() {
       >
         <div className="mx-auto max-w-5xl">
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 md:p-12">
-            <div
-              className="mb-6 inline-block rounded-md px-3 py-1.5 text-xs font-black"
-              style={{ backgroundColor: YELLOW, color: NAVY }}
-            >
-              Mercado Livre
+            <div className="mb-6 flex items-center gap-4">
+              <div
+                className="flex h-16 w-16 items-center justify-center rounded-xl p-2"
+                style={{ backgroundColor: YELLOW }}
+              >
+                <img
+                  src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/6.6.100/mercadolibre/logo__large_plus.png"
+                  alt="Mercado Livre"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <div
+                className="rounded-md px-3 py-1.5 text-xs font-black"
+                style={{ backgroundColor: YELLOW, color: NAVY }}
+              >
+                Mercado Livre
+              </div>
             </div>
             <h2 className="text-2xl font-black md:text-4xl">
               Ponto oficial Mercado Livre em Santos
@@ -396,6 +408,7 @@ function LandingPage() {
               BAG Envios. Sem complicação, sem fila, com atendimento
               presencial de qualidade.
             </p>
+
             <a
               href={`${WA}?text=${encodeURIComponent("Olá, como funciona o ponto Mercado Livre da BAG?")}`}
               target="_blank"
