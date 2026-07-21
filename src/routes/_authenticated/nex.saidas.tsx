@@ -5,6 +5,8 @@ import { Loader2, Plus, Download, AlertTriangle, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
+import { NexStats } from "@/components/summaries/NexStats";
+
 import { EmptyModule } from "@/components/EmptyModule";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -100,6 +102,8 @@ function SaidasNexPage() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader title="Saídas do dia" description="Registro de saídas do serviço NEX — motoristas são os entregadores cadastrados" />
+      <NexStats />
+
       <div className="flex flex-wrap items-end gap-3">
         <div className="grid gap-1.5">
           <Label>Data</Label>
