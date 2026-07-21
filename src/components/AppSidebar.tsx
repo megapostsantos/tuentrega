@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Package, Map, Zap, ArrowRightFromLine, UserCheck, History,
+  LayoutDashboard, Package, Map, Zap, ArrowRightFromLine, History,
   Bike, Building2, CalendarDays, BarChart2, Wallet, Settings, Users, LogOut,
 } from "lucide-react";
 import {
@@ -40,7 +40,6 @@ const GROUPS: Group[] = [
     label: "NEX",
     items: [
       { title: "Saídas do Dia", url: "/nex/saidas", icon: ArrowRightFromLine, roles: NOT_ENTREGADOR },
-      { title: "Motoristas NEX", url: "/nex/motoristas", icon: UserCheck, roles: NOT_ENTREGADOR },
       { title: "Histórico NEX", url: "/nex/historico", icon: History, roles: NOT_ENTREGADOR },
     ],
   },
