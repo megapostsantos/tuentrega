@@ -386,6 +386,10 @@ function CreateOperation({
   const [submitting, setSubmitting] = useState(false);
   const [createdOpId, setCreatedOpId] = useState<string | null>(null);
   const [createdRotaIds, setCreatedRotaIds] = useState<string[]>([]);
+  const [publishedOffers, setPublishedOffers] = useState<Array<{
+    id: string; titulo: string; quantidade_pacotes: number; quantidade_paradas: number;
+    valor_total: number; valor_por_pacote: number;
+  }>>([]);
 
   async function createOperation() {
     if (!origemFinal) { toast.error("Informe a origem."); return; }
