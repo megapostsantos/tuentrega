@@ -1375,7 +1375,7 @@ function ShareOfertaDialog({ o, onClose }: { o: Oferta; onClose: () => void }) {
   lines.push(`💵 Total: ${brl(o.valor)}${o.valor_por_pacote ? ` (${brl(o.valor_por_pacote)}/pacote)` : ""}`);
   if (o.exige_nota_fiscal) lines.push(`🧾 Exige nota fiscal`);
   if (o.descricao) lines.push(`\n${o.descricao}`);
-  lines.push(`\nAceite no app: ${base}/ofertas`);
+  lines.push(`\nVer detalhes: ${base}/oferta/${o.id}`);
   const message = lines.join("\n");
   const subject = `BAG Envios — ${o.titulo}`;
 
