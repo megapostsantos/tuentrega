@@ -1744,12 +1744,11 @@ function SharePublishedOffers({
   const buildMessage = () => {
     const lines = offers.map(
       (o) =>
-        `• ${o.titulo}\n  📦 ${o.quantidade_pacotes} pacotes · 🗺️ ${o.quantidade_paradas} paradas · 💰 ${brl(o.valor_por_pacote)}/pacote · 💵 ${brl(o.valor_total)}`,
+        `• ${o.titulo}\n  📦 ${o.quantidade_pacotes} pacotes · 🗺️ ${o.quantidade_paradas} paradas · 💰 ${brl(o.valor_por_pacote)}/pacote · 💵 ${brl(o.valor_total)}\n  🔗 ${base}/oferta/${o.id}`,
     );
     return (
       `🚚 BAG Envios — Novas ofertas disponíveis!\n\n` +
-      lines.join("\n\n") +
-      `\n\nVeja e aceite no app:\n${base}/ofertas`
+      lines.join("\n\n")
     );
   };
 
