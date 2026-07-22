@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RastrearTokenRouteImport } from './routes/rastrear.$token'
+import { Route as OfertaIdRouteImport } from './routes/oferta.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminPlansRouteImport } from './routes/admin.plans'
@@ -73,6 +74,11 @@ const IndexRoute = IndexRouteImport.update({
 const RastrearTokenRoute = RastrearTokenRouteImport.update({
   id: '/rastrear/$token',
   path: '/rastrear/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OfertaIdRoute = OfertaIdRouteImport.update({
+  id: '/oferta/$id',
+  path: '/oferta/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/oferta/$id': typeof OfertaIdRoute
   '/rastrear/$token': typeof RastrearTokenRoute
   '/nex/historico': typeof AuthenticatedNexHistoricoRoute
   '/nex/saidas': typeof AuthenticatedNexSaidasRoute
@@ -300,6 +307,7 @@ export interface FileRoutesByTo {
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/oferta/$id': typeof OfertaIdRoute
   '/rastrear/$token': typeof RastrearTokenRoute
   '/nex/historico': typeof AuthenticatedNexHistoricoRoute
   '/nex/saidas': typeof AuthenticatedNexSaidasRoute
@@ -339,6 +347,7 @@ export interface FileRoutesById {
   '/admin/plans': typeof AdminPlansRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/oferta/$id': typeof OfertaIdRoute
   '/rastrear/$token': typeof RastrearTokenRoute
   '/_authenticated/nex/historico': typeof AuthenticatedNexHistoricoRoute
   '/_authenticated/nex/saidas': typeof AuthenticatedNexSaidasRoute
@@ -378,6 +387,7 @@ export interface FileRouteTypes {
     | '/admin/plans'
     | '/admin/settings'
     | '/auth/callback'
+    | '/oferta/$id'
     | '/rastrear/$token'
     | '/nex/historico'
     | '/nex/saidas'
@@ -415,6 +425,7 @@ export interface FileRouteTypes {
     | '/admin/plans'
     | '/admin/settings'
     | '/auth/callback'
+    | '/oferta/$id'
     | '/rastrear/$token'
     | '/nex/historico'
     | '/nex/saidas'
@@ -453,6 +464,7 @@ export interface FileRouteTypes {
     | '/admin/plans'
     | '/admin/settings'
     | '/auth/callback'
+    | '/oferta/$id'
     | '/rastrear/$token'
     | '/_authenticated/nex/historico'
     | '/_authenticated/nex/saidas'
@@ -467,6 +479,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   LandingRoute: typeof LandingRoute
+  OfertaIdRoute: typeof OfertaIdRoute
   RastrearTokenRoute: typeof RastrearTokenRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
@@ -513,6 +526,13 @@ declare module '@tanstack/react-router' {
       path: '/rastrear/$token'
       fullPath: '/rastrear/$token'
       preLoaderRoute: typeof RastrearTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oferta/$id': {
+      id: '/oferta/$id'
+      path: '/oferta/$id'
+      fullPath: '/oferta/$id'
+      preLoaderRoute: typeof OfertaIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
@@ -829,6 +849,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   LandingRoute: LandingRoute,
+  OfertaIdRoute: OfertaIdRoute,
   RastrearTokenRoute: RastrearTokenRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
