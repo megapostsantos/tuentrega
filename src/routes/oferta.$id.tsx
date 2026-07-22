@@ -6,7 +6,7 @@ import { getOfertaPublic } from "@/lib/ofertas-public.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import Logo from "@/components/Logo";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/oferta/$id")({
   head: () => ({
