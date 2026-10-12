@@ -104,11 +104,11 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
       <SidebarHeader className="border-b border-white/10 bg-[#0D1B2A]">
         <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FFB700] text-[#0D1B2A] font-black text-sm">
-            BE
+            TE
           </div>
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-bold tracking-tight text-white">TuEntrega</span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-[#FFB700]">envios & variedades</span>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[#FFB700]">last mile delivery</span>
           </div>
         </Link>
       </SidebarHeader>

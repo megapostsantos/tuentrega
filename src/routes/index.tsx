@@ -166,7 +166,7 @@ function Landing() {
               />
               <img
                 src={bagLogo.url}
-                alt="TuEntrega — envios & variedades"
+                alt="TuEntrega — last mile delivery"
                 className="relative w-full h-full object-contain drop-shadow-2xl"
               />
             </div>

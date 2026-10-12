@@ -96,12 +96,12 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FFB700] text-[#0D1B2A] font-black text-sm">
-            BE
+            TE
           </div>
           <div className="flex flex-1 flex-col leading-tight min-w-0">
             <span className="text-sm font-bold tracking-tight text-white">TuEntrega</span>
             <span className="text-[10px] font-medium uppercase tracking-wider text-[#FFB700]">
-              envios & variedades
+              last mile delivery
             </span>
           </div>
           <button
