@@ -1507,7 +1507,7 @@ function RouteMapButton({ ofertaIds }: { ofertaIds: string[] }) {
 
       // Respect optimized order if all have it
       const orderMap = new Map(limited.map((p: any) => [p.id, p.ordem_otimizada ?? p.numero_pacote]));
-      result.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+      result.sort((a, b) => ((orderMap.get(a.id) ?? 0) as number) - ((orderMap.get(b.id) ?? 0) as number));
 
       setStops(result);
       setSkipped(skippedCount + (limited.length - result.length));

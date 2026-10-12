@@ -1,29 +1,45 @@
-import { createServerFn } from '@tanstack/react-start';
-import { z } from 'zod';
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { db } from "@/db";
+import { ofertas, empresas } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
-export const getOfertaPublic = createServerFn({ method: 'GET' })
+export const getOfertaPublic = createServerFn({ method: "GET" })
   .inputValidator((data) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
-    const { data: oferta, error } = await supabaseAdmin
-      .from('ofertas')
-      .select(
-        'id, titulo, descricao, bairro, valor, valor_por_pacote, exige_nota_fiscal, status, tipo_entrega, veiculo_necessario, quantidade_pacotes, endereco_coleta, data_trabalho, hora_inicio, hora_fim, empresa_id'
-      )
-      .eq('id', data.id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
+    const [oferta] = await db
+      .select()
+      .from(ofertas)
+      .where(eq(ofertas.id, data.id))
+      .limit(1);
     if (!oferta) return null;
 
     let empresaNome: string | null = null;
-    if (oferta.empresa_id) {
-      const { data: emp } = await supabaseAdmin
-        .from('empresas')
-        .select('nome_fantasia, razao_social')
-        .eq('id', oferta.empresa_id)
-        .maybeSingle();
-      empresaNome = emp?.nome_fantasia || emp?.razao_social || null;
+    if (oferta.empresaId) {
+      const [emp] = await db
+        .select({ nomeFantasia: empresas.nomeFantasia, razaoSocial: empresas.razaoSocial })
+        .from(empresas)
+        .where(eq(empresas.id, oferta.empresaId))
+        .limit(1);
+      empresaNome = emp?.nomeFantasia || emp?.razaoSocial || null;
     }
-    const { empresa_id: _e, ...safe } = oferta;
-    return { ...safe, empresa_nome: empresaNome };
+
+    return {
+      id: oferta.id,
+      titulo: oferta.titulo,
+      descricao: oferta.descricao,
+      bairro: oferta.bairro,
+      valor: oferta.valor,
+      valor_por_pacote: oferta.valorPorPacote,
+      exige_nota_fiscal: oferta.exigeNotaFiscal,
+      status: oferta.status,
+      tipo_entrega: oferta.tipoEntrega,
+      veiculo_necessario: oferta.veiculoNecessario,
+      quantidade_pacotes: oferta.quantidadePacotes,
+      endereco_coleta: oferta.enderecoColeta,
+      data_trabalho: oferta.dataTrabalho,
+      hora_inicio: oferta.horaInicio,
+      hora_fim: oferta.horaFim,
+      empresa_nome: empresaNome,
+    };
   });

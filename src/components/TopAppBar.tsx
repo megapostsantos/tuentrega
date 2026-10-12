@@ -133,8 +133,7 @@ export function TopAppBar() {
   };
 
   const fullName: string =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.company_name ||
+    user?.name ||
     user?.email?.split("@")[0] || "";
   const first = fullName.split(" ")[0] || "você";
 

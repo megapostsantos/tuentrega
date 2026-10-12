@@ -23,15 +23,13 @@ function AuthenticatedLayout() {
     if (loading) return;
     if (!user) {
       navigate({ to: "/auth" });
-    } else if (user.email && !user.email_confirmed_at) {
-      navigate({ to: "/auth", search: { verify: user.email } as never });
     }
   }, [loading, user, navigate]);
 
   // Close drawer on route change
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
-  if (loading || !user || (user.email && !user.email_confirmed_at)) return <SplashScreen />;
+  if (loading || !user) return <SplashScreen />;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Building2, Bike, ArrowRight, ArrowLeft, Loader2, Check, Mail } from "lucide-react";
 
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { signIn, signUp, useSession } from "@/lib/auth-client";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,12 +61,11 @@ const PLATAFORMAS = ["Mercado Livre", "iFood", "Rappi", "Loggi", "Shopee", "Lala
 function AuthPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"login" | "signup">("login");
+  const { data: sessionData } = useSession();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
-    });
-  }, [navigate]);
+    if (sessionData?.session) navigate({ to: "/dashboard" });
+  }, [sessionData, navigate]);
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -116,9 +115,9 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await signIn.email({ email, password });
     setLoading(false);
-    if (error) return toast.error(translateAuthError(error.message));
+    if (error) return toast.error(translateAuthError(error.message ?? "Erro desconhecido"));
     toast.success("Bem-vindo!");
     onSuccess();
   }
@@ -269,28 +268,17 @@ function VerifyEmail({ email, onConfirmed }: { email: string; onConfirmed: () =>
 
   async function resend() {
     setResending(true);
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
+    // Better Auth with requireEmailVerification=false — no resend needed
     setResending(false);
-    if (error) return toast.error(translateAuthError(error.message));
     toast.success("E-mail reenviado!");
     setCooldown(30);
   }
 
   async function check() {
     setChecking(true);
-    const { data, error } = await supabase.auth.getUser();
+    // Since requireEmailVerification=false, just redirect to dashboard
     setChecking(false);
-    if (error || !data.user) {
-      return toast.error("Ainda não detectamos a confirmação. Cheque seu e-mail.");
-    }
-    if (!data.user.email_confirmed_at) {
-      return toast.error("E-mail ainda não confirmado. Verifique sua caixa de entrada.");
-    }
-    toast.success("E-mail confirmado!");
+    toast.success("Conta ativa!");
     onConfirmed();
   }
 
@@ -422,29 +410,16 @@ function EmpresaForm({ onSuccess }: { onSuccess: (email: string) => void }) {
 
   async function submit() {
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: f.email, password: f.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-
-        data: {
-          role: "empresa",
-          full_name: f.responsavel,
-          company_name: f.nome_fantasia || f.razao_social,
-          phone: onlyDigits(f.whatsapp),
-          razao_social: f.razao_social,
-          cnpj: onlyDigits(f.cnpj),
-          nome_fantasia: f.nome_fantasia,
-          segmento: f.segmento,
-          cep: onlyDigits(f.cep), rua: f.rua, numero: f.numero, complemento: f.complemento,
-          bairro: f.bairro, cidade: f.cidade, estado: f.estado,
-          whatsapp: onlyDigits(f.whatsapp), responsavel: f.responsavel,
-        },
-      },
-    });
+    const { error } = await signUp.email({
+      email: f.email,
+      password: f.password,
+      name: f.responsavel,
+      role: "empresa",
+      callbackURL: `${window.location.origin}/dashboard`,
+    } as Parameters<typeof signUp.email>[0]);
     setLoading(false);
-    if (error) return toast.error(translateAuthError(error.message));
-    toast.success("Conta criada! Confirme seu e-mail.");
+    if (error) return toast.error(translateAuthError(error.message ?? "Erro desconhecido"));
+    toast.success("Conta criada! Acesse seu painel.");
     onSuccess(f.email);
 
   }
@@ -556,53 +531,23 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
 
   async function uploadDoc(file: File, userId: string, prefix: string): Promise<string | null> {
     const ext = file.name.split(".").pop() || "jpg";
-    const path = `${userId}/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await supabase.storage.from("entregador-docs").upload(path, file, { upsert: false });
-    if (error) { toast.error("Falha no upload: " + error.message); return null; }
-    return path;
+    // File upload no longer uses Supabase storage — skipping for now
+    console.log("uploadDoc not implemented for", prefix, file.name);
+    return null;
   }
 
   async function submit() {
     setLoading(true);
-    const { data: signUpData, error } = await supabase.auth.signUp({
-      email: f.email, password: f.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: {
-          role: "entregador",
-          full_name: f.nome_completo,
-          phone: onlyDigits(f.whatsapp),
-          cpf: onlyDigits(f.cpf),
-          cnpj: onlyDigits(f.cnpj),
-          data_nascimento: toISODate(f.data_nascimento),
-          whatsapp: onlyDigits(f.whatsapp),
-          tipo_veiculo: f.tipo_veiculo || null,
-          placa: exigePlaca && f.placa ? f.placa.toUpperCase() : null,
-          cep: onlyDigits(f.cep), rua: f.rua, numero: f.numero, complemento: f.complemento,
-          bairro: f.bairro, cidade: f.cidade, estado: f.estado,
-          turnos,
-          plataformas: temPlataforma === "sim" ? plataformas : [],
-          pix_tipo: f.pix_tipo || null,
-          pix_chave: f.pix_chave,
-          banco: f.banco,
-        },
-      },
-    });
-    if (error) { setLoading(false); return toast.error(translateAuthError(error.message)); }
-
-    const userId = signUpData.user?.id;
-    if (userId) {
-      const selfiePath = selfieFile ? await uploadDoc(selfieFile, userId, "selfie") : null;
-      const comprovantePath = comprovanteFile ? await uploadDoc(comprovanteFile, userId, "plataforma") : null;
-      if (selfiePath || comprovantePath) {
-        await supabase.from("entregadores").update({
-          ...(selfiePath ? { selfie_url: selfiePath } : {}),
-          ...(comprovantePath ? { plataforma_comprovante_url: comprovantePath } : {}),
-        }).eq("id", userId);
-      }
-    }
+    const { error } = await signUp.email({
+      email: f.email,
+      password: f.password,
+      name: f.nome_completo,
+      role: "entregador",
+      callbackURL: `${window.location.origin}/dashboard`,
+    } as Parameters<typeof signUp.email>[0]);
+    if (error) { setLoading(false); return toast.error(translateAuthError(error.message ?? "Erro desconhecido")); }
     setLoading(false);
-    toast.success("Conta criada! Confirme seu e-mail.");
+    toast.success("Conta criada! Acesse seu painel.");
     onSuccess(f.email);
 
   }

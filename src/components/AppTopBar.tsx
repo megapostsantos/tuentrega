@@ -84,9 +84,7 @@ export function AppTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   };
 
   const fullName: string =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.nome_completo ||
-    user?.user_metadata?.company_name ||
+    user?.name ||
     user?.email?.split("@")[0] || "";
 
   return (

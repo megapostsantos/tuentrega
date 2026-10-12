@@ -80,9 +80,9 @@ function OfertaPublicPage() {
 
               <div className="rounded-lg bg-[#0D1B2A]/5 border p-4">
                 <div className="text-sm text-muted-foreground">Valor total</div>
-                <div className="text-3xl font-bold text-[#0D1B2A]">{brl(data.valor)}</div>
+                <div className="text-3xl font-bold text-[#0D1B2A]">{brl(Number(data.valor))}</div>
                 {data.valor_por_pacote ? (
-                  <div className="text-sm text-muted-foreground mt-1">{brl(data.valor_por_pacote)} por pacote</div>
+                  <div className="text-sm text-muted-foreground mt-1">{brl(Number(data.valor_por_pacote))} por pacote</div>
                 ) : null}
               </div>
 

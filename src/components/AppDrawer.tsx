@@ -4,6 +4,7 @@ import {
   Bike, Building2, CalendarDays, BarChart2, Wallet, Settings, Users, LogOut, X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth-client";
 import { useAuth, type AppRole } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -62,7 +63,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
   const isActive = (p: string) => currentPath === p;
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    await signOut();
     toast.success("Sessão encerrada");
     onClose();
     navigate({ to: "/" });
@@ -70,9 +71,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
 
   const email = user?.email ?? "";
   const displayName =
-    (user?.user_metadata as any)?.nome_completo ||
-    (user?.user_metadata as any)?.full_name ||
-    (user?.user_metadata as any)?.name ||
+    user?.name ||
     email.split("@")[0] || "Usuário";
 
   return (

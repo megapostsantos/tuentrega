@@ -10,6 +10,7 @@ import {
 import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth-client";
 import { toast } from "sonner";
 
 const items = [
@@ -27,7 +28,7 @@ export function AdminSidebar({ unreadCount = 0 }: { unreadCount?: number }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
 
   async function logout() {
-    await supabase.auth.signOut();
+    await signOut();
     toast.success("Sessão encerrada");
     navigate({ to: "/admin/login" });
   }

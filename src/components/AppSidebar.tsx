@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth-client";
 import { useAuth, type AppRole } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
@@ -89,13 +90,13 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
   const isActive = (p: string) => currentPath === p;
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    await signOut();
     toast.success("Sessão encerrada");
     navigate({ to: "/" });
   }
 
   const email = user?.email ?? "";
-  const displayName = (user?.user_metadata as any)?.nome_completo || (user?.user_metadata as any)?.name || email.split("@")[0] || "Usuário";
+  const displayName = user?.name || email.split("@")[0] || "Usuário";
   const initials = displayName.split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase() || "BE";
 
   return (
