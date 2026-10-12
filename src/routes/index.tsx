@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import bagLogo from "@/assets/bag-logo-transparent.png.asset.json";
 import {
   Truck,
   Package,
@@ -58,14 +57,12 @@ function Landing() {
       >
         <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between gap-3">
           <a href="#top" className="flex items-center gap-2 text-white">
-            <img
-              src={bagLogo.url}
-              alt="TuEntrega"
-              className="w-9 h-9 rounded-lg object-cover border border-yellow-500/30"
-            />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg font-black text-sm" style={{ backgroundColor: YELLOW, color: NAVY }}>
+              TE
+            </div>
             <span className="tracking-tight text-sm sm:text-base" style={heading}>
-              BAG <span style={{ color: YELLOW }}>envios</span>
-              <span className="hidden sm:inline text-white/70 font-medium"> & variedades</span>
+              Tu<span style={{ color: YELLOW }}>Entrega</span>
+              <span className="hidden sm:inline text-white/70 font-medium"> · last mile</span>
             </span>
           </a>
           <div className="flex items-center gap-2 sm:gap-3">
@@ -164,11 +161,9 @@ function Landing() {
                 className="absolute inset-0 rounded-[3rem] blur-3xl opacity-30"
                 style={{ background: YELLOW }}
               />
-              <img
-                src={bagLogo.url}
-                alt="TuEntrega — last mile delivery"
-                className="relative w-full h-full object-contain drop-shadow-2xl"
-              />
+              <div className="relative w-full h-full flex items-center justify-center">
+                <div className="flex h-48 w-48 items-center justify-center rounded-[3rem] font-black text-6xl" style={{ backgroundColor: YELLOW, color: NAVY }}>TE</div>
+              </div>
             </div>
           </div>
         </div>
@@ -248,7 +243,7 @@ function Landing() {
         <div className="max-w-7xl mx-auto text-white">
           <div className="text-center mb-14 space-y-3">
             <span className="text-sm uppercase tracking-widest" style={{ color: YELLOW, ...heading }}>
-              Seja entregador BAG
+              Seja entregador TuEntrega
             </span>
             <h2 className="text-4xl md:text-5xl uppercase" style={heading}>
               Cadastre-se com o seu <span style={{ color: YELLOW }}>modal</span>
@@ -289,7 +284,7 @@ function Landing() {
               Quero me cadastrar <ArrowRight className="w-5 h-5" />
             </Link>
             <a
-              href={`${WHATSAPP}?text=${encodeURIComponent("Olá! Quero ser entregador da BAG.")}`}
+              href={`${WHATSAPP}?text=${encodeURIComponent("Olá! Quero ser entregador da TuEntrega.")}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-full uppercase tracking-wide border-2 border-white/25 text-white hover:border-white transition-colors"
@@ -342,12 +337,12 @@ function Landing() {
         </div>
       </section>
 
-      {/* POR QUE A BAG */}
+      {/* POR QUE A TUENTREGA */}
       <section className="py-20 px-5 relative overflow-hidden" style={{ background: NAVY }}>
         <div className="max-w-7xl mx-auto text-white">
           <div className="text-center mb-14 space-y-3">
             <span className="text-sm uppercase tracking-widest" style={{ color: YELLOW, ...heading }}>
-              Por que a BAG
+              Por que a TuEntrega
             </span>
             <h2 className="text-4xl md:text-5xl uppercase" style={heading}>
               Feitos para <span style={{ color: YELLOW }}>entregar</span>
@@ -471,8 +466,8 @@ function Landing() {
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-widest text-[#0D1B2A]/60" style={heading}>Instagram</p>
-                  <a href="https://instagram.com/bag_envios" target="_blank" rel="noreferrer" className="text-base" style={heading}>
-                    @bag_envios
+                  <a href="https://instagram.com/tuentrega" target="_blank" rel="noreferrer" className="text-base" style={heading}>
+                    @tuentrega
                   </a>
                 </div>
               </div>
@@ -522,7 +517,7 @@ function Landing() {
               <div className="w-2 h-2 rounded-full mt-1" style={{ background: NAVY }} />
             </div>
             <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center">
-              <span className="text-white text-xs uppercase tracking-widest" style={heading}>BAG · Santos/SP</span>
+              <span className="text-white text-xs uppercase tracking-widest" style={heading}>TuEntrega · Santos/SP</span>
               <span
                 className="px-3 py-1.5 rounded-full text-xs uppercase tracking-widest group-hover:scale-105 transition-transform"
                 style={{ background: YELLOW, color: NAVY, ...heading }}
@@ -538,13 +533,9 @@ function Landing() {
       <footer className="py-8 px-5" style={{ background: "#060E17" }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-center text-center md:text-left">
           <div className="flex items-center gap-2 justify-center md:justify-start">
-            <img
-              src={bagLogo.url}
-              alt="TuEntrega"
-              className="w-8 h-8 rounded-lg object-cover border border-yellow-500/30"
-            />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg font-black text-xs" style={{ backgroundColor: YELLOW, color: NAVY }}>TE</div>
             <span className="text-white text-sm" style={heading}>
-              BAG <span style={{ color: YELLOW }}>envios</span>
+              Tu<span style={{ color: YELLOW }}>Entrega</span>
             </span>
           </div>
           <p
@@ -554,12 +545,12 @@ function Landing() {
             Envie · Retire · Compre
           </p>
           <a
-            href="https://instagram.com/bag_envios"
+            href="https://instagram.com/tuentrega"
             target="_blank"
             rel="noreferrer"
             className="text-white/70 hover:text-white text-sm md:text-right flex items-center gap-2 justify-center md:justify-end"
           >
-            <Instagram className="w-4 h-4" /> @bag_envios
+            <Instagram className="w-4 h-4" /> @tuentrega
           </a>
         </div>
         <p className="text-center text-white/40 text-xs mt-6">
