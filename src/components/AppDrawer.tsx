@@ -99,7 +99,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
             BE
           </div>
           <div className="flex flex-1 flex-col leading-tight min-w-0">
-            <span className="text-sm font-bold tracking-tight text-white">BAG Envios</span>
+            <span className="text-sm font-bold tracking-tight text-white">TuEntrega</span>
             <span className="text-[10px] font-medium uppercase tracking-wider text-[#FFB700]">
               envios & variedades
             </span>

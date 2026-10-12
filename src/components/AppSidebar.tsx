@@ -107,7 +107,7 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
             BE
           </div>
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-bold tracking-tight text-white">BAG Envios</span>
+            <span className="text-sm font-bold tracking-tight text-white">TuEntrega</span>
             <span className="text-[10px] font-medium uppercase tracking-wider text-[#FFB700]">envios & variedades</span>
           </div>
         </Link>

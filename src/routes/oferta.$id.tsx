@@ -11,10 +11,10 @@ import { Logo } from "@/components/Logo";
 export const Route = createFileRoute("/oferta/$id")({
   head: () => ({
     meta: [
-      { title: "Oferta de entrega — BAG Envios" },
-      { name: "description", content: "Confira os detalhes da oferta de entrega e aceite pelo app BAG Envios." },
-      { property: "og:title", content: "Oferta de entrega — BAG Envios" },
-      { property: "og:description", content: "Confira os detalhes da oferta de entrega e aceite pelo app BAG Envios." },
+      { title: "Oferta de entrega — TuEntrega" },
+      { name: "description", content: "Confira os detalhes da oferta de entrega e aceite pelo app TuEntrega." },
+      { property: "og:title", content: "Oferta de entrega — TuEntrega" },
+      { property: "og:description", content: "Confira os detalhes da oferta de entrega e aceite pelo app TuEntrega." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

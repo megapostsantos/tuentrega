@@ -24,13 +24,13 @@ import {
 export const Route = createFileRoute("/landing")({
   head: () => ({
     meta: [
-      { title: "BAG Envios & Variedades — Last Mile na Baixada Santista" },
+      { title: "TuEntrega — Last Mile na Baixada Santista" },
       {
         name: "description",
         content:
           "Especialistas em entregas last mile em Santos e região. Contrate entregas, use nosso sistema de gestão ou seja um entregador BAG.",
       },
-      { property: "og:title", content: "BAG Envios & Variedades" },
+      { property: "og:title", content: "TuEntrega" },
       {
         property: "og:description",
         content:
@@ -69,7 +69,7 @@ function LandingPage() {
               B
             </div>
             <div className="hidden text-sm font-bold leading-tight sm:block">
-              BAG Envios
+              TuEntrega
               <div className="text-[10px] font-medium text-white/60">
                 & Variedades
               </div>
@@ -113,7 +113,7 @@ function LandingPage() {
             Santista
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-base text-white/70 md:text-lg">
-            A BAG Envios é uma empresa de entregas focada na última milha —
+            A TuEntrega é uma empresa de entregas focada na última milha —
             levamos seu pacote do ponto de origem até a porta do destinatário
             com agilidade, segurança e eficiência. Atendemos Santos e região.
           </p>
@@ -267,7 +267,7 @@ function LandingPage() {
             <p className="mt-5 text-white/70 md:text-lg">
               Farmácias, lojas, e-commerces, restaurantes — qualquer negócio
               que precisa despachar mercadorias regularmente pode contratar a
-              BAG Envios. Cadastre sua empresa, solicite entregas pelo painel
+              TuEntrega. Cadastre sua empresa, solicite entregas pelo painel
               e nós cuidamos do resto.
             </p>
           </div>
@@ -291,7 +291,7 @@ function LandingPage() {
           </div>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <a
-              href={`${WA}?text=${encodeURIComponent("Olá, quero contratar a BAG Envios para minha empresa")}`}
+              href={`${WA}?text=${encodeURIComponent("Olá, quero contratar a TuEntrega para minha empresa")}`}
               target="_blank"
               rel="noreferrer"
               className="flex items-center justify-center gap-2 rounded-md px-6 py-3.5 text-sm font-black"
@@ -362,7 +362,7 @@ function LandingPage() {
           </div>
           <div className="mt-10">
             <a
-              href={`${WA}?text=${encodeURIComponent("Olá, quero conhecer o sistema de gestão da BAG Envios")}`}
+              href={`${WA}?text=${encodeURIComponent("Olá, quero conhecer o sistema de gestão da TuEntrega")}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-md px-6 py-3.5 text-sm font-black"
@@ -405,7 +405,7 @@ function LandingPage() {
             </h2>
             <p className="mt-4 max-w-2xl text-white/70">
               Retire, devolva e envie seus pedidos do Mercado Livre aqui na
-              BAG Envios. Sem complicação, sem fila, com atendimento
+              TuEntrega. Sem complicação, sem fila, com atendimento
               presencial de qualidade.
             </p>
 
@@ -431,7 +431,7 @@ function LandingPage() {
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 max-w-3xl">
             <h2 className="text-3xl font-black leading-tight md:text-5xl">
-              Trabalhe com a BAG Envios.
+              Trabalhe com a TuEntrega.
             </h2>
             <p className="mt-5 text-base font-medium md:text-lg">
               Somos uma plataforma que conecta entregadores a empresas que
@@ -561,7 +561,7 @@ function LandingPage() {
                 className="mt-3 rounded-md px-3 py-1.5 text-xs font-black shadow-lg"
                 style={{ backgroundColor: NAVY, color: "white" }}
               >
-                BAG Envios · Santos
+                TuEntrega · Santos
               </div>
             </div>
             <a
@@ -591,7 +591,7 @@ function LandingPage() {
               B
             </div>
             <div className="text-sm font-bold leading-tight">
-              BAG Envios
+              TuEntrega
               <div className="text-[10px] font-medium text-white/60">
                 & Variedades
               </div>
