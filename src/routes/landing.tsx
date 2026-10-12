@@ -28,7 +28,7 @@ export const Route = createFileRoute("/landing")({
       {
         name: "description",
         content:
-          "Especialistas em entregas last mile em Santos e região. Contrate entregas, use nosso sistema de gestão ou seja um entregador BAG.",
+          "Especialistas em entregas last mile em Santos e região. Contrate entregas, use nosso sistema de gestão ou seja um entregador TuEntrega.",
       },
       { property: "og:title", content: "TuEntrega" },
       {
@@ -176,7 +176,7 @@ function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-14 text-center">
             <h2 className="text-3xl font-black md:text-5xl">
-              O que a BAG faz por você
+              O que a TuEntrega faz por você
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-white/70">
               Para pessoas físicas, lojas e empresas que precisam de entregas
@@ -193,7 +193,7 @@ function LandingPage() {
               {
                 icon: PackageOpen,
                 name: "Retiradas",
-                desc: "Receba seus pedidos aqui na BAG — seu pacote fica guardado com segurança",
+                desc: "Receba seus pedidos aqui na TuEntrega — seu pacote fica guardado com segurança",
               },
               {
                 icon: Send,
@@ -321,7 +321,7 @@ function LandingPage() {
               SISTEMA DE GESTÃO
             </div>
             <h2 className="text-3xl font-black leading-tight md:text-5xl">
-              Você também opera entregas? Use o sistema da BAG.
+              Você também opera entregas? Use o sistema da TuEntrega.
             </h2>
             <p className="mt-5 text-white/70 md:text-lg">
               Oferecemos nosso sistema de gestão logística para outras
@@ -410,7 +410,7 @@ function LandingPage() {
             </p>
 
             <a
-              href={`${WA}?text=${encodeURIComponent("Olá, como funciona o ponto Mercado Livre da BAG?")}`}
+              href={`${WA}?text=${encodeURIComponent("Olá, como funciona o ponto Mercado Livre da TuEntrega?")}`}
               target="_blank"
               rel="noreferrer"
               className="mt-6 inline-flex items-center gap-2 rounded-md border border-white/30 px-5 py-3 text-sm font-black hover:bg-white/10"
@@ -443,7 +443,7 @@ function LandingPage() {
             {[
               "Rotas diárias disponíveis na sua região",
               "Pagamento rápido e transparente pelo app",
-              "Suporte da equipe BAG em cada etapa",
+              "Suporte da equipe TuEntrega em cada etapa",
             ].map((v) => (
               <div
                 key={v}
@@ -503,7 +503,7 @@ function LandingPage() {
                   <div className="text-xs font-bold uppercase text-white/50">
                     Instagram
                   </div>
-                  <div className="text-sm font-bold">@bag.envios</div>
+                  <div className="text-sm font-bold">@tuentrega</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -604,7 +604,7 @@ function LandingPage() {
             ENVIE · RETIRE · COMPRE
           </div>
           <div className="text-xs font-bold text-white/70">
-            @bag.envios · (13) 99110-5065
+            @tuentrega · (13) 99110-5065
           </div>
         </div>
       </footer>
