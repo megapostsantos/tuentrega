@@ -1,31 +1,29 @@
-import { createAPIFileRoute } from "@tanstack/start/api";
 import { db } from "@/db";
-import { empresas, entregadores, user } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { empresas, entregadores } from "@/db/schema";
 
-export const APIRoute = createAPIFileRoute("/api/admin/accounts")({
-  GET: async ({ request }) => {
+export default {
+  async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const type = url.searchParams.get("type");
 
     if (type === "empresa") {
       const rows = await db
-        .select({ id: empresas.id, name: empresas.razao_social })
+        .select({ id: empresas.id, name: empresas.razaoSocial })
         .from(empresas)
-        .orderBy(empresas.razao_social)
+        .orderBy(empresas.razaoSocial)
         .limit(200);
       return Response.json(rows);
     }
 
     if (type === "entregador") {
       const rows = await db
-        .select({ id: entregadores.id, name: entregadores.nome_completo })
+        .select({ id: entregadores.id, name: entregadores.nomeCompleto })
         .from(entregadores)
-        .orderBy(entregadores.nome_completo)
+        .orderBy(entregadores.nomeCompleto)
         .limit(200);
       return Response.json(rows);
     }
 
     return Response.json({ error: "type must be empresa or entregador" }, { status: 400 });
   },
-});
+};
