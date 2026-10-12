@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm bun.lock bunfig.toml)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'fix: remove bun.lock and bunfig.toml to use npm on Cloudflare build *)",
+      "Bash(git push *)"
+    ]
+  }
+}
