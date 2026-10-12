@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth-client";
 import { useAuth, type AppRole } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
@@ -89,13 +90,13 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
   const isActive = (p: string) => currentPath === p;
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    await signOut();
     toast.success("Sessão encerrada");
     navigate({ to: "/" });
   }
 
   const email = user?.email ?? "";
-  const displayName = (user?.user_metadata as any)?.nome_completo || (user?.user_metadata as any)?.name || email.split("@")[0] || "Usuário";
+  const displayName = user?.name || email.split("@")[0] || "Usuário";
   const initials = displayName.split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase() || "BE";
 
   return (
@@ -103,11 +104,11 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
       <SidebarHeader className="border-b border-white/10 bg-[#0D1B2A]">
         <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FFB700] text-[#0D1B2A] font-black text-sm">
-            BE
+            TE
           </div>
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-bold tracking-tight text-white">BAG Envios</span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-[#FFB700]">envios & variedades</span>
+            <span className="text-sm font-bold tracking-tight text-white">TuEntrega</span>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[#FFB700]">last mile delivery</span>
           </div>
         </Link>
       </SidebarHeader>

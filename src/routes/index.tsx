@@ -22,13 +22,13 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "BAG Envios & Variedades — Last Mile em Santos/SP" },
+      { title: "TuEntrega — Last Mile em Santos/SP" },
       {
         name: "description",
         content:
           "Entregas, retiradas, envios e devoluções em Santos. Ponto oficial Mercado Livre. Last Mile com agilidade, segurança e eficiência.",
       },
-      { property: "og:title", content: "BAG Envios & Variedades" },
+      { property: "og:title", content: "TuEntrega" },
       {
         property: "og:description",
         content:
@@ -60,7 +60,7 @@ function Landing() {
           <a href="#top" className="flex items-center gap-2 text-white">
             <img
               src={bagLogo.url}
-              alt="BAG Envios"
+              alt="TuEntrega"
               className="w-9 h-9 rounded-lg object-cover border border-yellow-500/30"
             />
             <span className="tracking-tight text-sm sm:text-base" style={heading}>
@@ -166,7 +166,7 @@ function Landing() {
               />
               <img
                 src={bagLogo.url}
-                alt="BAG Envios — envios & variedades"
+                alt="TuEntrega — last mile delivery"
                 className="relative w-full h-full object-contain drop-shadow-2xl"
               />
             </div>
@@ -540,7 +540,7 @@ function Landing() {
           <div className="flex items-center gap-2 justify-center md:justify-start">
             <img
               src={bagLogo.url}
-              alt="BAG Envios"
+              alt="TuEntrega"
               className="w-8 h-8 rounded-lg object-cover border border-yellow-500/30"
             />
             <span className="text-white text-sm" style={heading}>
@@ -563,7 +563,7 @@ function Landing() {
           </a>
         </div>
         <p className="text-center text-white/40 text-xs mt-6">
-          © {new Date().getFullYear()} BAG Envios & Variedades · Santos/SP
+          © {new Date().getFullYear()} TuEntrega · Santos/SP
         </p>
       </footer>
     </div>

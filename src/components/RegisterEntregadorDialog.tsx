@@ -93,7 +93,7 @@ export function RegisterEntregadorDialog({
 
   function shareWhats() {
     if (!done) return;
-    const msg = `Olá ${done.nome}! Você foi cadastrado na BAG Envios. Em breve chegará um email com seu acesso. Qualquer dúvida, fale comigo aqui!`;
+    const msg = `Olá ${done.nome}! Você foi cadastrado na TuEntrega. Em breve chegará um email com seu acesso. Qualquer dúvida, fale comigo aqui!`;
     const phone = done.whatsapp.replace(/\D/g, "");
     const url = phone
       ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`

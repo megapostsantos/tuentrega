@@ -1,24 +1,14 @@
-import { useEffect, useState } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/auth-client";
 import { useImpersonation } from "@/lib/impersonation";
 
-export type AppRole = "admin" | "empresa" | "entregador" | "dispatcher";
+export type AppRole = "admin" | "empresa" | "dispatcher" | "entregador";
 
 const PRECEDENCE: AppRole[] = ["admin", "dispatcher", "empresa", "entregador"];
 
-function pickRole(rows: { role: string }[] | null): AppRole | null {
-  if (!rows?.length) return null;
-  const set = new Set(rows.map((r) => r.role));
-  for (const r of PRECEDENCE) if (set.has(r)) return r;
-  return null;
-}
-
 export interface AuthState {
-  user: User | null;
-  session: Session | null;
+  user: { id: string; email: string; name: string; emailVerified: boolean; image?: string | null; role?: string | null } | null;
+  session: { id: string; userId: string; expiresAt: Date } | null;
   role: AppRole | null;
-  /** All roles the user holds (useful when dispatcher is also entregador). */
   roles: AppRole[];
   loading: boolean;
   isImpersonating: boolean;
@@ -27,73 +17,36 @@ export interface AuthState {
 }
 
 export function useAuth(): AuthState {
-  const [session, setSession] = useState<Session | null>(null);
-  const [role, setRole] = useState<AppRole | null>(null);
-  const [roles, setRoles] = useState<AppRole[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: sessionData, isPending } = useSession();
   const imp = useImpersonation();
 
-  useEffect(() => {
-    const loadRoles = (uid: string) => {
-      supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", uid)
-        .then(({ data }) => {
-          const list = (data ?? []) as { role: string }[];
-          setRoles(list.map((r) => r.role as AppRole));
-          setRole(pickRole(list));
-        });
-    };
+  const user = sessionData?.user ?? null;
+  const session = sessionData?.session ?? null;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      if (s?.user) {
-        setTimeout(() => loadRoles(s.user.id), 0);
-      } else {
-        setRole(null);
-        setRoles([]);
-      }
-    });
+  // better-auth stores a single role on the user record
+  const userRole = (user?.role as AppRole) ?? null;
+  const roles: AppRole[] = userRole ? [userRole] : [];
+  const role: AppRole | null = userRole
+    ? PRECEDENCE.find((r) => roles.includes(r)) ?? null
+    : null;
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      if (data.session?.user) {
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.session.user.id)
-          .then(({ data: r }) => {
-            const list = (r ?? []) as { role: string }[];
-            setRoles(list.map((row) => row.role as AppRole));
-            setRole(pickRole(list));
-            setLoading(false);
-          });
-      } else {
-        setLoading(false);
-      }
-    });
+  const loading = isPending;
 
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const realUser = session?.user ?? null;
-
-  if (imp && role === "admin" && realUser) {
+  if (imp && role === "admin" && user) {
     return {
-      user: { ...realUser, id: imp.targetUserId } as User,
+      user: { ...user, id: imp.targetUserId },
       session,
       role: imp.targetType as AppRole,
       roles: [imp.targetType as AppRole],
       loading,
       isImpersonating: true,
-      realUserId: realUser.id,
+      realUserId: user.id,
       realRole: "admin",
     };
   }
 
   return {
-    user: realUser,
+    user,
     session,
     role,
     roles,

@@ -1359,12 +1359,12 @@ function EditOfertaDialog({
 }
 
 function ShareOfertaDialog({ o, onClose }: { o: Oferta; onClose: () => void }) {
-  const base = typeof window !== "undefined" ? window.location.origin : "https://bagenvios.lovable.app";
+  const base = typeof window !== "undefined" ? window.location.origin : "https://tuentrega.lovable.app";
   const brl = (n: number | null | undefined) =>
     `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 
   const lines: string[] = [];
-  lines.push(`🚚 BAG Envios — ${o.titulo}`);
+  lines.push(`🚚 TuEntrega — ${o.titulo}`);
   if (o.data_trabalho) {
     lines.push(
       `📅 ${new Date(o.data_trabalho).toLocaleDateString("pt-BR")}${o.hora_inicio ? ` · ${o.hora_inicio.slice(0, 5)}` : ""}${o.hora_fim ? ` - ${o.hora_fim.slice(0, 5)}` : ""}`,
@@ -1377,7 +1377,7 @@ function ShareOfertaDialog({ o, onClose }: { o: Oferta; onClose: () => void }) {
   if (o.descricao) lines.push(`\n${o.descricao}`);
   lines.push(`\nVer detalhes: ${base}/oferta/${o.id}`);
   const message = lines.join("\n");
-  const subject = `BAG Envios — ${o.titulo}`;
+  const subject = `TuEntrega — ${o.titulo}`;
 
   const waHref = `https://wa.me/?text=${encodeURIComponent(message)}`;
   const mailHref = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;

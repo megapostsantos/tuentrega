@@ -84,9 +84,7 @@ export function AppTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   };
 
   const fullName: string =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.nome_completo ||
-    user?.user_metadata?.company_name ||
+    user?.name ||
     user?.email?.split("@")[0] || "";
 
   return (
@@ -102,7 +100,7 @@ export function AppTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 
         <div className="flex flex-1 items-center justify-center">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <span className="text-base font-black tracking-tight text-foreground sm:text-lg">BAG Envios</span>
+            <span className="text-base font-black tracking-tight text-foreground sm:text-lg">TuEntrega</span>
           </Link>
         </div>
 

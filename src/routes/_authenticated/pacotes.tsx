@@ -1507,7 +1507,7 @@ function RouteMapButton({ ofertaIds }: { ofertaIds: string[] }) {
 
       // Respect optimized order if all have it
       const orderMap = new Map(limited.map((p: any) => [p.id, p.ordem_otimizada ?? p.numero_pacote]));
-      result.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+      result.sort((a, b) => ((orderMap.get(a.id) ?? 0) as number) - ((orderMap.get(b.id) ?? 0) as number));
 
       setStops(result);
       setSkipped(skippedCount + (limited.length - result.length));
@@ -1738,7 +1738,7 @@ function SharePublishedOffers({
   offers: Array<{ id: string; titulo: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number; valor_por_pacote: number }>;
   onDone: () => void;
 }) {
-  const base = typeof window !== "undefined" ? window.location.origin : "https://bagenvios.lovable.app";
+  const base = typeof window !== "undefined" ? window.location.origin : "https://tuentrega.lovable.app";
   const brl = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 
   const buildMessage = () => {
@@ -1747,13 +1747,13 @@ function SharePublishedOffers({
         `• ${o.titulo}\n  📦 ${o.quantidade_pacotes} pacotes · 🗺️ ${o.quantidade_paradas} paradas · 💰 ${brl(o.valor_por_pacote)}/pacote · 💵 ${brl(o.valor_total)}\n  🔗 ${base}/oferta/${o.id}`,
     );
     return (
-      `🚚 BAG Envios — Novas ofertas disponíveis!\n\n` +
+      `🚚 TuEntrega — Novas ofertas disponíveis!\n\n` +
       lines.join("\n\n")
     );
   };
 
   const message = buildMessage();
-  const subject = `BAG Envios — ${offers.length} nova(s) oferta(s) disponível(is)`;
+  const subject = `TuEntrega — ${offers.length} nova(s) oferta(s) disponível(is)`;
 
   const waHref = `https://wa.me/?text=${encodeURIComponent(message)}`;
   const mailHref = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;

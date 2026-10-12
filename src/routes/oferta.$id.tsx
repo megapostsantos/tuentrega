@@ -11,10 +11,10 @@ import { Logo } from "@/components/Logo";
 export const Route = createFileRoute("/oferta/$id")({
   head: () => ({
     meta: [
-      { title: "Oferta de entrega — BAG Envios" },
-      { name: "description", content: "Confira os detalhes da oferta de entrega e aceite pelo app BAG Envios." },
-      { property: "og:title", content: "Oferta de entrega — BAG Envios" },
-      { property: "og:description", content: "Confira os detalhes da oferta de entrega e aceite pelo app BAG Envios." },
+      { title: "Oferta de entrega — TuEntrega" },
+      { name: "description", content: "Confira os detalhes da oferta de entrega e aceite pelo app TuEntrega." },
+      { property: "og:title", content: "Oferta de entrega — TuEntrega" },
+      { property: "og:description", content: "Confira os detalhes da oferta de entrega e aceite pelo app TuEntrega." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -80,9 +80,9 @@ function OfertaPublicPage() {
 
               <div className="rounded-lg bg-[#0D1B2A]/5 border p-4">
                 <div className="text-sm text-muted-foreground">Valor total</div>
-                <div className="text-3xl font-bold text-[#0D1B2A]">{brl(data.valor)}</div>
+                <div className="text-3xl font-bold text-[#0D1B2A]">{brl(Number(data.valor))}</div>
                 {data.valor_por_pacote ? (
-                  <div className="text-sm text-muted-foreground mt-1">{brl(data.valor_por_pacote)} por pacote</div>
+                  <div className="text-sm text-muted-foreground mt-1">{brl(Number(data.valor_por_pacote))} por pacote</div>
                 ) : null}
               </div>
 

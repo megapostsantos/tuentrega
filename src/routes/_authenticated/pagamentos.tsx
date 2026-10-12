@@ -237,7 +237,7 @@ function EmpresaFinanceiro() {
   async function cobrarNF(g: GrupoEmpresa) {
     toast.success(`Lembrete de NF enviado para ${g.nome}`);
     if (g.whatsapp) console.info("[WhatsApp]", g.whatsapp,
-      `BAG Envios: ${empresaName} aguarda sua nota fiscal para liberar ${brl(g.total_pendente)}.`);
+      `TuEntrega: ${empresaName} aguarda sua nota fiscal para liberar ${brl(g.total_pendente)}.`);
   }
 
   return (
@@ -521,7 +521,7 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
       .in("oferta_id", ids).eq("status", "pendente");
 
     if (grupo.whatsapp) console.info("[WhatsApp]", grupo.whatsapp,
-      `BAG Envios ✅ Pagamento de ${brl(total)} confirmado por ${empresaName}.`);
+      `TuEntrega ✅ Pagamento de ${brl(total)} confirmado por ${empresaName}.`);
 
     toast.success(`Pagamento de ${brl(total)} registrado! ${grupo.nome} foi notificado.`);
     setSaving(false); onDone();

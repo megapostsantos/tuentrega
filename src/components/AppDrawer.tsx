@@ -4,6 +4,7 @@ import {
   Bike, Building2, CalendarDays, BarChart2, Wallet, Settings, Users, LogOut, X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth-client";
 import { useAuth, type AppRole } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -62,7 +63,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
   const isActive = (p: string) => currentPath === p;
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    await signOut();
     toast.success("Sessão encerrada");
     onClose();
     navigate({ to: "/" });
@@ -70,9 +71,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
 
   const email = user?.email ?? "";
   const displayName =
-    (user?.user_metadata as any)?.nome_completo ||
-    (user?.user_metadata as any)?.full_name ||
-    (user?.user_metadata as any)?.name ||
+    user?.name ||
     email.split("@")[0] || "Usuário";
 
   return (
@@ -97,12 +96,12 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FFB700] text-[#0D1B2A] font-black text-sm">
-            BE
+            TE
           </div>
           <div className="flex flex-1 flex-col leading-tight min-w-0">
-            <span className="text-sm font-bold tracking-tight text-white">BAG Envios</span>
+            <span className="text-sm font-bold tracking-tight text-white">TuEntrega</span>
             <span className="text-[10px] font-medium uppercase tracking-wider text-[#FFB700]">
-              envios & variedades
+              last mile delivery
             </span>
           </div>
           <button

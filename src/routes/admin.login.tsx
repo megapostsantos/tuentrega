@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, ShieldCheck } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { signIn, useSession } from "@/lib/auth-client";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,27 +15,21 @@ function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const { data: sessionData } = useSession();
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) return;
-      const { data: r } = await supabase
-        .from("user_roles").select("role").eq("user_id", data.session.user.id).eq("role", "admin").maybeSingle();
-      if (r) navigate({ to: "/admin/dashboard" });
-    })();
-  }, [navigate]);
+    if (sessionData?.user?.role === "admin") {
+      navigate({ to: "/admin/dashboard" });
+    }
+  }, [sessionData, navigate]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      const { data: r } = await supabase
-        .from("user_roles").select("role").eq("user_id", data.user.id).eq("role", "admin").maybeSingle();
-      if (!r) {
-        await supabase.auth.signOut();
+      const { data, error } = await signIn.email({ email, password });
+      if (error) throw new Error(error.message);
+      if (data?.user?.role !== "admin") {
         throw new Error("Esta conta não tem permissão de administrador.");
       }
       toast.success("Bem-vindo, Admin!");
@@ -57,7 +51,7 @@ function AdminLoginPage() {
           </span>
         </div>
         <h1 className="text-2xl font-bold tracking-tight">Acesso administrativo</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Acesso restrito ao time BAG Envios.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Acesso restrito ao time TuEntrega.</p>
 
         <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <div>

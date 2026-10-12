@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Upload, KeyRound, Camera, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth-client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ function Settings() {
   const navigate = useNavigate();
 
   async function logout() {
-    await supabase.auth.signOut();
+    await signOut();
     toast.success("Você saiu da sua conta");
     navigate({ to: "/auth" });
   }

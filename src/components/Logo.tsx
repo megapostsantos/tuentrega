@@ -9,7 +9,7 @@ export function Logo({ className, showText = true }: { className?: string; showT
       </div>
       {showText && (
         <span className="text-lg font-bold tracking-tight">
-          Bag<span className="text-primary"> Envios</span>
+          Tu<span className="text-primary">Entrega</span>
         </span>
       )}
     </div>
