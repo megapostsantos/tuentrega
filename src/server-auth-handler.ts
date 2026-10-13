@@ -15,14 +15,12 @@ export default defineEventHandler(async (event) => {
 
   if (url.pathname === "/api/auth/reset-admin" && url.searchParams.get("secret") === "tuentrega-reset-2024") {
     try {
-      const { auth } = await import("./lib/auth");
       const { db } = await import("./db");
       const { users, accounts, sessions } = await import("./db/schema");
       const { eq } = await import("drizzle-orm");
       const email = "lgramirodecampos@gmail.com";
-      const ctx = await (auth as any).$context;
 
-      // Hard delete everything for this email to start clean
+      // Hard delete everything for this email
       const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
       for (const u of existing) {
         await db.delete(sessions).where(eq(sessions.userId, u.id));
@@ -30,20 +28,26 @@ export default defineEventHandler(async (event) => {
       }
       await db.delete(users).where(eq(users.email, email));
 
-      // Create fresh user + account via Better Auth internals (correct hash)
-      const passwordHash = await ctx.password.hash("123456");
-      const newUser = await ctx.internalAdapter.createUser({
-        email, name: "Admin Master", emailVerified: true, role: "admin",
+      // Use Better Auth's own sign-up endpoint to create user with correct hash
+      const signUpReq = new Request(new URL("/api/auth/sign-up/email", url.origin).toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Origin": url.origin },
+        body: JSON.stringify({ email, password: "123456", name: "Admin Master" }),
       });
-      await ctx.internalAdapter.linkAccount({
-        userId: newUser.id, providerId: "credential",
-        accountId: email, password: passwordHash,
-      });
-      await db.update(users).set({ role: "admin" }).where(eq(users.id, newUser.id));
+      const { auth } = await import("./lib/auth");
+      const signUpRes = await auth.handler(signUpReq);
+      const signUpBody = await signUpRes.json() as any;
 
-      return Response.json({ ok: true, email, id: newUser.id, passwordHashPreview: passwordHash.substring(0, 30) });
+      if (signUpRes.status !== 200) {
+        return Response.json({ error: "sign-up failed", status: signUpRes.status, body: signUpBody });
+      }
+
+      // Update role to admin
+      await db.update(users).set({ role: "admin" }).where(eq(users.email, email));
+
+      return Response.json({ ok: true, email, userId: signUpBody.user?.id });
     } catch (e: any) {
-      return Response.json({ error: e?.message ?? "unknown", stack: (e as any)?.stack?.split("\n")[0] }, { status: 500 });
+      return Response.json({ error: e?.message ?? "unknown" }, { status: 500 });
     }
   }
 
