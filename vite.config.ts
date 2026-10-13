@@ -12,4 +12,12 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  nitro: {
+    handlers: [
+      {
+        route: "/api/auth/**",
+        handler: "src/server-auth-handler.ts",
+      },
+    ],
+  },
 });
