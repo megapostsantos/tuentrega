@@ -1,12 +1,9 @@
-import { defineEventHandler, toRequest } from "h3";
+import { defineEventHandler, toRequest, sendWebResponse } from "h3";
 
 export default defineEventHandler(async (event) => {
-  // Use the native CF Workers request when available — toRequest() may produce
-  // a relative URL which breaks Better Auth's cookie domain/origin logic.
   const rawRequest: Request = (event as any).web?.request ?? toRequest(event);
   const url = new URL(rawRequest.url);
 
-  // Diagnostic endpoint — no DB needed
   if (url.pathname === "/api/auth/env-check") {
     return Response.json({
       DATABASE_URL: process.env.DATABASE_URL ? "set" : "MISSING",
@@ -35,6 +32,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Debug: shows full response headers from sign-in
   if (url.pathname === "/api/auth/debug-login" && url.searchParams.get("secret") === "tuentrega-reset-2024") {
     try {
       const { auth } = await import("./lib/auth");
@@ -45,18 +43,16 @@ export default defineEventHandler(async (event) => {
       });
       const res = await auth.handler(testReq);
       const body = await res.text();
-      // Show response headers for debugging
       const headers: Record<string, string> = {};
       res.headers.forEach((v, k) => { headers[k] = v; });
-      return Response.json({ status: res.status, body, headers });
+      const setCookies = (res.headers as any).getSetCookie?.() ?? [];
+      return Response.json({ status: res.status, body, headers, setCookies });
     } catch (e: any) {
       return Response.json({ threw: e?.message ?? String(e) });
     }
   }
 
   const { auth } = await import("./lib/auth");
-  // Pass the raw request directly — preserves all headers including cookies
   const response = await auth.handler(rawRequest);
-  // Return the response directly so CF Workers forwards Set-Cookie as-is
-  return response;
+  return sendWebResponse(event, response);
 });
