@@ -1,7 +1,7 @@
-import { defineEventHandler, toRequest, sendWebResponse } from "h3";
+import { defineEventHandler } from "h3";
 
 export default defineEventHandler(async (event) => {
-  const rawRequest: Request = (event as any).web?.request ?? toRequest(event);
+  const rawRequest: Request = (event as any).req;
   const url = new URL(rawRequest.url);
 
   if (url.pathname === "/api/auth/env-check") {
@@ -73,5 +73,5 @@ export default defineEventHandler(async (event) => {
 
   const { auth } = await import("./lib/auth");
   const response = await auth.handler(rawRequest);
-  return sendWebResponse(event, response);
+  return response;
 });
