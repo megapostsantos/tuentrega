@@ -7,10 +7,31 @@ export default defineEventHandler(async (event) => {
   const url = new URL(req.url);
 
   if (url.pathname === "/api/db/setup") {
-    if (url.searchParams.get("secret") !== SETUP_SECRET) return Response.json({ error: "forbidden" }, { status: 403 });
-    const { runSetupSql } = await import("./server/data-engine");
+    const secret = url.searchParams.get("secret");
+    if (secret !== SETUP_SECRET) return Response.json({ error: "forbidden" }, { status: 403 });
+    if (url.searchParams.get("offset") === null) {
+      const html = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Setup do banco</title><body style="font-family:system-ui;padding:24px;max-width:640px;margin:auto">
+<h2>Configurando o banco...</h2><p id="s">Iniciando...</p><pre id="e" style="white-space:pre-wrap;color:#b00020"></pre>
+<script>
+(async()=>{let off=0,errs=[],total=0;
+while(off!==null){
+ try{const r=await fetch("/api/db/setup?secret=${SETUP_SECRET}&offset="+off+"&limit=40");const j=await r.json();
+  if(!r.ok){errs.push(JSON.stringify(j));break}
+  total=j.total;errs.push(...j.failed.map(f=>f.error+" :: "+f.stmt));off=j.next;
+  document.getElementById("s").textContent="Executando... "+Math.min(off??total,total)+" de "+total;
+ }catch(e){errs.push(String(e));break}}
+document.querySelector("h2").textContent=errs.length?"Terminou com "+errs.length+" erro(s)":"Concluído com sucesso";
+document.getElementById("s").textContent=errs.length?"Copie o texto abaixo e envie para o suporte:":"Pode fechar esta página e voltar ao app.";
+document.getElementById("e").textContent=errs.join("\\n\\n");})();
+</script></body>`;
+      return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
+    }
+    const { runSetupBatch } = await import("./server/data-engine");
     const { default: sqlText } = await import("./db/setup-sql");
-    return Response.json(await runSetupSql(sqlText));
+    const offset = Math.max(0, parseInt(url.searchParams.get("offset") ?? "0", 10) || 0);
+    const limit = Math.min(45, Math.max(1, parseInt(url.searchParams.get("limit") ?? "40", 10) || 40));
+    return Response.json(await runSetupBatch(sqlText, offset, limit));
   }
 
   if (url.pathname === "/api/db/query" && req.method === "POST") {

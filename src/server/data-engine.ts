@@ -433,4 +433,32 @@ export async function runSetupSql(sqlText: string): Promise<{ ok: number; failed
   return { ok, failed };
 }
 
+export async function runSetupBatch(sqlText: string, offset: number, limit: number) {
+  const parts = sqlText.split(/^-- @@\s*$/m).map((x) => x.trim()).filter(Boolean);
+  const slice = parts.slice(offset, offset + limit);
+  const failed: { stmt: string; error: string }[] = [];
+  if (slice.length) {
+    let done = false;
+    if (!queryImpl) {
+      try {
+        await (sqlClient() as any).transaction((t: any) => slice.map((x) => t.query(x)));
+        done = true;
+      } catch {
+        /* cai para execução individual para achar o comando com erro */
+      }
+    }
+    if (!done) {
+      for (const stmt of slice) {
+        try {
+          await query(stmt);
+        } catch (e: any) {
+          failed.push({ stmt: stmt.slice(0, 160), error: e?.message ?? String(e) });
+        }
+      }
+    }
+  }
+  const nextOffset = offset + limit;
+  return { total: parts.length, offset, processed: slice.length, next: nextOffset < parts.length ? nextOffset : null, failed };
+}
+
 export { query as rawQuery };
