@@ -115,10 +115,19 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const result = await signIn.email({ email, password });
-    setLoading(false);
-    if (result.error) return toast.error(translateAuthError(result.error.message ?? "Erro desconhecido"));
-    window.location.href = "/dashboard";
+    try {
+      const result = await signIn.email({ email, password });
+      setLoading(false);
+      if (result.error) {
+        toast.error(translateAuthError(result.error.message ?? "Erro desconhecido"));
+        return;
+      }
+      toast.success("Login ok! Redirecionando...");
+      setTimeout(() => { window.location.href = "/dashboard"; }, 500);
+    } catch (e: any) {
+      setLoading(false);
+      toast.error("Erro: " + (e?.message ?? String(e)));
+    }
   }
   return (
     <>
