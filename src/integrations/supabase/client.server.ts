@@ -1,21 +1,10 @@
-// Compatibility shim — replaced by Drizzle db
-// Server-side operations should use db from @/db directly
-export const supabaseAdmin = {
-  from: (_table: string) => ({
-    select: (_cols?: string) => ({
-      eq: (_col: string, _val: unknown) =>
-        Promise.resolve({ data: null, error: null }),
-      single: () => Promise.resolve({ data: null, error: null }),
-    }),
-    insert: (_data: unknown) =>
-      Promise.resolve({ data: null, error: null }),
-    update: (_data: unknown) => ({
-      eq: (_col: string, _val: unknown) =>
-        Promise.resolve({ data: null, error: null }),
-    }),
-    delete: () => ({
-      eq: (_col: string, _val: unknown) =>
-        Promise.resolve({ data: null, error: null }),
-    }),
-  }),
-} as const;
+// Acesso administrativo (sem checagem de sessão) para código que roda só no servidor.
+import { QueryBuilder, rpcBuilder, type QueryReq } from "@/lib/query-builder";
+import { executeQuery } from "@/server/data-engine";
+
+const exec = (req: QueryReq) => executeQuery(req, { userId: null, role: "admin", internal: true });
+
+export const supabaseAdmin: any = {
+  from: (table: string) => new QueryBuilder(exec, table),
+  rpc: (fn: string, args?: Record<string, unknown>) => rpcBuilder(exec, fn, args),
+};

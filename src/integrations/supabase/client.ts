@@ -1,93 +1,173 @@
-// Compatibility shim — replaced by Better Auth + Drizzle
-// Kept here so imports don't break during migration.
-// Components should migrate to use authClient from @/lib/auth-client
-// and db queries from @/db directly.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Camada de compatibilidade: mantém a API do supabase-js, mas executa tudo via /api/db (Neon) e Better Auth.
+import { QueryBuilder, rpcBuilder, type QueryReq, type QueryResp } from "@/lib/query-builder";
+import { authClient } from "@/lib/auth-client";
+
+const exec = async (req: QueryReq): Promise<QueryResp> => {
+  if (typeof window === "undefined") {
+    return { data: req.head || req.single ? null : [], error: null, count: req.count ? 0 : null };
+  }
+  const res = await fetch("/api/db/query", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify(req),
+  });
+  try {
+    return (await res.json()) as QueryResp;
+  } catch {
+    return { data: null, error: { message: `Erro ${res.status} ao consultar o servidor` }, count: null };
+  }
+};
+
+let lastPassword: string | null = null;
+
+function mapUser(u: any) {
+  if (!u) return null;
+  return { ...u, user_metadata: { name: u.name, role: u.role }, app_metadata: { role: u.role } };
+}
+
+class PollingChannel {
+  private handlers: { cfg: any; cb: (p: any) => void }[] = [];
+  private timer: ReturnType<typeof setInterval> | null = null;
+  on(_type: string, cfg: any, cb: (p: any) => void) {
+    this.handlers.push({ cfg, cb });
+    return this;
+  }
+  subscribe(cb?: (status: string) => void) {
+    if (typeof window !== "undefined") {
+      this.timer = setInterval(() => {
+        if (document.visibilityState !== "visible") return;
+        for (const h of this.handlers) {
+          if (h.cfg?.event !== "*") continue;
+          try {
+            const r: any = h.cb({ eventType: "UPDATE", table: h.cfg?.table, new: {}, old: {}, errors: null });
+            if (r && typeof r.catch === "function") r.catch(() => {});
+          } catch {
+            /* ignore */
+          }
+        }
+      }, 20000);
+    }
+    cb?.("SUBSCRIBED");
+    return this;
+  }
+  unsubscribe() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+    return Promise.resolve("ok");
+  }
+}
+
+function objectUrl(bucket: string, path: string) {
+  const enc = path.split("/").map(encodeURIComponent).join("/");
+  return `${typeof window !== "undefined" ? window.location.origin : ""}/api/storage/object/${bucket}/${enc}`;
+}
+
+async function toBase64(file: Blob): Promise<string> {
+  const buf = new Uint8Array(await file.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+async function post(path: string, body: unknown) {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify(body),
+  });
+  let json: any = null;
+  try {
+    json = await res.json();
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, json };
+}
+
 export const supabase: any = {
-  auth: {
-    getSession: async () => ({ data: { session: null }, error: null }),
-    getUser: async () => ({ data: { user: null }, error: null }),
-    onAuthStateChange: () => ({
-      data: { subscription: { unsubscribe: () => {} } },
+  from: (table: string) => new QueryBuilder(exec, table),
+  rpc: (fn: string, args?: Record<string, unknown>) => rpcBuilder(exec, fn, args),
+  channel: (_name: string) => new PollingChannel(),
+  removeChannel: (ch: any) => ch?.unsubscribe?.() ?? Promise.resolve("ok"),
+  storage: {
+    from: (bucket: string) => ({
+      upload: async (path: string, file: Blob, opts?: { contentType?: string; upsert?: boolean }) => {
+        const { ok, json } = await post("/api/storage/upload", {
+          bucket,
+          path,
+          contentType: opts?.contentType ?? (file as File).type,
+          data: await toBase64(file),
+          upsert: !!opts?.upsert,
+        });
+        if (!ok) return { data: null, error: { message: json?.error ?? "Falha no upload" } };
+        return { data: { path }, error: null };
+      },
+      getPublicUrl: (path: string) => ({ data: { publicUrl: objectUrl(bucket, path) } }),
+      createSignedUrl: async (path: string, _expiresIn?: number) => ({
+        data: { signedUrl: objectUrl(bucket, path) },
+        error: null,
+      }),
+      createSignedUrls: async (paths: string[], _expiresIn?: number) => ({
+        data: paths.map((p) => ({ path: p, signedUrl: objectUrl(bucket, p), error: null })),
+        error: null,
+      }),
+      download: async (path: string) => {
+        const r = await fetch(objectUrl(bucket, path));
+        if (!r.ok) return { data: null, error: { message: "Arquivo não encontrado" } };
+        return { data: await r.blob(), error: null };
+      },
+      remove: async (paths: string[]) => {
+        const { ok, json } = await post("/api/storage/remove", { bucket, paths });
+        return ok ? { data: paths, error: null } : { data: null, error: { message: json?.error ?? "Falha ao remover" } };
+      },
+      list: async (prefix = "") => {
+        const { ok, json } = await post("/api/storage/list", { bucket, prefix });
+        if (!ok) return { data: null, error: { message: json?.error ?? "Falha ao listar" } };
+        return { data: (json.items ?? []).map((i: any) => ({ name: i.path, ...i })), error: null };
+      },
     }),
-    signInWithPassword: async () => ({ data: null, error: new Error("Use authClient.signIn from @/lib/auth-client") }),
+  },
+  auth: {
+    getSession: async () => {
+      const { data } = await authClient.getSession();
+      if (!data?.session) return { data: { session: null }, error: null };
+      return {
+        data: { session: { ...data.session, access_token: data.session.token, user: mapUser(data.user) } },
+        error: null,
+      };
+    },
+    getUser: async () => {
+      const { data } = await authClient.getSession();
+      return { data: { user: mapUser(data?.user) }, error: null };
+    },
+    onAuthStateChange: (_cb: unknown) => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signInWithPassword: async ({ email, password }: { email: string; password: string }) => {
+      const r = await authClient.signIn.email({ email, password });
+      if (r.error) return { data: null, error: new Error(r.error.message || "Credenciais inválidas") };
+      lastPassword = password;
+      return { data: r.data, error: null };
+    },
+    updateUser: async ({ password }: { password?: string }) => {
+      if (!password) return { data: null, error: null };
+      const r = await authClient.changePassword({
+        newPassword: password,
+        currentPassword: lastPassword ?? "",
+        revokeOtherSessions: false,
+      });
+      if (r.error) return { data: null, error: new Error(r.error.message || "Não foi possível alterar a senha") };
+      lastPassword = password;
+      return { data: r.data, error: null };
+    },
     signUp: async () => ({ data: null, error: new Error("Use authClient.signUp from @/lib/auth-client") }),
-    signOut: async () => ({ error: null }),
+    signOut: async () => {
+      await authClient.signOut();
+      return { error: null };
+    },
     getClaims: async () => ({ data: null, error: new Error("Not available") }),
     resend: async () => ({ error: null }),
     exchangeCodeForSession: async () => ({ error: null }),
     setSession: async () => ({ error: null }),
-  },
-  from: (_table: string) => ({
-    select: (_cols?: string, _opts?: unknown) => ({
-      eq: (_col: string, _val: unknown) => ({
-        eq: (_c: string, _v: unknown) => ({
-          maybeSingle: () => Promise.resolve({ data: null, error: null }),
-          single: () => Promise.resolve({ data: null, error: null }),
-          then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-        }),
-        neq: (_c: string, _v: unknown) => ({
-          then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-        }),
-        order: (_c: string, _o?: unknown) => ({
-          limit: (_n: number) => Promise.resolve({ data: [], error: null }),
-          then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-        }),
-        maybeSingle: () => Promise.resolve({ data: null, error: null }),
-        single: () => Promise.resolve({ data: null, error: null }),
-        is: (_c: string, _v: unknown) => ({
-          then: (r: (v: { data: null; count: null; error: null }) => void) => Promise.resolve(r({ data: null, count: null, error: null })),
-        }),
-        then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-      }),
-      order: (_c: string, _o?: unknown) => ({
-        limit: (_n: number) => Promise.resolve({ data: [], error: null }),
-        then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-      }),
-      is: (_c: string, _v: unknown) => ({
-        then: (r: (v: { data: null; count: null; error: null }) => void) => Promise.resolve(r({ data: null, count: null, error: null })),
-      }),
-      neq: (_c: string, _v: unknown) => ({
-        then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-      }),
-      single: () => Promise.resolve({ data: null, error: null }),
-      limit: (_n: number) => Promise.resolve({ data: [], error: null }),
-      then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-    }),
-    insert: (_data: unknown) => ({
-      select: (_c?: string) => ({ single: () => Promise.resolve({ data: null, error: null }) }),
-      then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-    }),
-    update: (_data: unknown) => ({
-      eq: (_col: string, _val: unknown) => ({
-        eq: (_c: string, _v: unknown) => Promise.resolve({ data: null, error: null }),
-        then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-      }),
-      then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-    }),
-    upsert: (_data: unknown) => ({
-      then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-    }),
-    delete: () => ({
-      eq: (_col: string, _val: unknown) => Promise.resolve({ data: null, error: null }),
-      then: (r: (v: { data: null; error: null }) => void) => Promise.resolve(r({ data: null, error: null })),
-    }),
-  }),
-  channel: (_name: string) => ({
-    on: (_event: string, _schema: unknown, _cb?: unknown) => ({
-      on: (_e: string, _s: unknown, _c?: unknown) => ({
-        subscribe: (_cb?: (status: string) => void) => ({}),
-      }),
-      subscribe: (_cb?: (status: string) => void) => ({}),
-    }),
-    subscribe: (_cb?: (status: string) => void) => ({}),
-  }),
-  removeChannel: (_channel: unknown) => Promise.resolve(),
-  storage: {
-    from: (_bucket: string) => ({
-      upload: async () => ({ data: null, error: null }),
-      getPublicUrl: (_path: string) => ({ data: { publicUrl: "" } }),
-      createSignedUrl: async (_path: string, _exp: number) => ({ data: { signedUrl: "" }, error: null }),
-    }),
   },
 };
