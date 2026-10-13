@@ -95,7 +95,7 @@ function AuthPage() {
             </TabsList>
 
             <TabsContent value="login" className="mt-6">
-              <LoginForm onSuccess={() => navigate({ to: "/dashboard" })} />
+              <LoginForm onSuccess={() => { window.location.href = "/dashboard"; }} />
             </TabsContent>
 
             <TabsContent value="signup" className="mt-6">
