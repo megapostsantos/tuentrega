@@ -1,4 +1,4 @@
-import { defineEventHandler, toRequest, sendWebResponse } from "h3";
+import { defineEventHandler, toRequest, setResponseStatus, setResponseHeader, appendResponseHeader } from "h3";
 
 export default defineEventHandler(async (event) => {
   const rawRequest: Request = (event as any).web?.request ?? toRequest(event);
@@ -73,5 +73,21 @@ export default defineEventHandler(async (event) => {
 
   const { auth } = await import("./lib/auth");
   const response = await auth.handler(rawRequest);
-  return sendWebResponse(event, response);
+
+  setResponseStatus(event, response.status);
+
+  // Forward Set-Cookie headers individually (sendWebResponse can lose them in CF Workers)
+  const setCookies: string[] = (response.headers as any).getSetCookie?.() ?? [];
+  for (const cookie of setCookies) {
+    appendResponseHeader(event, "set-cookie", cookie);
+  }
+
+  // Forward remaining headers
+  response.headers.forEach((value, key) => {
+    if (key.toLowerCase() !== "set-cookie") {
+      setResponseHeader(event, key, value);
+    }
+  });
+
+  return response.text();
 });
