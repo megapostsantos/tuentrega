@@ -118,7 +118,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     const result = await signIn.email({ email, password });
     setLoading(false);
     if (result.error) return toast.error(translateAuthError(result.error.message ?? "Erro desconhecido"));
-    onSuccess();
+    window.location.href = "/dashboard";
   }
   return (
     <>
