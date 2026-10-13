@@ -9,6 +9,25 @@ export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
+    // Debug: test login and return raw response /api/auth/debug-login?secret=tuentrega-reset-2024
+    if (url.pathname === "/api/auth/debug-login") {
+      if (url.searchParams.get("secret") !== "tuentrega-reset-2024") {
+        return Response.json({ error: "forbidden" }, { status: 403 });
+      }
+      try {
+        const testReq = new Request(new URL("/api/auth/sign-in/email", url.origin).toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Origin": url.origin },
+          body: JSON.stringify({ email: "lgramirodecampos@gmail.com", password: "123456" }),
+        });
+        const res = await auth.handler(testReq);
+        const text = await res.text();
+        return Response.json({ status: res.status, statusText: res.statusText, body: text });
+      } catch (e: any) {
+        return Response.json({ threw: e?.message ?? String(e) });
+      }
+    }
+
     // One-time admin reset endpoint: /api/auth/reset-admin?secret=tuentrega-reset-2024
     if (url.pathname === "/api/auth/reset-admin") {
       if (url.searchParams.get("secret") !== "tuentrega-reset-2024") {
