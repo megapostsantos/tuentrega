@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { SplashScreen } from "@/components/SplashScreen";
@@ -18,12 +18,8 @@ function AuthenticatedLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const [drawerOpen, setDrawerOpen] = useState(false);
-  // Only redirect after the session check has completed at least once
-  const sessionChecked = useRef(false);
-  if (!loading) sessionChecked.current = true;
 
   useEffect(() => {
-    if (!sessionChecked.current) return;
     if (loading) return;
     if (!user) {
       navigate({ to: "/auth" });

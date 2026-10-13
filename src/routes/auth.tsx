@@ -122,8 +122,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         toast.error(translateAuthError(result.error.message ?? "Erro desconhecido"));
         return;
       }
-      toast.success("Login ok! Redirecionando...");
-      setTimeout(() => { window.location.href = "/dashboard"; }, 500);
+      onSuccess();
     } catch (e: any) {
       setLoading(false);
       toast.error("Erro: " + (e?.message ?? String(e)));
