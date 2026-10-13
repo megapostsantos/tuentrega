@@ -95,7 +95,7 @@ function AuthPage() {
             </TabsList>
 
             <TabsContent value="login" className="mt-6">
-              <LoginForm onSuccess={() => { window.location.href = "/dashboard"; }} />
+              <LoginForm onSuccess={() => navigate({ to: "/dashboard" })} />
             </TabsContent>
 
             <TabsContent value="signup" className="mt-6">
@@ -117,10 +117,9 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     setLoading(true);
     const result = await signIn.email({ email, password });
     setLoading(false);
-    console.log("[login] signIn result:", JSON.stringify({ error: result.error, hasData: !!result.data }));
     if (result.error) return toast.error(translateAuthError(result.error.message ?? "Erro desconhecido"));
-    toast.success("Bem-vindo! Redirecionando...");
-    setTimeout(() => { window.location.href = "/dashboard"; }, 800);
+    toast.success("Bem-vindo!");
+    onSuccess();
   }
   return (
     <>
