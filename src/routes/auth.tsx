@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Building2, Bike, ArrowRight, ArrowLeft, Loader2, Check, Mail } from "lucide-react";
 
 import { toast } from "sonner";
-import { signIn, signUp, useSession } from "@/lib/auth-client";
+import { signIn, signUp, useSession, getSession } from "@/lib/auth-client";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,6 +118,12 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     const result = await signIn.email({ email, password });
     setLoading(false);
     if (result.error) return toast.error(translateAuthError(result.error.message ?? "Erro desconhecido"));
+    // Confirm session is active before navigating
+    const { data: sessionCheck } = await getSession();
+    if (!sessionCheck?.session) {
+      toast.error("Sessão não estabelecida. Tente novamente.");
+      return;
+    }
     toast.success("Bem-vindo!");
     onSuccess();
   }
