@@ -17,18 +17,33 @@ export default defineEventHandler(async (event) => {
     try {
       const { auth } = await import("./lib/auth");
       const { db } = await import("./db");
-      const { users } = await import("./db/schema");
+      const { users, accounts, sessions } = await import("./db/schema");
       const { eq } = await import("drizzle-orm");
       const email = "lgramirodecampos@gmail.com";
       const ctx = await (auth as any).$context;
-      const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-      if (existing.length > 0) await ctx.internalAdapter.deleteUser(existing[0].id);
-      const newUser = await ctx.internalAdapter.createUser({ email, name: "Admin Master", emailVerified: true, role: "admin" });
-      await ctx.internalAdapter.linkAccount({ userId: newUser.id, providerId: "credential", accountId: email, password: await ctx.password.hash("123456") });
+
+      // Hard delete everything for this email to start clean
+      const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+      for (const u of existing) {
+        await db.delete(sessions).where(eq(sessions.userId, u.id));
+        await db.delete(accounts).where(eq(accounts.userId, u.id));
+      }
+      await db.delete(users).where(eq(users.email, email));
+
+      // Create fresh user + account via Better Auth internals (correct hash)
+      const passwordHash = await ctx.password.hash("123456");
+      const newUser = await ctx.internalAdapter.createUser({
+        email, name: "Admin Master", emailVerified: true, role: "admin",
+      });
+      await ctx.internalAdapter.linkAccount({
+        userId: newUser.id, providerId: "credential",
+        accountId: email, password: passwordHash,
+      });
       await db.update(users).set({ role: "admin" }).where(eq(users.id, newUser.id));
-      return Response.json({ ok: true, email, id: newUser.id });
+
+      return Response.json({ ok: true, email, id: newUser.id, passwordHashPreview: passwordHash.substring(0, 30) });
     } catch (e: any) {
-      return Response.json({ error: e?.message ?? "unknown" }, { status: 500 });
+      return Response.json({ error: e?.message ?? "unknown", stack: (e as any)?.stack?.split("\n")[0] }, { status: 500 });
     }
   }
 
