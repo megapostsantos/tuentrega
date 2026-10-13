@@ -41,6 +41,14 @@ export const auth = betterAuth({
       defaultRole: "entregador",
     }),
   ],
+  onAPIError: {
+    onError: (error: unknown) => {
+      const e = error as any;
+      (globalThis as any).__lastAuthError =
+        [e?.message, e?.cause?.message, e?.body?.message].filter(Boolean).join(" | ") || String(error);
+      console.error("[auth] API error:", error);
+    },
+  },
   trustedOrigins: [
     "http://localhost:5173",
     "https://tuentrega.megapostsantos.workers.dev",
