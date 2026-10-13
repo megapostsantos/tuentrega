@@ -1,15 +1,24 @@
-import { auth } from "./lib/auth";
-import { db } from "./db";
-import { users } from "./db/schema";
-import { eq } from "drizzle-orm";
 import { defineEventHandler, toRequest, sendWebResponse } from "h3";
 
 export default defineEventHandler(async (event) => {
   const request = toRequest(event);
   const url = new URL(request.url);
 
+  // Diagnostic endpoint — no DB needed
+  if (url.pathname === "/api/auth/env-check") {
+    return Response.json({
+      DATABASE_URL: process.env.DATABASE_URL ? "set" : "MISSING",
+      BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ? "set" : "MISSING",
+      BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || "(not set)",
+    });
+  }
+
   if (url.pathname === "/api/auth/reset-admin" && url.searchParams.get("secret") === "tuentrega-reset-2024") {
     try {
+      const { auth } = await import("./lib/auth");
+      const { db } = await import("./db");
+      const { users } = await import("./db/schema");
+      const { eq } = await import("drizzle-orm");
       const email = "lgramirodecampos@gmail.com";
       const ctx = await (auth as any).$context;
       const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
@@ -25,6 +34,7 @@ export default defineEventHandler(async (event) => {
 
   if (url.pathname === "/api/auth/debug-login" && url.searchParams.get("secret") === "tuentrega-reset-2024") {
     try {
+      const { auth } = await import("./lib/auth");
       const testReq = new Request(new URL("/api/auth/sign-in/email", url.origin).toString(), {
         method: "POST",
         headers: { "Content-Type": "application/json", "Origin": url.origin },
@@ -38,6 +48,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  const { auth } = await import("./lib/auth");
   const response = await auth.handler(request);
   return sendWebResponse(event, response);
 });
