@@ -19,7 +19,7 @@ export const auth = betterAuth({
   secret:
     process.env.BETTER_AUTH_SECRET ||
     "supersecretkey-change-in-production-32chars",
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5173",
+  baseURL: process.env.BETTER_AUTH_URL || "https://tuentrega.megapostsantos.workers.dev",
   basePath: "/api/auth",
   emailAndPassword: {
     enabled: true,
@@ -42,7 +42,8 @@ export const auth = betterAuth({
   ],
   trustedOrigins: [
     "http://localhost:5173",
-    process.env.BETTER_AUTH_URL || "http://localhost:5173",
+    "https://tuentrega.megapostsantos.workers.dev",
+    process.env.BETTER_AUTH_URL || "https://tuentrega.megapostsantos.workers.dev",
   ],
 });
 
