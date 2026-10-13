@@ -1,8 +1,10 @@
-import { defineEventHandler, toRequest, sendWebResponse } from "h3";
+import { defineEventHandler, toRequest } from "h3";
 
 export default defineEventHandler(async (event) => {
-  const request = toRequest(event);
-  const url = new URL(request.url);
+  // Use the native CF Workers request when available — toRequest() may produce
+  // a relative URL which breaks Better Auth's cookie domain/origin logic.
+  const rawRequest: Request = (event as any).web?.request ?? toRequest(event);
+  const url = new URL(rawRequest.url);
 
   // Diagnostic endpoint — no DB needed
   if (url.pathname === "/api/auth/env-check") {
@@ -10,6 +12,7 @@ export default defineEventHandler(async (event) => {
       DATABASE_URL: process.env.DATABASE_URL ? "set" : "MISSING",
       BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ? "set" : "MISSING",
       BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || "(not set)",
+      requestUrl: rawRequest.url,
     });
   }
 
@@ -41,14 +44,19 @@ export default defineEventHandler(async (event) => {
         body: JSON.stringify({ email: "lgramirodecampos@gmail.com", password: "123456" }),
       });
       const res = await auth.handler(testReq);
-      const text = await res.text();
-      return Response.json({ status: res.status, body: text });
+      const body = await res.text();
+      // Show response headers for debugging
+      const headers: Record<string, string> = {};
+      res.headers.forEach((v, k) => { headers[k] = v; });
+      return Response.json({ status: res.status, body, headers });
     } catch (e: any) {
       return Response.json({ threw: e?.message ?? String(e) });
     }
   }
 
   const { auth } = await import("./lib/auth");
-  const response = await auth.handler(request);
-  return sendWebResponse(event, response);
+  // Pass the raw request directly — preserves all headers including cookies
+  const response = await auth.handler(rawRequest);
+  // Return the response directly so CF Workers forwards Set-Cookie as-is
+  return response;
 });
