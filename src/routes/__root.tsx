@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -66,9 +67,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a692bc10-f1c9-47c9-b40f-f3c1263a30cc/id-preview-19755af4--8825fc6a-c379-463e-91e9-c48be3695c86.lovable.app-1779674986271.png" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
+      { name: "theme-color", content: "#FFB700" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "TuEntrega" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", type: "image/png", sizes: "48x48", href: "/icons/favicon-48.png" },
+      { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Archivo+Black&family=Hind:wght@300;400;500;600;700&family=Roboto:wght@400;500;600;700&display=swap" },
@@ -94,6 +103,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    if ("serviceWorker" in navigator && import.meta.env.PROD) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>

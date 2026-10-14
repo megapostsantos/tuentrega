@@ -27,6 +27,7 @@ export const auth = betterAuth({
     minPasswordLength: 6,
   },
   user: {
+    deleteUser: { enabled: true },
     additionalFields: {
       role: {
         type: "string",
