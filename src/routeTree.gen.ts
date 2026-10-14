@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as LandingRouteImport } from './routes/landing'
+import { Route as ExcluirContaRouteImport } from './routes/excluir-conta'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
@@ -47,9 +49,19 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as AuthenticatedPacotesDistribuirAlocacaoIdRouteImport } from './routes/_authenticated/pacotes.distribuir.$alocacaoId'
 import { Route as AuthenticatedPacotesAlocarOperacaoIdRouteImport } from './routes/_authenticated/pacotes.alocar.$operacaoId'
 
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LandingRoute = LandingRouteImport.update({
   id: '/landing',
   path: '/landing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExcluirContaRoute = ExcluirContaRouteImport.update({
+  id: '/excluir-conta',
+  path: '/excluir-conta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -243,7 +255,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/excluir-conta': typeof ExcluirContaRoute
   '/landing': typeof LandingRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -281,7 +295,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/excluir-conta': typeof ExcluirContaRoute
   '/landing': typeof LandingRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -321,7 +337,9 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/excluir-conta': typeof ExcluirContaRoute
   '/landing': typeof LandingRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -361,7 +379,9 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/excluir-conta'
     | '/landing'
+    | '/privacidade'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
@@ -399,7 +419,9 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/excluir-conta'
     | '/landing'
+    | '/privacidade'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
@@ -438,7 +460,9 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/admin'
     | '/auth'
+    | '/excluir-conta'
     | '/landing'
+    | '/privacidade'
     | '/_authenticated/agenda'
     | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
@@ -478,7 +502,9 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  ExcluirContaRoute: typeof ExcluirContaRoute
   LandingRoute: typeof LandingRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   OfertaIdRoute: typeof OfertaIdRoute
   RastrearTokenRoute: typeof RastrearTokenRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -486,11 +512,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/landing': {
       id: '/landing'
       path: '/landing'
       fullPath: '/landing'
       preLoaderRoute: typeof LandingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/excluir-conta': {
+      id: '/excluir-conta'
+      path: '/excluir-conta'
+      fullPath: '/excluir-conta'
+      preLoaderRoute: typeof ExcluirContaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -848,7 +888,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  ExcluirContaRoute: ExcluirContaRoute,
   LandingRoute: LandingRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   OfertaIdRoute: OfertaIdRoute,
   RastrearTokenRoute: RastrearTokenRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
