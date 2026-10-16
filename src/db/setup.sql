@@ -1726,3 +1726,436 @@ ALTER TABLE "saidas_nex" ADD COLUMN IF NOT EXISTS "empresa_id" text;
 CREATE UNIQUE INDEX IF NOT EXISTS "entregas_oferta_id_unique" ON "entregas" ("oferta_id");
 -- @@
 CREATE UNIQUE INDEX IF NOT EXISTS "dispatchers_entregador_empresa_unique" ON "dispatchers" ("entregador_id","empresa_id");
+-- @@
+ALTER TABLE "admin_impersonations" ALTER COLUMN "ended_at" DROP NOT NULL;
+-- @@
+ALTER TABLE "admin_logs" ALTER COLUMN "target" DROP NOT NULL;
+-- @@
+ALTER TABLE "admin_logs" ALTER COLUMN "details" DROP NOT NULL;
+-- @@
+ALTER TABLE "admin_notifications" ALTER COLUMN "body" DROP NOT NULL;
+-- @@
+ALTER TABLE "admin_notifications" ALTER COLUMN "link" DROP NOT NULL;
+-- @@
+ALTER TABLE "admin_notifications" ALTER COLUMN "read_at" DROP NOT NULL;
+-- @@
+ALTER TABLE "agenda_previsoes" ALTER COLUMN "veiculo_necessario" DROP NOT NULL;
+-- @@
+ALTER TABLE "agenda_previsoes" ALTER COLUMN "endereco_coleta" DROP NOT NULL;
+-- @@
+ALTER TABLE "agenda_previsoes" ALTER COLUMN "hora_abertura" DROP NOT NULL;
+-- @@
+ALTER TABLE "agenda_previsoes" ALTER COLUMN "cancelamento_ate" DROP NOT NULL;
+-- @@
+ALTER TABLE "alocacoes" ALTER COLUMN "oferta_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "auditoria_faixas" ALTER COLUMN "operacao_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "auditoria_faixas" ALTER COLUMN "descricao" DROP NOT NULL;
+-- @@
+ALTER TABLE "auditoria_faixas" ALTER COLUMN "rota_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "auditoria_faixas" ALTER COLUMN "faixa_inicio" DROP NOT NULL;
+-- @@
+ALTER TABLE "auditoria_faixas" ALTER COLUMN "faixa_fim" DROP NOT NULL;
+-- @@
+ALTER TABLE "auditoria_faixas" ALTER COLUMN "ordem" DROP NOT NULL;
+-- @@
+ALTER TABLE "auditoria_faixas" ALTER COLUMN "pacotes_contados" DROP NOT NULL;
+-- @@
+ALTER TABLE "auditoria_faixas" ALTER COLUMN "updated_at" DROP NOT NULL;
+-- @@
+ALTER TABLE "confiabilidade_historico" ALTER COLUMN "operacao_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "confiabilidade_historico" ALTER COLUMN "tipo" DROP NOT NULL;
+-- @@
+ALTER TABLE "confiabilidade_historico" ALTER COLUMN "motivo" DROP NOT NULL;
+-- @@
+ALTER TABLE "confiabilidade_historico" ALTER COLUMN "evento" DROP NOT NULL;
+-- @@
+ALTER TABLE "confiabilidade_historico" ALTER COLUMN "pontos" DROP NOT NULL;
+-- @@
+ALTER TABLE "confiabilidade_historico" ALTER COLUMN "descricao" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_alocacoes" ALTER COLUMN "notes" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_alocacoes" ALTER COLUMN "status" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_alocacoes" ALTER COLUMN "valor_por_pacote" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_alocacoes" ALTER COLUMN "distributed_at" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "member_user_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "oferta_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "empresa_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "closed_at" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "comissao_por_pacote" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "data_trabalho" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "dispatcher_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "quantidade_pacotes" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "titulo" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "valor_empresa" DROP NOT NULL;
+-- @@
+ALTER TABLE "dispatcher_commissions" ALTER COLUMN "valor_membro" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "cnpj" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "nome_fantasia" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "segmento" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "cep" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "rua" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "numero" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "complemento" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "bairro" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "cidade" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "estado" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "whatsapp" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "responsavel" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "tms_metodo_padrao" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "tms_mostrar_margem" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "tms_pacotes_por_rota" DROP NOT NULL;
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "tms_valor_padrao_pacote" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregador_localizacao" ALTER COLUMN "oferta_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregador_localizacao" ALTER COLUMN "velocidade_kmh" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "cpf" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "whatsapp" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "tipo_veiculo" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "pix_tipo" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "pix_chave" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "banco" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "data_nascimento" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "selfie_url" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "placa" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "cep" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "rua" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "numero" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "complemento" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "bairro" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "cidade" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "estado" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "plataforma_comprovante_url" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "activated_at" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "cnpj" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "email" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "invited_at" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "modelo_veiculo" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "marca_veiculo" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "reliability_level" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "reliability_score" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "suspended_at" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "suspension_reason" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "tipo_operacao" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "tipo_pessoa" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas" ALTER COLUMN "oferta_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas" ALTER COLUMN "nota_fiscal_url" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas" ALTER COLUMN "data_pagamento" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_ocorrencias" ALTER COLUMN "oferta_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_ocorrencias" ALTER COLUMN "tipo" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_ocorrencias" ALTER COLUMN "descricao" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_ocorrencias" ALTER COLUMN "fotos_urls" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_ocorrencias" ALTER COLUMN "motivo" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_ocorrencias" ALTER COLUMN "numero_pacote" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_ocorrencias" ALTER COLUMN "package_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_ocorrencias" ALTER COLUMN "package_id_scan_method" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_ocorrencias" ALTER COLUMN "score_impact" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_ocorrencias" ALTER COLUMN "sub_motivo" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "endereco_entrega" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "assinatura_url" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "codigo_pacote" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "data_agendada" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "destinatario_email" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "destinatario_nome" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "destinatario_telefone" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "distancia_anterior_metros" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "entregue_em" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "foto_pod_url" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "instrucoes_especiais" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "janela_fim" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "janela_inicio" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "lat" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "lng" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "motivo_nao_entrega" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "nome_recebedor" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "nx_code" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "observacao_entrega" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "operacao_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "ordem_otimizada" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "tempo_estimado_minutos" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "tentativas" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregas_pacotes" ALTER COLUMN "token_rastreamento" DROP NOT NULL;
+-- @@
+ALTER TABLE "eventos_agenda" ALTER COLUMN "empresa_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "eventos_agenda" ALTER COLUMN "entregador_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "eventos_agenda" ALTER COLUMN "descricao" DROP NOT NULL;
+-- @@
+ALTER TABLE "eventos_agenda" ALTER COLUMN "cor" DROP NOT NULL;
+-- @@
+ALTER TABLE "eventos_agenda" ALTER COLUMN "data_fim" DROP NOT NULL;
+-- @@
+ALTER TABLE "eventos_agenda" ALTER COLUMN "valor" DROP NOT NULL;
+-- @@
+ALTER TABLE "eventos_agenda" ALTER COLUMN "referencia_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "eventos_agenda" ALTER COLUMN "referencia_tabela" DROP NOT NULL;
+-- @@
+ALTER TABLE "eventos_agenda" ALTER COLUMN "created_by" DROP NOT NULL;
+-- @@
+ALTER TABLE "filiais" ALTER COLUMN "cep" DROP NOT NULL;
+-- @@
+ALTER TABLE "filiais" ALTER COLUMN "rua" DROP NOT NULL;
+-- @@
+ALTER TABLE "filiais" ALTER COLUMN "numero" DROP NOT NULL;
+-- @@
+ALTER TABLE "filiais" ALTER COLUMN "cidade" DROP NOT NULL;
+-- @@
+ALTER TABLE "filiais" ALTER COLUMN "estado" DROP NOT NULL;
+-- @@
+ALTER TABLE "filiais" ALTER COLUMN "responsavel" DROP NOT NULL;
+-- @@
+ALTER TABLE "filiais" ALTER COLUMN "whatsapp" DROP NOT NULL;
+-- @@
+ALTER TABLE "financeiro_lancamentos" ALTER COLUMN "entregador_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "financeiro_lancamentos" ALTER COLUMN "descricao" DROP NOT NULL;
+-- @@
+ALTER TABLE "financeiro_lancamentos" ALTER COLUMN "comprovante_url" DROP NOT NULL;
+-- @@
+ALTER TABLE "insucessos_nex" ALTER COLUMN "saida_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "insucessos_nex" ALTER COLUMN "motivo" DROP NOT NULL;
+-- @@
+ALTER TABLE "notificacoes_destinatario" ALTER COLUMN "mensagem" DROP NOT NULL;
+-- @@
+ALTER TABLE "notificacoes_destinatario" ALTER COLUMN "enviado_em" DROP NOT NULL;
+-- @@
+ALTER TABLE "notificacoes_whatsapp" ALTER COLUMN "telefone" DROP NOT NULL;
+-- @@
+ALTER TABLE "notificacoes_whatsapp" ALTER COLUMN "message_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "notificacoes_whatsapp" ALTER COLUMN "erro_msg" DROP NOT NULL;
+-- @@
+ALTER TABLE "notificacoes_whatsapp" ALTER COLUMN "enviado_em" DROP NOT NULL;
+-- @@
+ALTER TABLE "notificacoes_whatsapp" ALTER COLUMN "lido_em" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "descricao" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "bairro" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "tipo_entrega" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "veiculo_necessario" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "quantidade_pacotes" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "valor_por_pacote" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "endereco_coleta" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "prazo_pagamento" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "prazo_pagamento_data" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "data_trabalho" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "hora_inicio" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "hora_fim" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "expira_em" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "entregador_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "cancelamento_ate" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "closed_at" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "closing_notes" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "data_agendada" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "dispatcher_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "filial_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "operacao_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "pacotes_entregues" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "pacotes_nao_entregues" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "payment_confirmed_by" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "payment_date" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "payment_notes" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "payment_status" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "permite_cancelamento" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "previsao_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "quantidade_paradas" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "rota_operacao_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "tipo" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas" ALTER COLUMN "tipo_servico" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas_privadas_config" ALTER COLUMN "aceito_em" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas_privadas_config" ALTER COLUMN "notificado_em" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas_privadas_config" ALTER COLUMN "status" DROP NOT NULL;
+-- @@
+ALTER TABLE "ofertas_privadas_config" ALTER COLUMN "valor_por_pacote" DROP NOT NULL;
+-- @@
+ALTER TABLE "operacoes" ALTER COLUMN "observacoes" DROP NOT NULL;
+-- @@
+ALTER TABLE "operacoes" ALTER COLUMN "filial_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "operacoes" ALTER COLUMN "nx_code" DROP NOT NULL;
+-- @@
+ALTER TABLE "operacoes" ALTER COLUMN "origem" DROP NOT NULL;
+-- @@
+ALTER TABLE "operacoes" ALTER COLUMN "saca_qr_code" DROP NOT NULL;
+-- @@
+ALTER TABLE "operacoes" ALTER COLUMN "tipo_servico" DROP NOT NULL;
+-- @@
+ALTER TABLE "operacoes" ALTER COLUMN "total_pacotes" DROP NOT NULL;
+-- @@
+ALTER TABLE "pagamentos" ALTER COLUMN "observacao" DROP NOT NULL;
+-- @@
+ALTER TABLE "pagamentos" ALTER COLUMN "created_by" DROP NOT NULL;
+-- @@
+ALTER TABLE "pagamentos" ALTER COLUMN "nf_numero" DROP NOT NULL;
+-- @@
+ALTER TABLE "pagamentos" ALTER COLUMN "nf_url" DROP NOT NULL;
+-- @@
+ALTER TABLE "profiles" ALTER COLUMN "full_name" DROP NOT NULL;
+-- @@
+ALTER TABLE "profiles" ALTER COLUMN "phone" DROP NOT NULL;
+-- @@
+ALTER TABLE "profiles" ALTER COLUMN "company_name" DROP NOT NULL;
+-- @@
+ALTER TABLE "rotas_operacao" ALTER COLUMN "oferta_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "saidas_nex" ALTER COLUMN "entregador_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "saidas_nex" ALTER COLUMN "hora_saida" DROP NOT NULL;
+-- @@
+ALTER TABLE "saidas_nex" ALTER COLUMN "empresa_id" DROP NOT NULL;
+-- @@
+ALTER TABLE "user_notifications" ALTER COLUMN "corpo" DROP NOT NULL;
+-- @@
+ALTER TABLE "user_notifications" ALTER COLUMN "link" DROP NOT NULL;
+-- @@
+CREATE TABLE IF NOT EXISTS "agenda_compromissos" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"previsao_id" uuid NOT NULL,
+	"empresa_id" text NOT NULL,
+	"entregador_id" text NOT NULL,
+	"pacotes_comprometidos" integer DEFAULT 0 NOT NULL,
+	"pacotes_ajustados" integer,
+	"status" text DEFAULT 'comprometido' NOT NULL,
+	"observacao" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+-- @@
+CREATE UNIQUE INDEX IF NOT EXISTS "agenda_compromissos_unique" ON "agenda_compromissos" ("previsao_id","entregador_id");

@@ -467,6 +467,23 @@ export const dispatcherAlocacoes = pgTable("dispatcher_alocacoes", {
   distributedAt: timestamp("distributed_at"),
 });
 
+export const agendaCompromissos = pgTable(
+  "agenda_compromissos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    previsaoId: uuid("previsao_id").notNull(),
+    empresaId: text("empresa_id").notNull(),
+    entregadorId: text("entregador_id").notNull(),
+    pacotesComprometidos: integer("pacotes_comprometidos").notNull().default(0),
+    pacotesAjustados: integer("pacotes_ajustados"),
+    status: text("status").notNull().default("comprometido"),
+    observacao: text("observacao"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("agenda_compromissos_unique").on(t.previsaoId, t.entregadorId)],
+);
+
 export const agendaPrevisoes = pgTable("agenda_previsoes", {
   id: uuid("id").primaryKey().defaultRandom(),
   empresaId: text("empresa_id").notNull(),

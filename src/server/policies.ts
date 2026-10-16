@@ -285,7 +285,50 @@ export const POLICIES: Record<string, Policy> = {
     force: { empresa: { empresa_id: "uid" } },
   },
 
-  agenda_previsoes: apenasEmpresa(),
+  agenda_previsoes: {
+    ...apenasEmpresa(),
+    read: {
+      empresa: eq("empresa_id"),
+      entregador: or(
+        (a) => `(${col(a, "status")} = 'aberta' and ${col(a, "data_prevista")} >= current_date)`,
+        (a, p, u) =>
+          `exists (select 1 from "agenda_compromissos" c where c."previsao_id"::text = ${col(a, "id")}::text and c."entregador_id"::text = ${p(u)})`,
+      ),
+    },
+    mask: {
+      entregador: {
+        cols: ["endereco_coleta"],
+        unless: (a, p, u) =>
+          `exists (select 1 from "agenda_compromissos" c where c."previsao_id"::text = ${col(a, "id")}::text and c."entregador_id"::text = ${p(u)} and c."status" <> 'cancelado')`,
+      },
+    },
+  },
+
+  agenda_compromissos: {
+    read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
+    delete: { empresa: eq("empresa_id") },
+    update: {
+      empresa: eq("empresa_id"),
+      entregador: (a, p, u) =>
+        `(${col(a, "entregador_id")}::text = ${p(u)} and exists (select 1 from "agenda_previsoes" pv where pv."id"::text = ${col(a, "previsao_id")}::text and pv."status" = 'aberta' and pv."data_prevista" >= current_date and pv."permite_cancelamento" = true and (pv."cancelamento_ate" is null or pv."cancelamento_ate" > now())))`,
+    },
+    updateCols: { empresa: ["pacotes_ajustados", "status", "observacao", "updated_at"], entregador: ["pacotes_comprometidos", "status", "updated_at"] },
+    updateCheck: {
+      empresa: (v) => (v.status !== undefined && !["comprometido", "confirmado", "cancelado"].includes(String(v.status)) ? "Status inválido" : null),
+      entregador: (v) => (v.status !== undefined && !["comprometido", "cancelado"].includes(String(v.status)) ? "Status inválido" : null),
+    },
+    insert: {
+      entregador: async (row, uid, run) => {
+        if (row.entregador_id !== undefined && String(row.entregador_id) !== uid) return "Valor inválido em entregador_id";
+        const r = await run(
+          `select 1 from "agenda_previsoes" where "id"::text = $1 and "empresa_id" = $2 and "status" = 'aberta' and "data_prevista" >= current_date`,
+          [String(row.previsao_id), String(row.empresa_id)],
+        );
+        return r.length ? null : "Previsão indisponível";
+      },
+    },
+    force: { entregador: { entregador_id: "uid" } },
+  },
   auditoria_faixas: apenasEmpresa(),
   financeiro_lancamentos: apenasEmpresa(),
   filiais: apenasEmpresa(),
@@ -343,5 +386,6 @@ export const POLICIES: Record<string, Policy> = {
 function entregadorTrabalhaParaEmpresaInverso(): Pred {
   return (a, p, u) =>
     `(exists (select 1 from "ofertas" o where o."empresa_id"::text = ${col(a, "id")}::text and (o."entregador_id"::text = ${p(u)} or o."dispatcher_id"::text in ${meDispatcherIds(u, p)}))
-      or exists (select 1 from "dispatchers" d where d."empresa_id"::text = ${col(a, "id")}::text and d."entregador_id"::text = ${p(u)}))`;
+      or exists (select 1 from "dispatchers" d where d."empresa_id"::text = ${col(a, "id")}::text and d."entregador_id"::text = ${p(u)})
+      or exists (select 1 from "agenda_compromissos" c where c."empresa_id"::text = ${col(a, "id")}::text and c."entregador_id"::text = ${p(u)} and c."status" <> 'cancelado'))`;
 }

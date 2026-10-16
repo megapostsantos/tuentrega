@@ -26,10 +26,25 @@ import {
 } from "@/components/ui/sheet";
 import { useLocationTracker } from "@/hooks/use-location-tracker";
 import { LocationIndicator } from "@/components/LocationIndicator";
+import { EmpresaRotas } from "@/components/EmpresaRotas";
 
 export const Route = createFileRoute("/_authenticated/rotas")({
   component: RotasPage,
 });
+
+function RotasPage() {
+  const { user, role, loading, isImpersonating } = useAuth();
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (role === "empresa") return <EmpresaRotas empresaId={user!.id} />;
+  if (role === "admin" && !isImpersonating) return <EmpresaRotas empresaId={null} />;
+  return <EntregadorRotas />;
+}
 
 type Pacote = {
   id: string;
@@ -96,7 +111,7 @@ const RADIO_CHOICES: Array<{ key: string; label: string; motivo: string; sub?: s
 const SCORE_MOTIVO: Record<string, number> = { address_not_visited: -20, lost: -30, damaged: -10, could_not_deliver: 0 };
 const PAGE = 60;
 
-function RotasPage() {
+function EntregadorRotas() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [oferta, setOferta] = useState<Oferta | null>(null);
@@ -634,6 +649,7 @@ function ProblemSheet({
         entregador_id: user.id,
         empresa_id: oferta.empresa_id,
         numero_pacote: pacote.numero_pacote,
+        tipo: chosen.motivo,
         motivo: chosen.motivo,
         sub_motivo: [chosen.sub, obs].filter(Boolean).join(" — ") || null,
         fotos_urls: fotoPath ? [fotoPath] : [],

@@ -1425,17 +1425,17 @@ function AllocationPanel({
 
   async function load() {
     const sb = supabase as any;
-    // entregadores que aceitaram previsoes do dia
+    // entregadores que se comprometeram nas previsões do dia
     const { data: prevs } = await sb.from("agenda_previsoes")
       .select("id").eq("empresa_id", empresaId).eq("data_prevista", dataOperacao);
     const prevIds = (prevs ?? []).map((p: any) => p.id);
     let entregadoresAceitos: any[] = [];
     if (prevIds.length) {
-      const { data: ofs } = await sb.from("ofertas")
-        .select("id, entregador_id, updated_at, entregadores(nome_completo, tipo_veiculo, reliability_level, reliability_score)")
-        .in("previsao_id", prevIds).not("entregador_id", "is", null)
-        .order("updated_at", { ascending: true });
-      entregadoresAceitos = ofs ?? [];
+      const { data: cs } = await sb.from("agenda_compromissos")
+        .select("id, entregador_id, pacotes_comprometidos, pacotes_ajustados, updated_at, entregadores(nome_completo, tipo_veiculo, reliability_level, reliability_score)")
+        .in("previsao_id", prevIds).neq("status", "cancelado")
+        .order("created_at", { ascending: true });
+      entregadoresAceitos = cs ?? [];
     }
     setAceitos(entregadoresAceitos);
     const { data: alc } = await sb.from("alocacoes").select("*, entregadores(nome_completo)").eq("operacao_id", operacaoId);
@@ -1510,7 +1510,7 @@ function AllocationPanel({
     <div className="rounded border p-3 space-y-3">
       <div className="flex items-center gap-2 font-medium"><Users className="h-4 w-4" />Alocação ({alocacoes.length}/{rotas.length})</div>
       <p className="text-sm text-muted-foreground">
-        {aceitos.length} entregador(es) aceitaram previsões para {new Date(dataOperacao).toLocaleDateString("pt-BR")}.
+        {aceitos.length} entregador(es) se comprometeram na agenda para {new Date(dataOperacao).toLocaleDateString("pt-BR")}.
       </p>
 
       <Table>

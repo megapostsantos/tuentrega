@@ -1,3 +1,5 @@
+import { AgendaEntregador } from "@/components/agenda/AgendaEntregador";
+import { PrevisoesEmpresa } from "@/components/agenda/PrevisoesEmpresa";
 import { Fragment } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -83,13 +85,8 @@ function AgendaPage() {
       </div>
     );
   }
-  if (role === "entregador") {
-    return (
-      <div className="p-6">
-        <PageHeader title="Agenda" description="Disponível apenas para empresa e operadores." />
-        <EmptyModule icon={CalendarDays} title="Sem acesso" description="Este módulo está oculto para entregadores." />
-      </div>
-    );
+  if (role === "entregador" || role === "dispatcher") {
+    return <AgendaEntregador userId={user!.id} />;
   }
   return <AgendaContent userId={user!.id} isAdmin={role === "admin"} />;
 }
@@ -268,6 +265,8 @@ function AgendaContent({ userId, isAdmin }: { userId: string; isAdmin: boolean }
           </Button>
         }
       />
+
+      {!isAdmin && <PrevisoesEmpresa empresaId={userId} />}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3">
         <div className="flex items-center gap-2">
