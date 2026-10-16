@@ -951,10 +951,52 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 /* ============ Detail dialog ============ */
 
+async function publishPendingRotas(op: Operacao, rotas: any[]): Promise<number> {
+  let count = 0;
+  for (const r of rotas) {
+    if (r.oferta_id) continue;
+    const qtd = Number(r.quantidade_pacotes || 0);
+    const vp = qtd > 0 && Number(r.valor_total) > 0 ? Number(r.valor_total) / qtd : Number(op.valor_por_pacote || 0);
+    const titulo = `${(op as any).origem || "Operação"} · ${r.nome} - ${new Date(op.data_operacao).toLocaleDateString("pt-BR")}`;
+    const { data: of, error } = await supabase.from("ofertas").insert({
+      empresa_id: op.empresa_id,
+      titulo,
+      descricao: op.observacoes || null,
+      quantidade_pacotes: qtd,
+      quantidade_paradas: Number(r.quantidade_paradas || 0),
+      valor: Number(r.valor_total || qtd * vp),
+      valor_por_pacote: vp,
+      status: "open",
+      tipo_entrega: "package_delivery",
+      operacao_id: op.id,
+      rota_operacao_id: r.id,
+      data_trabalho: op.data_operacao,
+    } as any).select("id").single();
+    if (error) throw error;
+    const ofertaId = (of as any).id as string;
+    const { count: existing } = await supabase
+      .from("entregas_pacotes").select("id", { count: "exact", head: true }).eq("oferta_id", ofertaId);
+    if (!existing && qtd > 0) {
+      const rows = Array.from({ length: qtd }, (_, i) => ({
+        oferta_id: ofertaId, operacao_id: op.id, numero_pacote: i + 1, endereco_entrega: null, status: "pending",
+      }));
+      const { error: pErr } = await supabase.from("entregas_pacotes").insert(rows as any);
+      if (pErr) throw pErr;
+    }
+    const { error: rErr } = await supabase.from("rotas_operacao").update({ oferta_id: ofertaId, status: "open" }).eq("id", r.id);
+    if (rErr) throw rErr;
+    count++;
+  }
+  if (count > 0) await supabase.from("operacoes").update({ status: "published" } as any).eq("id", op.id);
+  return count;
+}
+
 function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: string | null; onClose: () => void; showMargem: boolean }) {
   const [op, setOp] = useState<Operacao | null>(null);
   const [rotas, setRotas] = useState<any[]>([]);
   const [ofertas, setOfertas] = useState<any[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     if (!operacaoId) return;
@@ -971,7 +1013,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
         setOfertas([]);
       }
     })();
-  }, [operacaoId]);
+  }, [operacaoId, reloadKey]);
 
   if (!operacaoId) return null;
   if (!op) {
@@ -1009,6 +1051,34 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
           {op.observacoes && (
             <div className="rounded border bg-muted/40 p-2"><strong>Obs:</strong> {op.observacoes}</div>
           )}
+          {rotas.some((r) => !r.oferta_id) && (
+            <div className="rounded-lg border-2 border-primary bg-primary/5 p-3">
+              <p className="font-medium">
+                {rotas.filter((r) => !r.oferta_id).length} rota(s) ainda sem oferta publicada
+              </p>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Publique agora para que os entregadores vejam e aceitem, ou atribua direto a um entregador abaixo.
+              </p>
+              <Button
+                disabled={publishing}
+                onClick={async () => {
+                  setPublishing(true);
+                  try {
+                    const n = await publishPendingRotas(op, rotas);
+                    toast.success(`${n} oferta(s) publicada(s)!`);
+                    setReloadKey((k) => k + 1);
+                  } catch (e: any) {
+                    toast.error(e?.message ?? "Erro ao publicar.");
+                  } finally {
+                    setPublishing(false);
+                  }
+                }}
+              >
+                {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Publicar {rotas.filter((r) => !r.oferta_id).length} oferta(s)
+              </Button>
+            </div>
+          )}
           <div>
             <div className="mb-1 font-medium">Rotas</div>
             <Table>
@@ -1030,7 +1100,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
                       <TableCell className="text-right">{r.quantidade_pacotes}</TableCell>
                       <TableCell className="text-right">{r.quantidade_paradas}</TableCell>
                       <TableCell className="text-right">R$ {Number(r.valor_total).toFixed(2)}</TableCell>
-                      <TableCell>{of?.status ?? "—"}</TableCell>
+                      <TableCell>{of?.status ?? "Não publicada"}</TableCell>
                     </TableRow>
                   );
                 })}
@@ -1042,7 +1112,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
             <div>Pago aos entregadores: <strong>R$ {totalPago.toFixed(2)}</strong></div>
             {showMargem && <div>Margem: <strong>R$ {margem.toFixed(2)}</strong></div>}
           </div>
-          <AllocationPanel operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={rotas} />
+          <AllocationPanel operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={rotas} onChanged={() => setReloadKey((k) => k + 1)} />
           <RouteMapButton ofertaIds={rotas.map((r: any) => r.oferta_id).filter(Boolean)} />
           <OptimizeRouteButton operacaoId={op.id} ofertaIds={rotas.map((r: any) => r.oferta_id).filter(Boolean)} />
         </div>
@@ -1345,9 +1415,11 @@ function AuditByRanges({
 /* ============ Allocation panel ============ */
 
 function AllocationPanel({
-  operacaoId, empresaId, dataOperacao, rotas,
-}: { operacaoId: string; empresaId: string; dataOperacao: string; rotas: any[] }) {
+  operacaoId, empresaId, dataOperacao, rotas, onChanged,
+}: { operacaoId: string; empresaId: string; dataOperacao: string; rotas: any[]; onChanged?: () => void }) {
   const [aceitos, setAceitos] = useState<any[]>([]);
+  const [ativos, setAtivos] = useState<any[]>([]);
+  const [escolha, setEscolha] = useState<Record<string, string>>({});
   const [alocacoes, setAlocacoes] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -1368,6 +1440,28 @@ function AllocationPanel({
     setAceitos(entregadoresAceitos);
     const { data: alc } = await sb.from("alocacoes").select("*, entregadores(nome_completo)").eq("operacao_id", operacaoId);
     setAlocacoes(alc ?? []);
+    const { data: ents } = await sb.from("entregadores").select("id, nome_completo").eq("status", "ativo").order("nome_completo");
+    setAtivos(ents ?? []);
+  }
+
+  async function atribuirManual(rota: any) {
+    const entId = escolha[rota.id];
+    if (!entId) { toast.error("Escolha um entregador."); return; }
+    setBusy(true);
+    try {
+      const sb = supabase as any;
+      const { error } = await sb.from("alocacoes").insert({
+        operacao_id: operacaoId, rota_id: rota.id, entregador_id: entId,
+        oferta_id: rota.oferta_id, empresa_id: empresaId, status: "allocated",
+      });
+      if (error) throw error;
+      if (rota.oferta_id) {
+        await sb.from("ofertas").update({ entregador_id: entId, status: "accepted" }).eq("id", rota.oferta_id);
+      }
+      toast.success("Rota atribuída.");
+      await load();
+      onChanged?.();
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
   }
   useEffect(() => { load(); }, [operacaoId, empresaId, dataOperacao]);
 
@@ -1429,7 +1523,28 @@ function AllocationPanel({
             return (
               <TableRow key={r.id}>
                 <TableCell>{r.nome} · {r.quantidade_pacotes}p · R$ {Number(r.valor_total).toFixed(2)}</TableCell>
-                <TableCell>{a ? <span className="text-emerald-700">✅ {(a.entregadores as any)?.nome_completo}</span> : <span className="text-muted-foreground">❌ ninguém</span>}</TableCell>
+                <TableCell>{a ? <span className="text-emerald-700">✅ {(a.entregadores as any)?.nome_completo}</span> : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-muted-foreground">❌ ninguém</span>
+                    {r.oferta_id ? (
+                      <>
+                        <select
+                          className="h-8 rounded-md border bg-background px-2 text-xs"
+                          value={escolha[r.id] ?? ""}
+                          onChange={(e) => setEscolha((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                        >
+                          <option value="">Escolher entregador...</option>
+                          {ativos.map((en) => <option key={en.id} value={en.id}>{en.nome_completo}</option>)}
+                        </select>
+                        <Button size="sm" variant="outline" disabled={busy || !escolha[r.id]} onClick={() => atribuirManual(r)}>
+                          Atribuir
+                        </Button>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">(publique a oferta primeiro)</span>
+                    )}
+                  </div>
+                )}</TableCell>
               </TableRow>
             );
           })}
