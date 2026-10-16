@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, MapPin, Bike, CheckCircle2, AlertTriangle, Radio, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, MapPin, Bike, CheckCircle2, AlertTriangle, Radio, RefreshCw, UserX, Undo2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyModule } from "@/components/EmptyModule";
 import { LiveTrackingMap } from "@/components/LiveTrackingMap";
+import { reofertarRota } from "@/lib/reofertar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 type RotaOferta = {
   id: string;
+  empresa_id: string;
   titulo: string;
   status: string;
   entregador_id: string | null;
@@ -20,6 +23,11 @@ type RotaOferta = {
   entregadores?: { nome_completo?: string | null; tipo_veiculo?: string | null } | null;
 };
 
+type Recusa = {
+  id: string; origem: string; motivo: string | null; created_at: string;
+  ofertas?: { titulo?: string | null; status?: string | null } | null;
+  entregadores?: { nome_completo?: string | null } | null;
+};
 type Contagem = { total: number; entregues: number; problemas: number };
 type Pos = { registrado_em: string };
 
@@ -38,11 +46,13 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
   const [posicao, setPosicao] = useState<Record<string, Pos>>({});
   const [loading, setLoading] = useState(true);
   const [tracking, setTracking] = useState<RotaOferta | null>(null);
+  const [recusas, setRecusas] = useState<Recusa[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [, tick] = useState(0);
 
   async function load(showSpinner = false) {
     if (showSpinner) setLoading(true);
-    const sel = "id, titulo, status, entregador_id, operacao_id, quantidade_pacotes, closed_at, updated_at, entregadores(nome_completo, tipo_veiculo)";
+    const sel = "id, empresa_id, titulo, status, entregador_id, operacao_id, quantidade_pacotes, closed_at, updated_at, entregadores(nome_completo, tipo_veiculo)";
     let qa = supabase.from("ofertas").select(sel).in("status", ["accepted", "in_progress"]);
     if (empresaId) qa = qa.eq("empresa_id", empresaId);
     const { data: ativas } = await qa.order("updated_at", { ascending: false });
@@ -78,7 +88,33 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
       for (const l of (locs as any[]) ?? []) if (!p[l.entregador_id]) p[l.entregador_id] = { registrado_em: l.registrado_em };
       setPosicao(p);
     } else setPosicao({});
+
+    const desde = new Date(Date.now() - 7 * 86400000).toISOString();
+    let qr = supabase.from("ofertas_recusas")
+      .select("id, origem, motivo, created_at, ofertas(titulo, status), entregadores(nome_completo)")
+      .gte("created_at", desde);
+    if (empresaId) qr = qr.eq("empresa_id", empresaId);
+    const { data: rec } = await qr.order("created_at", { ascending: false }).limit(20);
+    setRecusas((rec as Recusa[]) ?? []);
     setLoading(false);
+  }
+
+  async function reofertar(o: RotaOferta) {
+    if (!o.entregador_id) return;
+    if (!confirm(`Tirar ${o.entregadores?.nome_completo ?? "o entregador"} desta rota e oferecê-la a outros entregadores?`)) return;
+    setBusyId(o.id);
+    try {
+      await reofertarRota({
+        ofertaId: o.id, empresaId: o.empresa_id, entregadorId: o.entregador_id,
+        motivo: "Empresa removeu o entregador (não compareceu ou desistiu)",
+      });
+      toast.success("Rota reofertada. Ela voltou para o mercado.");
+      load();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Não foi possível reofertar.");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   useEffect(() => {
@@ -160,14 +196,39 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
                     <span className={`flex items-center gap-1 text-xs ${cor}`}>
                       <Radio className="h-3.5 w-3.5" /> Localização {sinal}
                     </span>
-                    <Button size="sm" disabled={!o.entregador_id} onClick={() => setTracking(o)}>
-                      <MapPin className="mr-1 h-4 w-4" /> Mapa ao vivo
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="text-red-600" disabled={!o.entregador_id || busyId === o.id} onClick={() => reofertar(o)}>
+                        <UserX className="mr-1 h-4 w-4" /> Reofertar
+                      </Button>
+                      <Button size="sm" disabled={!o.entregador_id} onClick={() => setTracking(o)}>
+                        <MapPin className="mr-1 h-4 w-4" /> Mapa ao vivo
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {recusas.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="flex items-center gap-1 text-sm font-semibold text-muted-foreground"><Undo2 className="h-4 w-4" />Recusas e remoções (7 dias)</h3>
+          {recusas.map((r) => (
+            <Card key={r.id} className="border-orange-300/60">
+              <CardContent className="space-y-1 p-3 text-sm">
+                <div>
+                  <strong>{r.entregadores?.nome_completo ?? "Entregador"}</strong>{" "}
+                  {r.origem === "entregador" ? "recusou" : "foi removido de"} <strong>{r.ofertas?.titulo ?? "a rota"}</strong>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {r.motivo ? `${r.motivo} · ` : ""}{new Date(r.created_at).toLocaleString("pt-BR")} ·{" "}
+                  {r.ofertas?.status === "open" ? "aguardando outro entregador no mercado" : `situação: ${r.ofertas?.status ?? "—"}`}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 

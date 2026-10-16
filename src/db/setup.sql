@@ -2159,3 +2159,15 @@ CREATE TABLE IF NOT EXISTS "agenda_compromissos" (
 );
 -- @@
 CREATE UNIQUE INDEX IF NOT EXISTS "agenda_compromissos_unique" ON "agenda_compromissos" ("previsao_id","entregador_id");
+-- @@
+CREATE TABLE IF NOT EXISTS "ofertas_recusas" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"oferta_id" uuid NOT NULL,
+	"empresa_id" text NOT NULL,
+	"entregador_id" text NOT NULL,
+	"origem" text DEFAULT 'entregador' NOT NULL,
+	"motivo" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+-- @@
+CREATE INDEX IF NOT EXISTS "idx_ofertas_recusas_oferta" ON "ofertas_recusas" ("oferta_id","entregador_id");

@@ -467,6 +467,16 @@ export const dispatcherAlocacoes = pgTable("dispatcher_alocacoes", {
   distributedAt: timestamp("distributed_at"),
 });
 
+export const ofertasRecusas = pgTable("ofertas_recusas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ofertaId: uuid("oferta_id").notNull(),
+  empresaId: text("empresa_id").notNull(),
+  entregadorId: text("entregador_id").notNull(),
+  origem: text("origem").notNull().default("entregador"),
+  motivo: text("motivo"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const agendaCompromissos = pgTable(
   "agenda_compromissos",
   {

@@ -27,6 +27,7 @@ import {
 import { useLocationTracker } from "@/hooks/use-location-tracker";
 import { LocationIndicator } from "@/components/LocationIndicator";
 import { EmpresaRotas } from "@/components/EmpresaRotas";
+import { recusarRotaAtribuida } from "@/lib/reofertar";
 
 export const Route = createFileRoute("/_authenticated/rotas")({
   component: RotasPage,
@@ -63,6 +64,10 @@ type Oferta = {
   operacao_id?: string | null;
   quantidade_pacotes: number | null;
   valor_por_pacote?: number | null;
+  valor?: number | null;
+  data_trabalho?: string | null;
+  hora_inicio?: string | null;
+  endereco_coleta?: string | null;
 };
 
 async function ensurePackagesForOferta(oferta: Oferta) {
@@ -125,7 +130,9 @@ function EntregadorRotas() {
   const [confirmBaixa, setConfirmBaixa] = useState<null | "pendentes" | "selecionados">(null);
   const [confirmFinalizar, setConfirmFinalizar] = useState(false);
   const [busy, setBusy] = useState(false);
-  const trackerState = useLocationTracker(oferta?.id ?? null);
+  const trackerState = useLocationTracker(oferta?.status === "in_progress" ? oferta.id : null);
+  const [recusando, setRecusando] = useState(false);
+  const [motivoRecusa, setMotivoRecusa] = useState("indisponivel");
 
   async function load() {
     if (!user) return;
@@ -133,25 +140,16 @@ function EntregadorRotas() {
     try {
       const { data: ofs } = await supabase
         .from("ofertas")
-        .select("id, empresa_id, titulo, status, quantidade_pacotes, operacao_id, valor_por_pacote")
+        .select("id, empresa_id, titulo, status, quantidade_pacotes, operacao_id, valor_por_pacote, valor, data_trabalho, hora_inicio, endereco_coleta")
         .eq("entregador_id", user.id)
         .in("status", ["in_progress", "accepted"])
         .order("updated_at", { ascending: false })
         .limit(1);
       let of = (ofs?.[0] as Oferta) ?? null;
 
-      if (of?.status === "accepted") {
-        const { error: startErr } = await supabase
-          .from("ofertas")
-          .update({ status: "in_progress" })
-          .eq("id", of.id)
-          .eq("entregador_id", user.id);
-        if (!startErr) of = { ...of, status: "in_progress" };
-      }
-
       setOferta(of);
 
-      if (of) {
+      if (of && of.status === "in_progress") {
         await ensurePackagesForOferta(of);
 
         const { data: pks } = await supabase
@@ -316,6 +314,89 @@ function EntregadorRotas() {
       <div className="p-6">
         <PageHeader title="Rota em andamento" description="Acompanhe as paradas da sua rota ativa" />
         <EmptyModule icon={MapPin} title="Nenhuma rota em andamento" description="Aceite uma oferta e inicie a rota para ver as paradas aqui." />
+      </div>
+    );
+  }
+
+  if (oferta.status === "accepted") {
+    const MOTIVOS: Array<[string, string]> = [
+      ["indisponivel", "Estou indisponível nesse dia"],
+      ["veiculo", "Meu veículo não atende"],
+      ["valor", "Valor ou distância não compensam"],
+      ["outro", "Outro motivo"],
+    ];
+    async function iniciar() {
+      setBusy(true);
+      const { error } = await supabase.from("ofertas").update({ status: "in_progress" }).eq("id", oferta!.id).eq("entregador_id", user!.id);
+      setBusy(false);
+      if (error) return toast.error(error.message);
+      load();
+    }
+    async function recusar() {
+      setBusy(true);
+      try {
+        await recusarRotaAtribuida({
+          ofertaId: oferta!.id, empresaId: oferta!.empresa_id, entregadorId: user!.id,
+          motivo: MOTIVOS.find((m) => m[0] === motivoRecusa)?.[1] ?? motivoRecusa,
+        });
+        toast.success("Rota recusada. Ela voltou para outros entregadores.");
+        setRecusando(false);
+        load();
+      } catch (e: any) {
+        toast.error(e?.message ?? "Não foi possível recusar.");
+      } finally {
+        setBusy(false);
+      }
+    }
+    return (
+      <div className="space-y-4 p-4 sm:p-6">
+        <PageHeader title="Rota atribuída a você" description="Confirme para iniciar ou recuse para a empresa oferecer a outro entregador" />
+        <Card className="border-primary/40">
+          <CardContent className="space-y-3 p-4">
+            <div className="text-lg font-semibold">{oferta.titulo}</div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <span>{oferta.quantidade_pacotes ?? 0} pacotes</span>
+              <span>R$ {Number(oferta.valor ?? 0).toFixed(2)} no total</span>
+              <span>{oferta.data_trabalho ? new Date(oferta.data_trabalho + "T12:00:00").toLocaleDateString("pt-BR") : "Data a combinar"}</span>
+              <span>{oferta.hora_inicio ?? "Horário a combinar"}</span>
+            </div>
+            {oferta.endereco_coleta && (
+              <div className="flex items-start gap-1 rounded-md bg-muted p-2 text-xs">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Coleta: {oferta.endereco_coleta}
+              </div>
+            )}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button className="flex-1 bg-green-600 hover:bg-green-700" disabled={busy} onClick={iniciar}>
+                <CheckCircle2 className="mr-2 h-4 w-4" /> Aceitar e iniciar rota
+              </Button>
+              <Button variant="outline" className="flex-1 border-red-300 text-red-600" disabled={busy} onClick={() => setRecusando(true)}>
+                Recusar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <AlertDialog open={recusando} onOpenChange={setRecusando}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Recusar esta rota?</AlertDialogTitle>
+              <AlertDialogDescription>A empresa será avisada e a rota volta para outros entregadores. Ela não será oferecida a você de novo.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <RadioGroup value={motivoRecusa} onValueChange={setMotivoRecusa} className="space-y-1">
+              {MOTIVOS.map(([k, label]) => (
+                <label key={k} htmlFor={`m-${k}`} className="flex cursor-pointer items-center gap-2 rounded border p-2 hover:bg-accent">
+                  <RadioGroupItem id={`m-${k}`} value={k} /><span className="text-sm">{label}</span>
+                </label>
+              ))}
+            </RadioGroup>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={busy}>Voltar</AlertDialogCancel>
+              <AlertDialogAction disabled={busy} onClick={(e) => { e.preventDefault(); recusar(); }}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Recusar rota"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }

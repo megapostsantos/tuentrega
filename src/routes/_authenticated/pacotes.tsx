@@ -1538,7 +1538,7 @@ function AllocationPanel({
     }
     setAceitos(entregadoresAceitos);
     const { data: alc } = await sb.from("alocacoes").select("*, entregadores(nome_completo)").eq("operacao_id", operacaoId);
-    setAlocacoes(alc ?? []);
+    setAlocacoes((alc ?? []).filter((a: any) => !["recusada", "removida"].includes(a.status)));
     const { data: ents } = await sb.from("entregadores").select("id, nome_completo").eq("status", "ativo").order("nome_completo");
     setAtivos(ents ?? []);
   }
@@ -1596,7 +1596,7 @@ function AllocationPanel({
     const sb = supabase as any;
     const ofertaIds = rotas.map((r) => r.oferta_id).filter(Boolean);
     if (ofertaIds.length) {
-      await sb.from("ofertas").update({ status: "in_progress" }).in("id", ofertaIds);
+      await sb.from("ofertas").update({ status: "in_progress" }).in("id", ofertaIds).not("entregador_id", "is", null);
       const { notifyDestinatarioOferta } = await import("@/lib/whatsapp-notify");
       ofertaIds.forEach((id: string) => { notifyDestinatarioOferta(id).catch(() => {}); });
     }
