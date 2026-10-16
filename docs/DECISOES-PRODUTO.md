@@ -10,7 +10,8 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 ## Decidido
 1. **Senha:** só o admin redefine. A empresa não pode (evita travar o acesso do motorista).
 2. **Vínculo por convite:** quem convida fica atrelado a quem convidou.
-3. **Liberação:** 15 dias sem fazer rota para a empresa => o motorista passa a ver ofertas de outras.
+3. **Liberação (revisada em 16/10):** enquanto a empresa tem ofertas e o motorista pode escolher aceitar ou não, o vínculo continua. Se a empresa ficar **7 a 14 dias sem publicar nenhuma oferta**, o motorista fica livre para ver ofertas de outras empresas (prazo exato a definir; a regra anterior de "15 dias sem o motorista fazer rota" fica como proposta complementar).
+3b. **Remoção pela empresa:** a empresa pode tirar um motorista do seu quadro (ex.: após um incidente). Ele **não é banido da plataforma**, só deixa de carregar para aquela empresa e fica livre para as demais.
 4. **Desvinculação paga:** o entregador pode pagar uma mensalidade para se desvincular e ver ofertas de todas as empresas.
    (Já existe no admin o campo de mensalidade do entregador, padrão R$ 15,00, e `trial_days`.)
 5. **Blindagem anti-espionagem:** um dono de empresa não pode se cadastrar como motorista para ver o que concorrentes pagam.
@@ -30,7 +31,9 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 - Convite por link de uso único (a empresa nunca vê senha); o motorista cria a própria senha e aceita o vínculo.
 - Contagem dos 15 dias começa no aceite e zera a cada rota concluída para a empresa; calculado na leitura (sem tarefa agendada).
 - Um vínculo ativo por motorista; admin pode liberar/transferir.
-- Exclusividade total vs prioridade de aceite: **decisão pendente**.
+- Exclusividade: enquanto vinculado, o motorista vê as ofertas da empresa e escolhe aceitar ou não (**decidido**: o vínculo se mantém enquanto a empresa publicar ofertas).
+- Estados do vínculo: `ativo`, `liberado` (por inatividade da empresa, por mensalidade paga ou pelo admin) e `removido` (pela empresa; a empresa fica bloqueada para aquele motorista, com motivo interno e registro).
+- Prazo de liberação configurável no admin (padrão sugerido: 14 dias), calculado pela data da última oferta publicada pela empresa.
 
 **Financeiro da empresa**
 - Ciclo de pagamento configurável por empresa; fechamento por ciclo; contas a pagar com vencimento.
@@ -51,7 +54,9 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 7. "Esqueci minha senha" por e-mail (precisa de domínio e serviço de e-mail).
 
 ## Perguntas em aberto
-- Exclusividade total ou prioridade de aceite enquanto vinculado?
+- Prazo de liberação: 7 ou 14 dias sem a empresa publicar oferta?
+- Se a empresa publica ofertas mas o motorista não aceita nenhuma por N dias, ele também é liberado?
+- A empresa que removeu um motorista pode reconvidá-lo depois? Precisa de motivo obrigatório?
 - A mensalidade desvincula de todas as empresas ou só do vínculo atual? Valor final?
 - O ciclo de pagamento é definido pela empresa ou pela plataforma?
 - Motorista novo precisa de aprovação manual do admin?
