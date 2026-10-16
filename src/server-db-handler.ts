@@ -7,7 +7,16 @@ export default defineEventHandler(async (event) => {
   if (url.pathname === "/api/db/setup") {
     const { auth } = await import("./lib/auth");
     const session = await auth.api.getSession({ headers: req.headers });
-    if ((session?.user as any)?.role !== "admin") return Response.json({ error: "forbidden" }, { status: 403 });
+    if ((session?.user as any)?.role !== "admin") {
+      if (url.searchParams.get("offset") !== null) return Response.json({ error: "forbidden" }, { status: 403 });
+      const page = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Setup do banco</title><body style="font-family:system-ui;padding:24px;max-width:640px;margin:auto">
+<h2>Entre como administrador</h2>
+<p>Este navegador não está logado como <strong>admin</strong>. Entre com a conta de administrador e abra este endereço de novo.</p>
+<p><a href="/auth" style="display:inline-block;padding:12px 20px;background:#FFB700;color:#0D1B2A;border-radius:8px;text-decoration:none;font-weight:600">Ir para o login</a></p>
+</body>`;
+      return new Response(page, { status: 403, headers: { "content-type": "text/html; charset=utf-8" } });
+    }
     if (url.searchParams.get("offset") === null) {
       const html = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Setup do banco</title><body style="font-family:system-ui;padding:24px;max-width:640px;margin:auto">
