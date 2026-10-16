@@ -192,6 +192,7 @@ export const entregadores = pgTable("entregadores", {
   email: text("email"),
   invitedAt: timestamp("invited_at"),
   modeloVeiculo: text("modelo_veiculo"),
+  marcaVeiculo: text("marca_veiculo"),
   reliabilityLevel: text("reliability_level"),
   reliabilityScore: integer("reliability_score"),
   suspendedAt: timestamp("suspended_at"),

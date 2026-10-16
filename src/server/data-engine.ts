@@ -479,7 +479,7 @@ async function runTransaction(stmts: { text: string; params: unknown[] }[]) {
 const VEICULOS = ["walker", "biker", "motoboy", "carro", "caminhao", "moto_eletrica"];
 const PIX_TIPOS = ["cpf", "cnpj", "email", "telefone", "aleatoria"];
 const EMPRESA_FIELDS = ["razao_social", "cnpj", "nome_fantasia", "segmento", "cep", "rua", "numero", "complemento", "bairro", "cidade", "estado", "whatsapp", "responsavel"];
-const ENTREGADOR_FIELDS = ["nome_completo", "cpf", "cnpj", "whatsapp", "tipo_veiculo", "placa", "pix_tipo", "pix_chave", "banco", "data_nascimento", "cep", "rua", "numero", "complemento", "bairro", "cidade", "estado"];
+const ENTREGADOR_FIELDS = ["nome_completo", "cpf", "cnpj", "whatsapp", "tipo_veiculo", "marca_veiculo", "modelo_veiculo", "placa", "pix_tipo", "pix_chave", "banco", "data_nascimento", "cep", "rua", "numero", "complemento", "bairro", "cidade", "estado"];
 
 function clean(v: unknown): string | null {
   if (v === undefined || v === null) return null;

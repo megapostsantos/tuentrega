@@ -460,7 +460,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
   const [f, setF] = useState({
     nome_completo: "", cpf: "", cnpj: "", data_nascimento: "", whatsapp: "", email: "",
     password: "", password2: "",
-    tipo_veiculo: "", placa: "",
+    tipo_veiculo: "", marca_veiculo: "", modelo_veiculo: "", placa: "",
     cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "",
     pix_tipo: "", pix_chave: "", banco: "",
   });
@@ -502,7 +502,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
     const err = await createAccount("entregador", f.email, f.password, f.nome_completo || f.email, {
       nome_completo: f.nome_completo, cpf: onlyDigits(f.cpf), cnpj: onlyDigits(f.cnpj),
       data_nascimento: f.data_nascimento ? toISODate(f.data_nascimento) : null,
-      whatsapp: f.whatsapp, tipo_veiculo: f.tipo_veiculo, placa: f.placa,
+      whatsapp: f.whatsapp, tipo_veiculo: f.tipo_veiculo, marca_veiculo: f.marca_veiculo, modelo_veiculo: f.modelo_veiculo, placa: f.placa,
       cep: f.cep, rua: f.rua, numero: f.numero, complemento: f.complemento, bairro: f.bairro,
       cidade: f.cidade, estado: f.estado, pix_tipo: f.pix_tipo, pix_chave: f.pix_chave, banco: f.banco,
       turnos, plataformas,
@@ -553,6 +553,13 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
                 </SelectContent>
               </Select>
             </div>
+
+            {f.tipo_veiculo && f.tipo_veiculo !== "walker" && (
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Marca do veículo" value={f.marca_veiculo} onChange={(v) => set("marca_veiculo", v)} />
+                <Field label="Modelo do veículo" value={f.modelo_veiculo} onChange={(v) => set("modelo_veiculo", v)} />
+              </div>
+            )}
 
             {exigePlaca && (
               <Field label="Placa (AAA-0000 ou AAA0A00)" value={f.placa}

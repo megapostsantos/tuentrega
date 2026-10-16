@@ -238,7 +238,7 @@ function EmpresaProfile() {
 
 type EntregadorRow = {
   id: string; nome_completo: string; cpf: string; whatsapp: string | null;
-  tipo_veiculo: string | null; placa: string | null;
+  tipo_veiculo: string | null; placa: string | null; marca_veiculo?: string | null; modelo_veiculo?: string | null;
   pix_tipo: string | null; pix_chave: string | null; banco: string | null;
   data_nascimento: string | null; selfie_url: string | null;
   cep: string | null; rua: string | null; numero: string | null; complemento: string | null;
@@ -272,7 +272,7 @@ function EntregadorProfile() {
     if (!user) return;
     supabase.from("entregadores").select("*").eq("id", user.id).maybeSingle().then(async ({ data }) => {
       const row = (data as EntregadorRow) ?? {
-        id: user.id, nome_completo: "", cpf: "", whatsapp: "", tipo_veiculo: null, placa: "",
+        id: user.id, nome_completo: "", cpf: "", whatsapp: "", tipo_veiculo: null, placa: "", marca_veiculo: "", modelo_veiculo: "",
         pix_tipo: null, pix_chave: "", banco: "", data_nascimento: null, selfie_url: null,
         cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "",
         turnos: [], plataformas: [], plataforma_comprovante_url: null,
@@ -358,6 +358,8 @@ function EntregadorProfile() {
       whatsapp: f.whatsapp,
       tipo_veiculo: f.tipo_veiculo as never,
       placa: f.placa,
+      marca_veiculo: f.marca_veiculo ?? null,
+      modelo_veiculo: f.modelo_veiculo ?? null,
       pix_tipo: f.pix_tipo as never, pix_chave: f.pix_chave, banco: f.banco,
       selfie_url: f.selfie_url, plataforma_comprovante_url: f.plataforma_comprovante_url,
       cep: f.cep, rua: f.rua, numero: f.numero, complemento: f.complemento,
@@ -432,6 +434,17 @@ function EntregadorProfile() {
               </Select>
               <EmptyHint v={f.tipo_veiculo} />
             </Field>
+
+            {f.tipo_veiculo && f.tipo_veiculo !== "walker" && (
+              <>
+                <Field label="Marca do veículo">
+                  <Input value={f.marca_veiculo ?? ""} onChange={(e) => up("marca_veiculo", e.target.value)} />
+                </Field>
+                <Field label="Modelo do veículo">
+                  <Input value={f.modelo_veiculo ?? ""} onChange={(e) => up("modelo_veiculo", e.target.value)} />
+                </Field>
+              </>
+            )}
 
             {needsPlaca && (
               <Field label="Placa">

@@ -1718,3 +1718,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS "user_roles_user_role_idx" ON "user_roles" USI
 ALTER TABLE "empresas" ALTER COLUMN "cnpj" DROP NOT NULL;
 -- @@
 ALTER TABLE "entregadores" ALTER COLUMN "cpf" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ADD COLUMN IF NOT EXISTS "marca_veiculo" text;
