@@ -13,6 +13,16 @@ export default defineConfig({
     server: { entry: "server" },
   },
   nitro: {
+    routeRules: {
+      "/**": {
+        headers: {
+          "X-Content-Type-Options": "nosniff",
+          "Referrer-Policy": "strict-origin-when-cross-origin",
+          "Permissions-Policy": "geolocation=(self), camera=(self), microphone=()",
+          "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+        },
+      },
+    },
     handlers: [
       {
         route: "/api/auth/**",
@@ -22,5 +32,5 @@ export default defineConfig({
       { route: "/api/admin/**", handler: "src/server-admin-handler.ts" },
       { route: "/api/storage/**", handler: "src/server-storage-handler.ts" },
     ],
-  },
+  } as any,
 });

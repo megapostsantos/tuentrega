@@ -1,8 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { db } from "@/db";
-import { entregasPacotes } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 export type TrackingPacote = {
   id: string;
@@ -29,23 +26,4 @@ export const getTrackingByToken = createServerFn({ method: "GET" })
     // TODO: entregasPacotes does not have token_rastreamento column yet
     // This needs a schema migration to add that column
     return null;
-  });
-
-export const updatePacoteStatus = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
-    z
-      .object({
-        id: z.string().uuid(),
-        status: z.string(),
-        foto_pod_url: z.string().optional(),
-        motivo_nao_entrega: z.string().optional(),
-      })
-      .parse(data),
-  )
-  .handler(async ({ data }) => {
-    await db
-      .update(entregasPacotes)
-      .set({ status: data.status, updatedAt: new Date() })
-      .where(eq(entregasPacotes.id, data.id));
-    return { success: true };
   });

@@ -28,15 +28,3 @@ export const inviteEntregador = createServerFn({ method: "POST" })
       "Convite de entregador requer configuração adicional do Better Auth admin plugin.",
     );
   });
-
-// Get entregador profile
-export const getEntregadorProfile = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) => z.object({ userId: z.string() }).parse(data))
-  .handler(async ({ data }) => {
-    const result = await db
-      .select()
-      .from(entregadores)
-      .where(eq(entregadores.id, data.userId))
-      .limit(1);
-    return result[0] ?? null;
-  });

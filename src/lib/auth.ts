@@ -46,6 +46,15 @@ export const auth = betterAuth({
       defaultRole: "entregador",
     }),
   ],
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+    customRules: {
+      "/sign-in/email": { window: 60, max: 8 },
+      "/sign-up/email": { window: 60, max: 5 },
+    },
+  },
   onAPIError: {
     onError: (error: unknown) => {
       const e = error as any;

@@ -3,6 +3,7 @@ import { is } from "drizzle-orm";
 import { PgTable, getTableConfig } from "drizzle-orm/pg-core";
 import * as schema from "../db/schema";
 import type { Filter, QueryReq, QueryResp } from "../lib/query-builder";
+import { POLICIES, ruleFor, type Role } from "./policies";
 
 export interface EngineCtx {
   userId: string | null;
@@ -34,9 +35,43 @@ for (const v of Object.values(schema)) {
 }
 
 const BLOCKED = new Set(["user", "session", "account", "verification"]);
-const ADMIN_READ = new Set(["admin_logs", "admin_settings", "admin_notes", "admin_impersonations", "admin_notifications"]);
-const OPEN_INSERT = new Set(["admin_notifications", "admin_logs"]);
-const ADMIN_WRITE = new Set(["plans", "admin_settings", "admin_notes", "admin_impersonations"]);
+interface Scope {
+  uid: string;
+  role: Role;
+  P: (v: unknown) => string;
+}
+
+function makeScope(ctx: EngineCtx, params: unknown[]): Scope | null {
+  if (ctx.internal || ctx.role === "admin") return null;
+  const role = ctx.role as Role;
+  if (!ctx.userId) throw Object.assign(new Error("Não autenticado"), { code: "401" });
+  if (role !== "empresa" && role !== "entregador" && role !== "dispatcher")
+    throw Object.assign(new Error("Sem permissão"), { code: "403" });
+  return { uid: ctx.userId, role, P: (v) => `$${params.push(v)}` };
+}
+
+function forbidden(msg = "Sem permissão"): never {
+  throw Object.assign(new Error(msg), { code: "403" });
+}
+
+function readGuard(table: string, alias: string, scope: Scope | null): { deny: boolean; sql?: string } {
+  if (!scope) return { deny: false };
+  const rule = ruleFor(POLICIES[table]?.read, scope.role);
+  if (rule === undefined || rule === false) return { deny: true };
+  if (rule === true) return { deny: false };
+  return { deny: false, sql: rule(alias, scope.P, scope.uid) };
+}
+
+function maskExpr(table: string, alias: string, col: string, scope: Scope | null): string | null {
+  if (!scope) return null;
+  const m = ruleFor(POLICIES[table]?.mask, scope.role);
+  if (!m || !m.cols.includes(col)) return null;
+  return m.unless ? `(case when ${m.unless(alias, scope.P, scope.uid)} then "${alias}"."${col}" else null end)` : "null";
+}
+
+function colRef(table: string, alias: string, col: string, scope: Scope | null): string {
+  return maskExpr(table, alias, col, scope) ?? `${q(alias)}.${q(col)}`;
+}
 
 let _sql: ReturnType<typeof neon> | null = null;
 function sqlClient() {
@@ -94,14 +129,20 @@ function splitTop(s: string): string[] {
 
 let aliasN = 0;
 
-function buildCols(table: string, alias: string, columns: string, extraWhere: string[]): string {
+function buildCols(table: string, alias: string, columns: string, extraWhere: string[], scope: Scope | null): string {
   const info = tableInfo(table);
   const out: string[] = [];
   for (const raw of splitTop(columns.trim() || "*")) {
     const p = raw.trim();
     if (!p) continue;
     if (p === "*") {
-      out.push(`${q(alias)}.*`);
+      const hasMask = scope && ruleFor(POLICIES[table]?.mask, scope.role);
+      if (hasMask) {
+        for (const c of info.cols.keys()) {
+          const m = maskExpr(table, alias, c, scope);
+          out.push(m ? `${m} as ${q(c)}` : `${q(alias)}.${q(c)}`);
+        }
+      } else out.push(`${q(alias)}.*`);
       continue;
     }
     const emb = p.match(/^(?:([A-Za-z_][A-Za-z0-9_]*)\s*:\s*)?([A-Za-z_][A-Za-z0-9_]*)(?:!([A-Za-z_][A-Za-z0-9_]*))?\s*\(([\s\S]*)\)$/);
@@ -109,13 +150,14 @@ function buildCols(table: string, alias: string, columns: string, extraWhere: st
       const [, outAlias, rel, hintRaw, sub] = emb;
       const inner = hintRaw === "inner";
       const hint = hintRaw && hintRaw !== "inner" ? hintRaw : undefined;
-      out.push(buildEmbed(table, info, alias, outAlias ?? rel, rel, hint, sub, inner, extraWhere));
+      out.push(buildEmbed(table, info, alias, outAlias ?? rel, rel, hint, sub, inner, extraWhere, scope));
       continue;
     }
     const plain = p.match(/^(?:([A-Za-z_][A-Za-z0-9_]*)\s*:\s*)?([A-Za-z_][A-Za-z0-9_]*)(?:::[a-z]+)?$/);
     if (!plain) throw new Error(`Seleção inválida: ${p}`);
     const [, a, col] = plain;
-    out.push(`${q(alias)}.${q(col)}${a ? ` as ${q(a)}` : ""}`);
+    const masked = maskExpr(table, alias, col, scope);
+    out.push(`${masked ?? `${q(alias)}.${q(col)}`}${a || masked ? ` as ${q(a ?? col)}` : ""}`);
   }
   return out.join(", ") || `${q(alias)}.*`;
 }
@@ -130,22 +172,25 @@ function buildEmbed(
   sub: string,
   inner: boolean,
   extraWhere: string[],
+  scope: Scope | null,
 ): string {
   const childInfo = tableInfo(rel);
   const a = `e${++aliasN}`;
-  const subList = buildCols(rel, a, sub || "*", []);
+  const subList = buildCols(rel, a, sub || "*", [], scope);
+  const g = readGuard(rel, a, scope);
+  const guard = g.deny ? " and false" : g.sql ? ` and (${g.sql})` : "";
 
   const declaredM2o = parentInfo.fks.filter((f) => f.table === rel);
   const declaredO2m = childInfo.fks.filter((f) => f.table === parent);
   if (declaredM2o.length) {
     const f = declaredM2o.find((x) => x.col === hint || x.col === `${outName}_id`) ?? declaredM2o[0];
     if (inner) extraWhere.push(`exists (select 1 from ${q(rel)} z where z.${q(f.refCol)}::text = ${q(pAlias)}.${q(f.col)}::text)`);
-    return `(select to_jsonb(x) from (select ${subList} from ${q(rel)} ${q(a)} where ${q(a)}.${q(f.refCol)}::text = ${q(pAlias)}.${q(f.col)}::text limit 1) x) as ${q(outName)}`;
+    return `(select to_jsonb(x) from (select ${subList} from ${q(rel)} ${q(a)} where ${q(a)}.${q(f.refCol)}::text = ${q(pAlias)}.${q(f.col)}::text${guard} limit 1) x) as ${q(outName)}`;
   }
   if (declaredO2m.length) {
     const f = declaredO2m.find((x) => x.col === hint) ?? declaredO2m[0];
     if (inner) extraWhere.push(`exists (select 1 from ${q(rel)} z where z.${q(f.col)}::text = ${q(pAlias)}.${q(f.refCol)}::text)`);
-    return `coalesce((select jsonb_agg(to_jsonb(x)) from (select ${subList} from ${q(rel)} ${q(a)} where ${q(a)}.${q(f.col)}::text = ${q(pAlias)}.${q(f.refCol)}::text) x), '[]'::jsonb) as ${q(outName)}`;
+    return `coalesce((select jsonb_agg(to_jsonb(x)) from (select ${subList} from ${q(rel)} ${q(a)} where ${q(a)}.${q(f.col)}::text = ${q(pAlias)}.${q(f.refCol)}::text${guard}) x), '[]'::jsonb) as ${q(outName)}`;
   }
 
   const fkCands = [hint, `${outName}_id`, ...singulars(rel).map((s) => `${s}_id`)].filter(
@@ -154,7 +199,7 @@ function buildEmbed(
   if (fkCands.length) {
     const fk = fkCands[0];
     if (inner) extraWhere.push(`exists (select 1 from ${q(rel)} z where z."id"::text = ${q(pAlias)}.${q(fk)}::text)`);
-    return `(select to_jsonb(x) from (select ${subList} from ${q(rel)} ${q(a)} where ${q(a)}."id"::text = ${q(pAlias)}.${q(fk)}::text limit 1) x) as ${q(outName)}`;
+    return `(select to_jsonb(x) from (select ${subList} from ${q(rel)} ${q(a)} where ${q(a)}."id"::text = ${q(pAlias)}.${q(fk)}::text${guard} limit 1) x) as ${q(outName)}`;
   }
   const cfkCands = [hint, ...singulars(parent).map((s) => `${s}_id`)].filter(
     (c): c is string => !!c && childInfo.cols.has(c),
@@ -162,7 +207,7 @@ function buildEmbed(
   if (cfkCands.length) {
     const cfk = cfkCands[0];
     if (inner) extraWhere.push(`exists (select 1 from ${q(rel)} z where z.${q(cfk)}::text = ${q(pAlias)}."id"::text)`);
-    return `coalesce((select jsonb_agg(to_jsonb(x)) from (select ${subList} from ${q(rel)} ${q(a)} where ${q(a)}.${q(cfk)}::text = ${q(pAlias)}."id"::text) x), '[]'::jsonb) as ${q(outName)}`;
+    return `coalesce((select jsonb_agg(to_jsonb(x)) from (select ${subList} from ${q(rel)} ${q(a)} where ${q(a)}.${q(cfk)}::text = ${q(pAlias)}."id"::text${guard}) x), '[]'::jsonb) as ${q(outName)}`;
   }
   throw new Error(`Relação não encontrada entre ${parent} e ${rel}`);
 }
@@ -215,11 +260,11 @@ function cond(colRef: string, op: string, val: unknown, params: unknown[]): stri
   }
 }
 
-function parseGroup(expr: string, kind: "and" | "or", alias: string, params: unknown[]): string {
+function parseGroup(expr: string, kind: "and" | "or", alias: string, params: unknown[], table: string, scope: Scope | null): string {
   const terms = splitTop(expr).map((t) => t.trim()).filter(Boolean);
   const parts = terms.map((t) => {
     const g = t.match(/^(and|or)\(([\s\S]*)\)$/);
-    if (g) return parseGroup(g[2], g[1] as "and" | "or", alias, params);
+    if (g) return parseGroup(g[2], g[1] as "and" | "or", alias, params, table, scope);
     const i = t.indexOf(".");
     if (i < 0) throw new Error(`Filtro inválido: ${t}`);
     const col = t.slice(0, i);
@@ -231,18 +276,18 @@ function parseGroup(expr: string, kind: "and" | "or", alias: string, params: unk
     }
     const j = rest.indexOf(".");
     if (j < 0) throw new Error(`Filtro inválido: ${t}`);
-    const c = cond(`${q(alias)}.${q(col)}`, rest.slice(0, j), rest.slice(j + 1), params);
+    const c = cond(colRef(table, alias, col, scope), rest.slice(0, j), rest.slice(j + 1), params);
     return negate ? `not (${c})` : c;
   });
   return `(${parts.join(kind === "and" ? " and " : " or ")})`;
 }
 
-function buildWhere(filters: Filter[], alias: string, params: unknown[]): string[] {
+function buildWhere(filters: Filter[], alias: string, params: unknown[], table: string, scope: Scope | null): string[] {
   const out: string[] = [];
   for (const f of filters) {
-    if (f.k === "f") out.push(cond(`${q(alias)}.${q(f.col)}`, f.op, f.val, params));
-    else if (f.k === "not") out.push(`not (${cond(`${q(alias)}.${q(f.col)}`, f.op, f.val, params)})`);
-    else out.push(parseGroup(f.expr, "or", alias, params));
+    if (f.k === "f") out.push(cond(colRef(table, alias, f.col, scope), f.op, f.val, params));
+    else if (f.k === "not") out.push(`not (${cond(colRef(table, alias, f.col, scope), f.op, f.val, params)})`);
+    else out.push(parseGroup(f.expr, "or", alias, params, table, scope));
   }
   return out;
 }
@@ -265,17 +310,6 @@ function fixTs(v: any): any {
     return o;
   }
   return v;
-}
-
-function authorize(req: QueryReq, ctx: EngineCtx) {
-  if (ctx.internal) return;
-  if (!ctx.userId) throw Object.assign(new Error("Não autenticado"), { code: "401" });
-  const admin = ctx.role === "admin";
-  if (admin) return;
-  const t = req.table;
-  if (ADMIN_READ.has(t) && req.op !== "insert") throw Object.assign(new Error("Sem permissão"), { code: "403" });
-  if (ADMIN_READ.has(t) && req.op === "insert" && !OPEN_INSERT.has(t)) throw Object.assign(new Error("Sem permissão"), { code: "403" });
-  if (ADMIN_WRITE.has(t) && req.op !== "select") throw Object.assign(new Error("Sem permissão"), { code: "403" });
 }
 
 async function runRpc(req: QueryReq): Promise<QueryResp> {
@@ -307,24 +341,42 @@ async function runRpc(req: QueryReq): Promise<QueryResp> {
 
 export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<QueryResp> {
   try {
-    authorize(req, ctx);
-    if (req.op === "rpc") return await runRpc(req);
+    if (!ctx.internal && !ctx.userId) throw Object.assign(new Error("Não autenticado"), { code: "401" });
+    const params: unknown[] = [];
+    const scope = makeScope(ctx, params);
+
+    if (req.op === "rpc") {
+      if (scope) {
+        const a = req.rpc?.args ?? {};
+        const pontos = Number(a._pontos ?? 0);
+        if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
+      }
+      return await runRpc(req);
+    }
 
     const info = tableInfo(req.table);
     const T = q(req.table);
-    const params: unknown[] = [];
+    const pol = POLICIES[req.table];
 
     if (req.op === "select") {
       const alias = "t0";
+      const g = readGuard(req.table, alias, scope);
+      if (g.deny) {
+        return { data: req.head || req.single ? null : [], error: null, count: req.count ? 0 : null };
+      }
       const extra: string[] = [];
-      const list = buildCols(req.table, alias, req.columns ?? "*", extra);
-      const where = [...buildWhere(req.filters, alias, params), ...extra];
+      const list = buildCols(req.table, alias, req.columns ?? "*", extra, scope);
+      const where = [...buildWhere(req.filters, alias, params, req.table, scope), ...extra];
+      if (g.sql) where.push(g.sql);
       const whereSql = where.length ? ` where ${where.join(" and ")}` : "";
 
       let count: number | null = null;
       if (req.count) {
         const cp: unknown[] = [];
-        const cw = buildWhere(req.filters, alias, cp);
+        const cs = makeScope(ctx, cp);
+        const cg = readGuard(req.table, alias, cs);
+        const cw = buildWhere(req.filters, alias, cp, req.table, cs);
+        if (cg.sql) cw.push(cg.sql);
         const rows = await query(
           `select count(*)::int as c from ${T} ${q(alias)}${cw.length ? ` where ${cw.join(" and ")}` : ""}`,
           cp,
@@ -334,7 +386,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
       if (req.head) return { data: null, error: null, count };
 
       const orderSql = req.order.length
-        ? ` order by ${req.order.map((o) => `${q(alias)}.${q(o.col)} ${o.asc ? "asc" : "desc"}`).join(", ")}`
+        ? ` order by ${req.order.map((o) => `${colRef(req.table, alias, o.col, scope)} ${o.asc ? "asc" : "desc"}`).join(", ")}`
         : "";
       let limit = req.limit;
       if (req.single && limit == null) limit = 2;
@@ -362,10 +414,32 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
       return { data, error: null, count };
     }
 
+    // ----- escritas -----
+    const forced = scope ? ruleFor(pol?.force, scope.role) : undefined;
+    const allowedCols = scope ? ruleFor(pol?.updateCols, scope.role) : undefined;
+
+    function updPred(): string | null {
+      if (!scope) return null;
+      const r = ruleFor(pol?.update, scope.role);
+      if (r === undefined || r === false) return forbidden();
+      return r === true ? null : r(req.table, scope.P, scope.uid);
+    }
+
     let stmt: string;
     if (req.op === "insert" || req.op === "upsert") {
-      const rows = (Array.isArray(req.values) ? req.values : [req.values]) as Record<string, unknown>[];
+      const rows = ((Array.isArray(req.values) ? req.values : [req.values]) as Record<string, unknown>[]).map((r) => ({ ...r }));
       if (!rows.length || !rows[0]) return { data: req.returning ? [] : null, error: null, count: null };
+      if (scope) {
+        const ins = ruleFor(pol?.insert, scope.role);
+        if (ins === undefined || ins === false) forbidden();
+        for (const r of rows) {
+          if (forced) for (const c of Object.keys(forced)) if (r[c] === undefined || r[c] === null) r[c] = scope.uid;
+          if (typeof ins === "function") {
+            const err = await ins(r, scope.uid, query);
+            if (err) forbidden(err);
+          }
+        }
+      }
       const cols = [...new Set(rows.flatMap((r) => Object.keys(r).filter((k) => r[k] !== undefined)))];
       cols.forEach(q);
       if (!cols.length) throw new Error("Nenhum valor para inserir");
@@ -379,25 +453,52 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
         .join(", ");
       stmt = `insert into ${T} (${cols.map(q).join(", ")}) values ${valuesSql}`;
       if (req.op === "upsert") {
-        const conflict = req.onConflict ? req.onConflict.split(",").map((s) => s.trim()) : info.pk;
+        const conflict = req.onConflict ? req.onConflict.split(",").map((x) => x.trim()) : info.pk;
         if (!conflict.length) throw new Error("upsert sem chave de conflito");
-        const upd = cols.filter((c) => !conflict.includes(c));
+        let upd = cols.filter((c) => !conflict.includes(c));
+        let pred: string | null = null;
+        let canUpdate = true;
+        if (scope) {
+          const r = ruleFor(pol?.update, scope.role);
+          if (r === undefined || r === false) canUpdate = false;
+          else {
+            if (typeof r === "function") pred = r(req.table, scope.P, scope.uid);
+            if (allowedCols) upd = upd.filter((c) => allowedCols.includes(c));
+            if (forced) upd = upd.filter((c) => !(c in forced));
+          }
+        }
         stmt += ` on conflict (${conflict.map(q).join(", ")}) ` +
-          (req.ignoreDuplicates || !upd.length
+          (req.ignoreDuplicates || !upd.length || !canUpdate
             ? "do nothing"
-            : `do update set ${upd.map((c) => `${q(c)} = excluded.${q(c)}`).join(", ")}`);
+            : `do update set ${upd.map((c) => `${q(c)} = excluded.${q(c)}`).join(", ")}${pred ? ` where ${pred}` : ""}`);
       }
     } else if (req.op === "update") {
       const vals = (req.values ?? {}) as Record<string, unknown>;
       const keys = Object.keys(vals).filter((k) => vals[k] !== undefined);
       if (!keys.length) throw new Error("Nenhum valor para atualizar");
+      const pred = updPred();
+      if (scope) {
+        if (allowedCols) for (const k of keys) if (!allowedCols.includes(k)) forbidden(`Coluna não permitida: ${k}`);
+        if (forced) for (const c of Object.keys(forced)) if (vals[c] !== undefined && String(vals[c]) !== scope.uid) forbidden(`Coluna protegida: ${c}`);
+        const chk = ruleFor(pol?.updateCheck, scope.role);
+        const err = chk?.(vals, scope.uid);
+        if (err) forbidden(err);
+      }
       const sets = keys.map((k) => `${q(k)} = $${params.push(encode(vals[k], info.cols.get(k)))}`);
-      const where = buildWhere(req.filters, req.table, params);
+      const where = buildWhere(req.filters, req.table, params, req.table, scope);
       if (!where.length) throw new Error("update sem filtro não é permitido");
+      if (pred) where.push(pred);
       stmt = `update ${T} set ${sets.join(", ")} where ${where.join(" and ")}`;
     } else if (req.op === "delete") {
-      const where = buildWhere(req.filters, req.table, params);
+      let pred: string | null = null;
+      if (scope) {
+        const r = ruleFor(pol?.delete, scope.role);
+        if (r === undefined || r === false) forbidden();
+        if (typeof r === "function") pred = r(req.table, scope.P, scope.uid);
+      }
+      const where = buildWhere(req.filters, req.table, params, req.table, scope);
       if (!where.length) throw new Error("delete sem filtro não é permitido");
+      if (pred) where.push(pred);
       stmt = `delete from ${T} where ${where.join(" and ")}`;
     } else {
       throw new Error(`Operação inválida: ${req.op}`);

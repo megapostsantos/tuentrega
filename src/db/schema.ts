@@ -619,6 +619,7 @@ export const saidasNex = pgTable("saidas_nex", {
   horaSaida: time("hora_saida").defaultNow(),
   status: text("status").notNull().default("saiu"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  empresaId: text("empresa_id"),
 });
 
 export const financeiroLancamentos = pgTable("financeiro_lancamentos", {
