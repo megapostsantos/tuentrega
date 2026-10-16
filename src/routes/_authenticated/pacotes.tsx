@@ -37,7 +37,10 @@ export const Route = createFileRoute("/_authenticated/pacotes")({
 
 
 type DivMethod = "packages" | "stops" | "manual";
-type Rota = { nome: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number; valor_por_pacote?: number };
+type Rota = {
+  nome: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number; valor_por_pacote?: number;
+  entregador_id?: string; entregador_nome?: string;
+};
 type Operacao = {
   id: string;
   empresa_id: string;
@@ -255,7 +258,19 @@ function OperationCard({ op, onView, showMargem }: { op: Operacao; onView: () =>
 
 /* ============ Create operation flow (4-step stepper) ============ */
 
-type DivisionMode = "auto" | "manual" | "single";
+type DivisionMode = "auto" | "manual" | "single" | "agenda";
+type AgendaMembro = { entregador_id: string; nome: string; qtd: number };
+
+function repartir(total: number, pesos: number[]): number[] {
+  const W = pesos.reduce((a, b) => a + b, 0);
+  if (W <= 0 || total <= 0) return pesos.map(() => 0);
+  const raw = pesos.map((w) => (total * w) / W);
+  const base = raw.map(Math.floor);
+  let resto = total - base.reduce((a, b) => a + b, 0);
+  const ordem = raw.map((r, i) => [r - base[i], i] as const).sort((a, b) => b[0] - a[0]);
+  for (let k = 0; resto > 0; k++, resto--) base[ordem[k % ordem.length][1]]++;
+  return base;
+}
 
 const ORIGENS_PRESET = ["Mercado Livre", "Shopee", "Shein", "Amazon", "Magalu", "iFood", "Rappi"];
 
@@ -295,6 +310,32 @@ function CreateOperation({
   const [numRotas, setNumRotas] = useState<number>(3);
   const [manualRotas, setManualRotas] = useState<Rota[]>([]);
   const [rotas, setRotas] = useState<Rota[]>([]);
+  const [agenda, setAgenda] = useState<{ valor: number; membros: AgendaMembro[] } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const sb = supabase as any;
+      const { data: pv } = await sb.from("agenda_previsoes").select("id, valor_por_pacote")
+        .eq("empresa_id", userId).eq("data_prevista", dataOperacao);
+      const ids = (pv ?? []).map((x: any) => x.id);
+      if (!ids.length) { if (alive) setAgenda(null); return; }
+      const { data: cs } = await sb.from("agenda_compromissos")
+        .select("entregador_id, pacotes_comprometidos, pacotes_ajustados, entregadores(nome_completo)")
+        .in("previsao_id", ids).neq("status", "cancelado").order("created_at", { ascending: true });
+      const porId = new Map<string, AgendaMembro>();
+      for (const c of cs ?? []) {
+        const qtd = Number(c.pacotes_ajustados ?? c.pacotes_comprometidos ?? 0);
+        if (qtd <= 0) continue;
+        const m = porId.get(c.entregador_id);
+        if (m) m.qtd += qtd;
+        else porId.set(c.entregador_id, { entregador_id: c.entregador_id, nome: c.entregadores?.nome_completo ?? "Entregador", qtd });
+      }
+      const membros = [...porId.values()];
+      if (alive) setAgenda(membros.length ? { valor: Number(pv?.[0]?.valor_por_pacote ?? 0), membros } : null);
+    })();
+    return () => { alive = false; };
+  }, [userId, dataOperacao]);
 
   function buildAuto(n: number): Rota[] {
     const out: Rota[] = [];
@@ -313,6 +354,26 @@ function CreateOperation({
 
   function buildSingle(): Rota[] {
     return [{ nome: "Rota única", quantidade_pacotes: totalPacotes, quantidade_paradas: totalParadas, valor_total: totalPacotes * valorPorPacote }];
+  }
+
+  function buildFromAgenda(): Rota[] {
+    if (!agenda) return [];
+    const pesos = agenda.membros.map((m) => m.qtd);
+    const pacs = repartir(totalPacotes, pesos);
+    const pars = repartir(totalParadas, pesos);
+    const out: Rota[] = [];
+    agenda.membros.forEach((m, i) => {
+      if (pacs[i] <= 0) return;
+      out.push({
+        nome: `Rota ${out.length + 1} · ${m.nome.split(" ")[0]}`,
+        quantidade_pacotes: pacs[i],
+        quantidade_paradas: pars[i],
+        valor_total: pacs[i] * valorPorPacote,
+        entregador_id: m.entregador_id,
+        entregador_nome: m.nome,
+      });
+    });
+    return out;
   }
 
   function addManual() {
@@ -345,7 +406,8 @@ function CreateOperation({
 
   function confirmDivision() {
     let r: Rota[] = [];
-    if (divisionMode === "auto") r = buildAuto(numRotas);
+    if (divisionMode === "agenda") r = buildFromAgenda();
+    else if (divisionMode === "auto") r = buildAuto(numRotas);
     else if (divisionMode === "single") r = buildSingle();
     else r = manualRotas.map((x) => ({ ...x, valor_total: x.quantidade_pacotes * valorPorPacote }));
     setRotas(r);
@@ -430,6 +492,14 @@ function CreateOperation({
         if (rErr) throw rErr;
         rotaIds.push((rRow as any).id);
       }
+      for (let i = 0; i < rotas.length; i++) {
+        if (!rotas[i].entregador_id) continue;
+        const { error: aErr } = await supabase.from("alocacoes").insert({
+          operacao_id: opId, rota_id: rotaIds[i], entregador_id: rotas[i].entregador_id,
+          empresa_id: empresaId, status: "allocated",
+        } as any);
+        if (aErr) throw aErr;
+      }
 
       setCreatedOpId(opId);
       setCreatedRotaIds(rotaIds);
@@ -500,7 +570,8 @@ function CreateOperation({
           quantidade_paradas: r.quantidade_paradas,
           valor: r.valor_total,
           valor_por_pacote: vp,
-          status: "open",
+          status: r.entregador_id ? "accepted" : "open",
+          entregador_id: r.entregador_id ?? null,
           tipo_entrega: "package_delivery",
           operacao_id: createdOpId,
           rota_operacao_id: rotaId,
@@ -508,6 +579,7 @@ function CreateOperation({
         } as any).select("id").single();
         if (ofErr) throw ofErr;
         const ofertaId = (of as any).id as string;
+        if (r.entregador_id) await supabase.from("alocacoes").update({ oferta_id: ofertaId } as any).eq("rota_id", rotaId);
         await createPlaceholderPackages(ofertaId, createdOpId, r.quantidade_pacotes);
         await supabase.from("rotas_operacao").update({ oferta_id: ofertaId, status: "open" }).eq("id", rotaId);
         published.push({
@@ -540,6 +612,7 @@ function CreateOperation({
 
   const step1Valid = !!origemFinal && totalPacotes > 0 && totalParadas > 0 && valorPorPacote > 0;
   const step2Valid =
+    (divisionMode === "agenda" && !!agenda && totalPacotes > 0) ||
     divisionMode === "single" ||
     (divisionMode === "auto" && numRotas > 0) ||
     (divisionMode === "manual" && manualRotas.length > 0 && manualSomaP === totalPacotes && manualSomaS === totalParadas);
@@ -661,8 +734,11 @@ function CreateOperation({
             <CardTitle>Como quer dividir as rotas?</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
+                ...(agenda
+                  ? [{ v: "agenda" as DivisionMode, title: "Pela agenda", d: `${agenda.membros.length} entregador(es) comprometido(s) para esta data: uma rota para cada um` }]
+                  : []),
                 { v: "auto" as DivisionMode, title: "Divisão automática", d: "Sistema divide igualmente por quantidade de rotas" },
                 { v: "manual" as DivisionMode, title: "Divisão manual", d: "Você define cada rota individualmente" },
                 { v: "single" as DivisionMode, title: "Rota única", d: "Tudo em uma única rota sem divisão" },
@@ -670,7 +746,10 @@ function CreateOperation({
                 <button
                   key={opt.v}
                   type="button"
-                  onClick={() => setDivisionMode(opt.v)}
+                  onClick={() => {
+                    setDivisionMode(opt.v);
+                    if (opt.v === "agenda" && agenda && agenda.valor > 0) setValorPorPacote(agenda.valor);
+                  }}
                   className={`text-left rounded-lg border-2 p-4 transition-all ${divisionMode === opt.v ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
                 >
                   <div className="font-semibold">{opt.title}</div>
@@ -678,6 +757,21 @@ function CreateOperation({
                 </button>
               ))}
             </div>
+
+            {divisionMode === "agenda" && agenda && (
+              <div className="space-y-3 rounded-md border p-3">
+                <div className="rounded bg-muted/40 p-2 text-sm">
+                  Compromissos somam <strong>{agenda.membros.reduce((a, m) => a + m.qtd, 0)}</strong> pacotes (já com os seus ajustes);
+                  a operação tem <strong>{totalPacotes}</strong>. A divisão é proporcional ao que cada um prometeu.
+                  {agenda.valor > 0 && <> Valor por pacote da previsão: <strong>R$ {agenda.valor.toFixed(2)}</strong>.</>}
+                  <ul className="mt-2 list-disc pl-5">
+                    {buildFromAgenda().map((r, i) => (
+                      <li key={i}>{r.entregador_nome}: {r.quantidade_pacotes} pacotes · {r.quantidade_paradas} paradas · R$ {r.valor_total.toFixed(2)}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
 
             {divisionMode === "auto" && (
               <div className="space-y-3 rounded-md border p-3">
@@ -774,6 +868,7 @@ function CreateOperation({
                 <div key={i} className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_90px_90px_130px_130px] sm:items-end">
                   <Field label="Nome">
                     <Input value={r.nome} onChange={(e) => updateRota(i, { nome: e.target.value })} />
+                    {r.entregador_nome && <Badge variant="secondary" className="mt-1">Entregador: {r.entregador_nome}</Badge>}
                   </Field>
                   <Field label="Pacotes">
                     <Input type="number" min={0} value={r.quantidade_pacotes || ""} onChange={(e) => updateRota(i, { quantidade_pacotes: Number(e.target.value) || 0 })} />
@@ -953,6 +1048,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 async function publishPendingRotas(op: Operacao, rotas: any[]): Promise<number> {
   let count = 0;
+  const { data: als } = await supabase.from("alocacoes").select("rota_id, entregador_id").eq("operacao_id", op.id);
+  const donoDaRota = new Map<string, string>(((als as any[]) ?? []).map((a) => [a.rota_id, a.entregador_id]));
   for (const r of rotas) {
     if (r.oferta_id) continue;
     const qtd = Number(r.quantidade_pacotes || 0);
@@ -966,7 +1063,8 @@ async function publishPendingRotas(op: Operacao, rotas: any[]): Promise<number> 
       quantidade_paradas: Number(r.quantidade_paradas || 0),
       valor: Number(r.valor_total || qtd * vp),
       valor_por_pacote: vp,
-      status: "open",
+      status: donoDaRota.has(r.id) ? "accepted" : "open",
+      entregador_id: donoDaRota.get(r.id) ?? null,
       tipo_entrega: "package_delivery",
       operacao_id: op.id,
       rota_operacao_id: r.id,
@@ -974,6 +1072,7 @@ async function publishPendingRotas(op: Operacao, rotas: any[]): Promise<number> 
     } as any).select("id").single();
     if (error) throw error;
     const ofertaId = (of as any).id as string;
+    if (donoDaRota.has(r.id)) await supabase.from("alocacoes").update({ oferta_id: ofertaId } as any).eq("rota_id", r.id);
     const { count: existing } = await supabase
       .from("entregas_pacotes").select("id", { count: "exact", head: true }).eq("oferta_id", ofertaId);
     if (!existing && qtd > 0) {
