@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  Loader2, MapPin, CheckCircle2, AlertTriangle, Camera, Flag,
+  Loader2, MapPin, CheckCircle2, AlertTriangle, Camera, Flag, Search, ListChecks,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyDestinatarioPacote } from "@/lib/whatsapp-notify";
@@ -13,12 +13,17 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from "@/components/ui/sheet";
-import { ProofOfDeliverySheet } from "@/components/ProofOfDeliverySheet";
 import { useLocationTracker } from "@/hooks/use-location-tracker";
 import { LocationIndicator } from "@/components/LocationIndicator";
 
@@ -42,6 +47,7 @@ type Oferta = {
   status: string;
   operacao_id?: string | null;
   quantidade_pacotes: number | null;
+  valor_por_pacote?: number | null;
 };
 
 async function ensurePackagesForOferta(oferta: Oferta) {
@@ -80,11 +86,15 @@ async function ensurePackagesForOferta(oferta: Oferta) {
 // UI choices mapped to motivo + sub_motivo respecting the DB check constraint
 const RADIO_CHOICES: Array<{ key: string; label: string; motivo: string; sub?: string }> = [
   { key: "ausente", label: "Cliente ausente", motivo: "could_not_deliver", sub: "ausente" },
+  { key: "fechado", label: "Estabelecimento fechado", motivo: "could_not_deliver", sub: "estabelecimento_fechado" },
   { key: "endereco", label: "Endereço não encontrado", motivo: "address_not_visited" },
   { key: "recusou", label: "Cliente recusou", motivo: "could_not_deliver", sub: "recusou" },
   { key: "danificado", label: "Pacote danificado", motivo: "damaged" },
   { key: "outro", label: "Outro", motivo: "could_not_deliver", sub: "outro" },
 ];
+
+const SCORE_MOTIVO: Record<string, number> = { address_not_visited: -20, lost: -30, damaged: -10, could_not_deliver: 0 };
+const PAGE = 60;
 
 function RotasPage() {
   const { user } = useAuth();
@@ -92,7 +102,14 @@ function RotasPage() {
   const [oferta, setOferta] = useState<Oferta | null>(null);
   const [pacotes, setPacotes] = useState<Pacote[]>([]);
   const [problemPacote, setProblemPacote] = useState<Pacote | null>(null);
-  const [podPacote, setPodPacote] = useState<Pacote | null>(null);
+  const [filtro, setFiltro] = useState<"pending" | "not_delivered" | "delivered" | "all">("pending");
+  const [busca, setBusca] = useState("");
+  const [selecionando, setSelecionando] = useState(false);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [limite, setLimite] = useState(PAGE);
+  const [confirmBaixa, setConfirmBaixa] = useState<null | "pendentes" | "selecionados">(null);
+  const [confirmFinalizar, setConfirmFinalizar] = useState(false);
+  const [busy, setBusy] = useState(false);
   const trackerState = useLocationTracker(oferta?.id ?? null);
 
   async function load() {
@@ -101,7 +118,7 @@ function RotasPage() {
     try {
       const { data: ofs } = await supabase
         .from("ofertas")
-        .select("id, empresa_id, titulo, status, quantidade_pacotes, operacao_id")
+        .select("id, empresa_id, titulo, status, quantidade_pacotes, operacao_id, valor_por_pacote")
         .eq("entregador_id", user.id)
         .in("status", ["in_progress", "accepted"])
         .order("updated_at", { ascending: false })
@@ -148,43 +165,126 @@ function RotasPage() {
     const total = pacotes.length;
     const entregues = pacotes.filter((p) => p.status === "delivered").length;
     const problemas = pacotes.filter((p) => p.status === "not_delivered").length;
-    const concluidas = entregues + problemas;
-    const pct = total ? (concluidas / total) * 100 : 0;
-    return { total, entregues, problemas, concluidas, pct };
+    const pendentes = total - entregues - problemas;
+    const pct = total ? ((entregues + problemas) / total) * 100 : 0;
+    return { total, entregues, problemas, pendentes, pct };
   }, [pacotes]);
-
-  const allDone = stats.total > 0 && stats.concluidas === stats.total;
 
   const progressColor =
     stats.pct < 34 ? "bg-red-500" : stats.pct < 67 ? "bg-amber-500" : "bg-green-500";
 
-  async function markDelivered(p: Pacote) {
-    setPacotes((prev) => prev.map((x) => x.id === p.id ? { ...x, status: "delivered" } : x));
-    const { error } = await supabase.from("entregas_pacotes").update({ status: "delivered" }).eq("id", p.id);
+  const visiveis = useMemo(() => {
+    const t = busca.trim().toLowerCase();
+    return pacotes.filter((p) => {
+      const st = p.status === "delivered" ? "delivered" : p.status === "not_delivered" ? "not_delivered" : "pending";
+      if (filtro !== "all" && st !== filtro) return false;
+      if (!t) return true;
+      return String(p.numero_pacote).includes(t) || (p.endereco_entrega ?? "").toLowerCase().includes(t);
+    });
+  }, [pacotes, filtro, busca]);
+
+  async function baixa(ids: string[] | "pendentes"): Promise<boolean> {
+    if (!oferta) return false;
+    const now = new Date().toISOString();
+    let q = supabase.from("entregas_pacotes").update({ status: "delivered", entregue_em: now } as any).eq("oferta_id", oferta.id);
+    q = ids === "pendentes" ? q.eq("status", "pending") : q.in("id", ids).eq("status", "pending");
+    const { error } = await q;
+    if (error) {
+      toast.error(error.message || "Erro ao dar baixa.");
+      return false;
+    }
+    setPacotes((prev) =>
+      prev.map((x) => (x.status === "pending" && (ids === "pendentes" || ids.includes(x.id)) ? { ...x, status: "delivered" } : x)),
+    );
+    return true;
+  }
+
+  async function entregueUm(p: Pacote) {
+    setPacotes((prev) => prev.map((x) => (x.id === p.id ? { ...x, status: "delivered" } : x)));
+    const { error } = await supabase
+      .from("entregas_pacotes").update({ status: "delivered", entregue_em: new Date().toISOString() } as any).eq("id", p.id);
     if (error) {
       toast.error("Erro ao marcar entrega.");
       load();
     } else {
-      toast.success(`Pacote #${p.numero_pacote} entregue.`);
+      notifyDestinatarioPacote(p.id, "entregue").catch(() => {});
     }
   }
 
-  async function finalizarRota() {
-    if (!oferta) return;
-    const { error } = await supabase
-      .from("ofertas")
-      .update({
+  async function executarBaixa(tipo: "pendentes" | "selecionados") {
+    setBusy(true);
+    const ok = await baixa(tipo === "pendentes" ? "pendentes" : [...selecionados]);
+    setBusy(false);
+    setConfirmBaixa(null);
+    if (ok) {
+      toast.success(tipo === "pendentes" ? "Baixa feita em todos os pendentes." : `Baixa feita em ${selecionados.size} pacote(s).`);
+      setSelecionados(new Set());
+      setSelecionando(false);
+    }
+  }
+
+  async function finalizar(comBaixa: boolean) {
+    if (!oferta || !user) return;
+    setBusy(true);
+    try {
+      const sb = supabase as any;
+      if (comBaixa && stats.pendentes > 0) {
+        const ok = await baixa("pendentes");
+        if (!ok) throw new Error("Não foi possível dar baixa nos pendentes.");
+      }
+      const { data: pks, error: pErr } = await sb.from("entregas_pacotes").select("status").eq("oferta_id", oferta.id);
+      if (pErr) throw pErr;
+      const total = (pks ?? []).length;
+      const entregues = (pks ?? []).filter((x: any) => x.status === "delivered").length;
+      const naoEntregues = total - entregues;
+
+      const { error: e2 } = await sb.from("ofertas").update({
         status: "completed",
-        pacotes_entregues: stats.entregues,
-        pacotes_nao_entregues: stats.problemas,
+        pacotes_entregues: entregues,
+        pacotes_nao_entregues: naoEntregues,
         closed_at: new Date().toISOString(),
-      } as any)
-      .eq("id", oferta.id);
-    if (error) {
-      toast.error(error.message);
-    } else {
+      }).eq("id", oferta.id);
+      if (e2) throw e2;
+
+      const { data: occ } = await sb.from("entregas_ocorrencias").select("numero_pacote, motivo").eq("oferta_id", oferta.id);
+      for (const o of occ ?? []) {
+        const pts = SCORE_MOTIVO[o.motivo as string] ?? 0;
+        if (!pts) continue;
+        await sb.rpc("apply_reliability_event", {
+          _entregador_id: user.id, _evento: o.motivo, _pontos: pts,
+          _descricao: `Pacote ${o.numero_pacote} - ${o.motivo}`,
+        });
+      }
+      const pct = total ? entregues / total : 0;
+      if (pct === 1 || pct >= 0.95) {
+        await sb.rpc("apply_reliability_event", {
+          _entregador_id: user.id, _evento: "route_completed", _pontos: pct === 1 ? 10 : 5,
+          _descricao: `Rota ${oferta.titulo} ${(pct * 100).toFixed(0)}% entregue`,
+        });
+      }
+
+      await sb.from("entregas").upsert({
+        oferta_id: oferta.id,
+        empresa_id: oferta.empresa_id,
+        entregador_id: user.id,
+        valor: entregues * Number(oferta.valor_por_pacote ?? 0),
+        status: "pendente",
+      }, { onConflict: "oferta_id" });
+
+      await sb.from("admin_notifications").insert({
+        type: "route_closed",
+        title: `Rota fechada: ${oferta.titulo}`,
+        body: `✅ ${entregues} entregues / ❌ ${naoEntregues} não entregues`,
+        link: `/ofertas`,
+      });
+
       toast.success("Rota finalizada!");
+      setConfirmFinalizar(false);
       load();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao finalizar a rota.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -245,19 +345,27 @@ function RotasPage() {
     );
   }
 
+  const filtros: Array<{ k: typeof filtro; label: string; n: number }> = [
+    { k: "pending", label: "Pendentes", n: stats.pendentes },
+    { k: "not_delivered", label: "Problemas", n: stats.problemas },
+    { k: "delivered", label: "Entregues", n: stats.entregues },
+    { k: "all", label: "Todos", n: stats.total },
+  ];
+
   return (
-    <div className="pb-24">
-      {/* Sticky header */}
+    <div className="pb-28">
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
         <LocationIndicator state={trackerState} />
         <div className="px-4 py-3 space-y-2">
-          <div className="flex items-baseline justify-between">
-            <div>
-              <div className="text-xs text-muted-foreground truncate">{oferta.titulo}</div>
-              <div className="text-3xl font-bold tabular-nums">
-                {stats.entregues} <span className="text-muted-foreground text-xl">/ {stats.total}</span>
-              </div>
-              <div className="text-xs text-muted-foreground">entregues{stats.problemas > 0 ? ` · ${stats.problemas} com problema` : ""}</div>
+          <div className="text-xs text-muted-foreground truncate">{oferta.titulo}</div>
+          <div className="flex items-end justify-between">
+            <div className="text-3xl font-bold tabular-nums">
+              {stats.entregues} <span className="text-muted-foreground text-xl">/ {stats.total}</span>
+              <span className="ml-2 text-xs font-normal text-muted-foreground">entregues</span>
+            </div>
+            <div className="text-right text-xs text-muted-foreground">
+              <div>{stats.pendentes} pendentes</div>
+              {stats.problemas > 0 && <div className="text-orange-600">{stats.problemas} com problema</div>}
             </div>
           </div>
           <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -266,26 +374,104 @@ function RotasPage() {
         </div>
       </div>
 
-      <div className="px-4 py-4 space-y-3">
-        {pacotes.map((p, i) => (
+      <div className="px-4 pt-4 space-y-3">
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-3 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Registre só as exceções (com motivo e foto) e dê baixa nos demais de uma vez.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                className="flex-1 min-w-[200px] bg-green-600 hover:bg-green-700"
+                disabled={stats.pendentes === 0 || busy}
+                onClick={() => setConfirmBaixa("pendentes")}
+              >
+                <CheckCircle2 className="mr-2 h-4 w-4" /> Dar baixa nos {stats.pendentes} pendentes
+              </Button>
+              <Button
+                variant={selecionando ? "default" : "outline"}
+                onClick={() => { setSelecionando((v) => !v); setSelecionados(new Set()); }}
+              >
+                <ListChecks className="mr-2 h-4 w-4" /> {selecionando ? "Cancelar seleção" : "Selecionar vários"}
+              </Button>
+            </div>
+            {selecionando && (
+              <div className="flex items-center justify-between gap-2 rounded-md bg-background p-2 text-sm">
+                <span>{selecionados.size} selecionado(s)</span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm" variant="outline"
+                    onClick={() => setSelecionados(new Set(visiveis.filter((p) => p.status === "pending").map((p) => p.id)))}
+                  >
+                    Marcar visíveis
+                  </Button>
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700" disabled={selecionados.size === 0}
+                    onClick={() => setConfirmBaixa("selecionados")}>
+                    Dar baixa
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Buscar pelo número do pacote ou endereço"
+            value={busca}
+            onChange={(e) => { setBusca(e.target.value); setLimite(PAGE); }}
+          />
+        </div>
+
+        <div className="flex gap-1 overflow-x-auto">
+          {filtros.map((f) => (
+            <button
+              key={f.k}
+              onClick={() => { setFiltro(f.k); setLimite(PAGE); }}
+              className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${
+                filtro === f.k ? "bg-primary text-primary-foreground border-primary" : "bg-background"
+              }`}
+            >
+              {f.label} ({f.n})
+            </button>
+          ))}
+        </div>
+
+        {visiveis.length === 0 && (
+          <p className="py-6 text-center text-sm text-muted-foreground">Nenhum pacote nesta lista.</p>
+        )}
+
+        {visiveis.slice(0, limite).map((p) => (
           <StopCard
             key={p.id}
-            index={i + 1}
+            index={pacotes.indexOf(p) + 1}
             pacote={p}
-            onDelivered={() => setPodPacote(p)}
+            selecionando={selecionando}
+            selecionado={selecionados.has(p.id)}
+            onToggle={() =>
+              setSelecionados((prev) => {
+                const n = new Set(prev);
+                n.has(p.id) ? n.delete(p.id) : n.add(p.id);
+                return n;
+              })
+            }
+            onDelivered={() => entregueUm(p)}
             onProblem={() => setProblemPacote(p)}
           />
         ))}
-
-        {allDone && (
-          <Button
-            size="lg"
-            className="w-full h-14 text-base bg-green-600 hover:bg-green-700 mt-4"
-            onClick={finalizarRota}
-          >
-            <Flag className="mr-2 h-5 w-5" /> Finalizar Rota
+        {visiveis.length > limite && (
+          <Button variant="outline" className="w-full" onClick={() => setLimite((l) => l + PAGE)}>
+            Mostrar mais ({visiveis.length - limite})
           </Button>
         )}
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 backdrop-blur">
+        <Button size="lg" className="h-12 w-full text-base" onClick={() => setConfirmFinalizar(true)} disabled={busy}>
+          <Flag className="mr-2 h-5 w-5" /> Finalizar rota
+        </Button>
       </div>
 
       <ProblemSheet
@@ -299,24 +485,57 @@ function RotasPage() {
         }}
       />
 
-      <ProofOfDeliverySheet
-        open={!!podPacote}
-        onClose={() => setPodPacote(null)}
-        pacote={podPacote}
-        entregadorId={user?.id}
-        onConfirmed={(id) => {
-          setPacotes((prev) => prev.map((x) => x.id === id ? { ...x, status: "delivered" } : x));
-          setPodPacote(null);
-        }}
-      />
+      <AlertDialog open={!!confirmBaixa} onOpenChange={(o) => !o && setConfirmBaixa(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar baixa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmBaixa === "pendentes"
+                ? `${stats.pendentes} pacote(s) pendentes serão marcados como entregues. Os pacotes com problema não são alterados.`
+                : `${selecionados.size} pacote(s) serão marcados como entregues.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Voltar</AlertDialogCancel>
+            <AlertDialogAction disabled={busy} onClick={(e) => { e.preventDefault(); executarBaixa(confirmBaixa!); }}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar baixa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmFinalizar} onOpenChange={setConfirmFinalizar}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalizar rota</AlertDialogTitle>
+            <AlertDialogDescription>
+              {stats.entregues} entregues · {stats.problemas} com problema · {stats.pendentes} pendentes.
+              {stats.pendentes > 0 && " Os pendentes podem receber baixa como entregues agora, ou ficarão como não entregues."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            {stats.pendentes > 0 && (
+              <Button className="w-full bg-green-600 hover:bg-green-700" disabled={busy} onClick={() => finalizar(true)}>
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Dar baixa nos {stats.pendentes} e finalizar
+              </Button>
+            )}
+            <Button variant="outline" className="w-full" disabled={busy} onClick={() => finalizar(false)}>
+              {stats.pendentes > 0 ? "Finalizar sem dar baixa" : "Finalizar"}
+            </Button>
+            <Button variant="ghost" className="w-full" disabled={busy} onClick={() => setConfirmFinalizar(false)}>Voltar</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 function StopCard({
-  index, pacote, onDelivered, onProblem,
+  index, pacote, onDelivered, onProblem, selecionando, selecionado, onToggle,
 }: {
   index: number; pacote: Pacote; onDelivered: () => void; onProblem: () => void;
+  selecionando: boolean; selecionado: boolean; onToggle: () => void;
 }) {
   const s = pacote.status;
   const isDone = s === "delivered";
@@ -328,6 +547,11 @@ function StopCard({
   return (
     <Card className={bg}>
       <CardContent className="p-3 flex gap-3">
+        {selecionando && !isDone && !isProblem && (
+          <div className="flex items-center">
+            <Checkbox checked={selecionado} onCheckedChange={onToggle} />
+          </div>
+        )}
         <div className="flex-shrink-0 flex flex-col items-center">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm
             ${isDone ? "bg-green-600 text-white"
@@ -345,7 +569,7 @@ function StopCard({
               {pacote.endereco_entrega ?? "Sem endereço"}
             </div>
           </div>
-          {!isDone && !isProblem && (
+          {!isDone && !isProblem && !selecionando && (
             <div className="flex gap-2">
               <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={onDelivered}>
                 <CheckCircle2 className="mr-1 h-4 w-4" /> Entreguei
@@ -398,6 +622,7 @@ function ProblemSheet({
 
   async function handleSave() {
     if (!pacote || !oferta || !user) return;
+    if (!file) { toast.error("Tire uma foto do local para comprovar."); return; }
     setSaving(true);
     try {
       const chosen = RADIO_CHOICES.find((c) => c.key === choice)!;
@@ -457,7 +682,7 @@ function ProblemSheet({
           </div>
 
           <div className="space-y-2">
-            <Label>Foto (opcional)</Label>
+            <Label>Foto do local (obrigatória)</Label>
             <label className="flex items-center gap-2 rounded border border-dashed p-3 cursor-pointer hover:bg-accent">
               <Camera className="h-4 w-4" />
               <span className="text-sm">{file ? file.name : "Tirar/escolher foto"}</span>
@@ -474,7 +699,7 @@ function ProblemSheet({
 
         <SheetFooter className="flex-row gap-2">
           <Button variant="outline" className="flex-1" onClick={onClose} disabled={saving}>Cancelar</Button>
-          <Button className="flex-1 bg-orange-600 hover:bg-orange-700" onClick={handleSave} disabled={saving}>
+          <Button className="flex-1 bg-orange-600 hover:bg-orange-700" onClick={handleSave} disabled={saving || !file}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <AlertTriangle className="mr-2 h-4 w-4" />}
             Registrar
           </Button>

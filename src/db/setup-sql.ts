@@ -1723,4 +1723,8 @@ ALTER TABLE "entregadores" ALTER COLUMN "cpf" DROP NOT NULL;
 ALTER TABLE "entregadores" ADD COLUMN IF NOT EXISTS "marca_veiculo" text;
 -- @@
 ALTER TABLE "saidas_nex" ADD COLUMN IF NOT EXISTS "empresa_id" text;
+-- @@
+CREATE UNIQUE INDEX IF NOT EXISTS "entregas_oferta_id_unique" ON "entregas" ("oferta_id");
+-- @@
+CREATE UNIQUE INDEX IF NOT EXISTS "dispatchers_entregador_empresa_unique" ON "dispatchers" ("entregador_id","empresa_id");
 `;

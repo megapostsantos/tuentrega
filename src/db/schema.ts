@@ -272,6 +272,7 @@ export const entregas = pgTable(
   (t) => [
     index("idx_entregas_empresa").on(t.empresaId, t.dataEntrega),
     index("idx_entregas_entregador").on(t.entregadorId, t.dataEntrega),
+    uniqueIndex("entregas_oferta_id_unique").on(t.ofertaId),
   ],
 );
 
@@ -438,15 +439,19 @@ export const extratosMensais = pgTable("extratos_mensais", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const dispatchers = pgTable("dispatchers", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  entregadorId: text("entregador_id").notNull(),
-  empresaId: text("empresa_id").notNull(),
-  valorPorPacote: numeric("valor_por_pacote").notNull().default("0"),
-  plataformas: text("plataformas").array().notNull().default([]),
-  status: text("status").notNull().default("ativo"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const dispatchers = pgTable(
+  "dispatchers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    entregadorId: text("entregador_id").notNull(),
+    empresaId: text("empresa_id").notNull(),
+    valorPorPacote: numeric("valor_por_pacote").notNull().default("0"),
+    plataformas: text("plataformas").array().notNull().default([]),
+    status: text("status").notNull().default("ativo"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("dispatchers_entregador_empresa_unique").on(t.entregadorId, t.empresaId)],
+);
 
 export const dispatcherAlocacoes = pgTable("dispatcher_alocacoes", {
   id: uuid("id").primaryKey().defaultRandom(),

@@ -92,6 +92,38 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId, operaca
   const [loading, setLoading] = useState(true);
   const [, force] = useState(0);
 
+  // Atualização periódica da posição e do andamento dos pacotes (substitui o tempo real)
+  useEffect(() => {
+    if (!open || !entregadorId) return;
+    let alive = true;
+    const refresh = async () => {
+      if (document.visibilityState !== "visible") return;
+      const { data: locs } = await supabase.from("entregador_localizacao")
+        .select("lat, lng, registrado_em, velocidade_kmh")
+        .eq("entregador_id", entregadorId)
+        .order("registrado_em", { ascending: false })
+        .limit(1);
+      if (alive && locs?.[0]) {
+        const r = locs[0] as any;
+        setLoc({
+          lat: Number(r.lat),
+          lng: Number(r.lng),
+          registrado_em: r.registrado_em,
+          velocidade_kmh: r.velocidade_kmh != null ? Number(r.velocidade_kmh) : null,
+        });
+      }
+      const { data: pks } = await supabase.from("entregas_pacotes")
+        .select("id, status")
+        .eq("oferta_id", ofertaId);
+      if (alive && pks) {
+        const byId = new Map((pks as any[]).map((x) => [x.id, x.status]));
+        setPacotes((prev) => prev.map((p) => (byId.has(p.id) ? { ...p, status: byId.get(p.id) } : p)));
+      }
+    };
+    const t = setInterval(refresh, 10_000);
+    return () => { alive = false; clearInterval(t); };
+  }, [open, entregadorId, ofertaId]);
+
   // tick to refresh "há Xs"
   useEffect(() => {
     if (!open) return;
