@@ -16,9 +16,12 @@ export const auth = betterAuth({
       verification: schema.verifications,
     },
   }),
-  secret:
-    process.env.BETTER_AUTH_SECRET ||
-    "supersecretkey-change-in-production-32chars",
+  secret: (() => {
+    const s = process.env.BETTER_AUTH_SECRET;
+    if (!s) throw new Error("BETTER_AUTH_SECRET não configurado");
+    if (s.length < 32) console.warn("[auth] BETTER_AUTH_SECRET tem menos de 32 caracteres; troque por um valor forte");
+    return s;
+  })(),
   baseURL: process.env.BETTER_AUTH_URL || "https://tuentrega.megapostsantos.workers.dev",
   basePath: "/api/auth",
   emailAndPassword: {
@@ -33,6 +36,7 @@ export const auth = betterAuth({
         type: "string",
         defaultValue: "entregador",
         fieldName: "role",
+        input: false,
       },
     },
   },

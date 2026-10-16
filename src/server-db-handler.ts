@@ -1,14 +1,13 @@
 import { defineEventHandler } from "h3";
 
-const SETUP_SECRET = "tuentrega-reset-2024";
-
 export default defineEventHandler(async (event) => {
   const req: Request = (event as any).req;
   const url = new URL(req.url);
 
   if (url.pathname === "/api/db/setup") {
-    const secret = url.searchParams.get("secret");
-    if (secret !== SETUP_SECRET) return Response.json({ error: "forbidden" }, { status: 403 });
+    const { auth } = await import("./lib/auth");
+    const session = await auth.api.getSession({ headers: req.headers });
+    if ((session?.user as any)?.role !== "admin") return Response.json({ error: "forbidden" }, { status: 403 });
     if (url.searchParams.get("offset") === null) {
       const html = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Setup do banco</title><body style="font-family:system-ui;padding:24px;max-width:640px;margin:auto">
@@ -16,7 +15,7 @@ export default defineEventHandler(async (event) => {
 <script>
 (async()=>{let off=0,errs=[],total=0;
 while(off!==null){
- try{const r=await fetch("/api/db/setup?secret=${SETUP_SECRET}&offset="+off+"&limit=40");const j=await r.json();
+ try{const r=await fetch("/api/db/setup?offset="+off+"&limit=40",{credentials:"same-origin"});const j=await r.json();
   if(!r.ok){errs.push(JSON.stringify(j));break}
   total=j.total;errs.push(...j.failed.map(f=>f.error+" :: "+f.stmt));off=j.next;
   document.getElementById("s").textContent="Executando... "+Math.min(off??total,total)+" de "+total;

@@ -19,6 +19,7 @@ export default defineConfig({
         handler: "src/server-auth-handler.ts",
       },
       { route: "/api/db/**", handler: "src/server-db-handler.ts" },
+      { route: "/api/admin/**", handler: "src/server-admin-handler.ts" },
       { route: "/api/storage/**", handler: "src/server-storage-handler.ts" },
     ],
   },
