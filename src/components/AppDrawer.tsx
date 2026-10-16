@@ -1,3 +1,4 @@
+import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Package, Map, Zap, ArrowRightFromLine, History,
@@ -149,6 +150,11 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
             );
           })}
         </nav>
+
+        {/* Visualizar como (somente admin) */}
+        <div className="mx-3 mb-3 rounded-xl bg-background text-foreground empty:hidden">
+          <RoleSwitcher />
+        </div>
 
         {/* Footer */}
         <div className="border-t border-white/10 px-3 py-3">
