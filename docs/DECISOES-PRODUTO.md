@@ -18,7 +18,17 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 6. **Gestão para a empresa:** financeiro, contas a pagar, definição do ciclo de pagamento (semanal, mensal etc.).
 7. **Antecipação:** o motorista pode pedir antecipação de um valor a receber, com desconto; a empresa decide se paga.
 
+8. **Parceria após trabalhar junto (16/10):** o motorista entra pelo app por conta própria e aceita ofertas públicas de uma empresa uma ou duas vezes. Se a empresa gostar, pode **propor o vínculo**. Se ele aceitar, a empresa passa a poder **alocar rotas direto** para ele (sem oferta pública) e a plataforma dá benefícios para ele querer ficar atrelado.
+
 ## Proposta (a validar)
+**Dois tipos de vínculo**
+- **De origem:** a empresa trouxe o motorista (convite por link). Vale a regra de liberação por inatividade da empresa.
+- **De parceria:** o motorista chegou sozinho e aceitou a proposta depois de trabalhar com a empresa. Sugestão: **sem exclusividade** (ele continua vendo as demais ofertas), com benefícios, e ele pode sair quando quiser.
+- Em ambos, a empresa pode alocar rotas direto; o motorista **recebe como convite e pode aceitar ou recusar** (prazo de resposta a definir, ex.: 4 horas).
+- A empresa só pode propor parceria após **N rotas concluídas** com o motorista (padrão: 2), para evitar propostas em massa.
+- Remoção pela empresa e liberação pelo admin valem para os dois tipos.
+- Benefícios possíveis (escolher): alocação direta sem concorrência; prioridade de horas nas novas ofertas; rotas fixas recorrentes; selo "Parceiro de [empresa]"; taxa menor na antecipação; prioridade no pagamento.
+
 **Blindagem**
 - Segurança por perfil no banco **antes de tudo** (hoje qualquer usuário logado lê tudo, inclusive ofertas de concorrentes).
 - 1 CPF = 1 conta; 1 CNPJ = 1 conta; cruzar CPF do responsável da empresa com CPF de motorista (bloquear coincidência); telefone e e-mail únicos.
@@ -54,6 +64,7 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 7. "Esqueci minha senha" por e-mail (precisa de domínio e serviço de e-mail).
 
 ## Perguntas em aberto
+- Parceria sem exclusividade? Quais benefícios entram primeiro?
 - Prazo de liberação: 7 ou 14 dias sem a empresa publicar oferta?
 - Se a empresa publica ofertas mas o motorista não aceita nenhuma por N dias, ele também é liberado?
 - A empresa que removeu um motorista pode reconvidá-lo depois? Precisa de motivo obrigatório?
