@@ -34,6 +34,33 @@ function translateAuthError(msg: string): string {
   return msg;
 }
 
+async function createAccount(
+  role: Role,
+  email: string,
+  password: string,
+  name: string,
+  data: Record<string, unknown>,
+): Promise<string | null> {
+  const su = await signUp.email({ email, password, name });
+  if (su.error) {
+    const msg = su.error.message ?? "";
+    if (!/already|exist|cadastrad/i.test(msg)) return translateAuthError(msg || "Erro desconhecido");
+    const si = await signIn.email({ email, password });
+    if (si.error) return "Este e-mail já está cadastrado. Faça login.";
+  }
+  const res = await fetch("/api/db/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ role, data }),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => null);
+    return j?.error ?? "Não foi possível concluir o cadastro";
+  }
+  return null;
+}
+
 const SEGMENTOS = ["Last Mile", "E-commerce", "Transportadora", "Distribuidora", "Loja própria", "Outro"];
 const VEICULOS = [
   { value: "walker", label: "A pé" },
@@ -152,11 +179,6 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
   const [role, setRole] = useState<Role | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-
-  if (pendingEmail) {
-    return <VerifyEmail email={pendingEmail} onConfirmed={onSuccess} />;
-  }
 
   if (!confirmed) {
     return (
@@ -210,8 +232,8 @@ function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       {role === "empresa"
-        ? <EmpresaForm onSuccess={(email) => setPendingEmail(email)} />
-        : <EntregadorForm onSuccess={(email) => setPendingEmail(email)} />}
+        ? <EmpresaForm onSuccess={onSuccess} />
+        : <EntregadorForm onSuccess={onSuccess} />}
     </>
   );
 }
@@ -261,75 +283,6 @@ function BigRoleCard({
     </button>
   );
 }
-
-function VerifyEmail({ email, onConfirmed }: { email: string; onConfirmed: () => void }) {
-  const [resending, setResending] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
-  const [checking, setChecking] = useState(false);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [cooldown]);
-
-  async function resend() {
-    setResending(true);
-    // Better Auth with requireEmailVerification=false — no resend needed
-    setResending(false);
-    toast.success("E-mail reenviado!");
-    setCooldown(30);
-  }
-
-  async function check() {
-    setChecking(true);
-    // Since requireEmailVerification=false, just redirect to dashboard
-    setChecking(false);
-    toast.success("Conta ativa!");
-    onConfirmed();
-  }
-
-  return (
-    <div className="mt-6 flex flex-col items-center text-center">
-      <div className="relative grid h-20 w-20 place-content-center rounded-full bg-primary/10 text-primary">
-        <Mail className="h-9 w-9 animate-bounce" />
-        <span className="absolute inset-0 rounded-full ring-2 ring-primary/30 animate-ping" />
-      </div>
-      <h1 className="mt-5 text-2xl font-bold">Verifique seu e-mail!</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Enviamos um link de confirmação para <span className="font-medium text-foreground">{email}</span>.
-        Abra a mensagem e clique no link para ativar sua conta.
-      </p>
-
-      <div className="mt-6 w-full space-y-2">
-        <Button
-          onClick={check}
-          disabled={checking}
-          className="w-full bg-primary text-primary-foreground hover:opacity-90"
-        >
-          {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Já confirmei <Check className="ml-1 h-4 w-4" /></>}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={resend}
-          disabled={resending || cooldown > 0}
-          className="w-full"
-        >
-          {resending
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : cooldown > 0
-              ? `Reenviar em ${cooldown}s`
-              : "Reenviar e-mail"}
-        </Button>
-      </div>
-
-      <p className="mt-4 text-xs text-muted-foreground">
-        Não recebeu? Verifique a caixa de spam ou tente reenviar.
-      </p>
-    </div>
-  );
-}
-
 
 /* ---------------- Stepper ---------------- */
 
@@ -394,7 +347,7 @@ function StepNav({ step, total, onBack, onNext, onSubmit, loading }: {
 
 /* ---------------- Empresa ---------------- */
 
-function EmpresaForm({ onSuccess }: { onSuccess: (email: string) => void }) {
+function EmpresaForm({ onSuccess }: { onSuccess: () => void }) {
   const [step, setStep] = useState(0);
   const STEPS = ["Empresa", "Endereço", "Acesso"];
   const [f, setF] = useState({
@@ -416,19 +369,18 @@ function EmpresaForm({ onSuccess }: { onSuccess: (email: string) => void }) {
   }
 
   async function submit() {
+    if (!f.email || !f.password) return toast.error("Informe e-mail e senha.");
+    if (f.password !== f.password2) return toast.error("As senhas não conferem.");
     setLoading(true);
-    const { error } = await signUp.email({
-      email: f.email,
-      password: f.password,
-      name: f.responsavel,
-      role: "empresa",
-      callbackURL: `${window.location.origin}/dashboard`,
-    } as Parameters<typeof signUp.email>[0]);
+    const err = await createAccount("empresa", f.email, f.password, f.responsavel || f.razao_social || f.email, {
+      razao_social: f.razao_social, cnpj: onlyDigits(f.cnpj), nome_fantasia: f.nome_fantasia, segmento: f.segmento,
+      cep: f.cep, rua: f.rua, numero: f.numero, complemento: f.complemento, bairro: f.bairro,
+      cidade: f.cidade, estado: f.estado, whatsapp: f.whatsapp, responsavel: f.responsavel,
+    });
     setLoading(false);
-    if (error) return toast.error(translateAuthError(error.message ?? "Erro desconhecido"));
+    if (err) return toast.error(err);
     toast.success("Conta criada! Acesse seu painel.");
-    onSuccess(f.email);
-
+    onSuccess();
   }
 
   return (
@@ -502,7 +454,7 @@ function EmpresaForm({ onSuccess }: { onSuccess: (email: string) => void }) {
 
 /* ---------------- Entregador ---------------- */
 
-function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
+function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
   const [step, setStep] = useState(0);
   const STEPS = ["Pessoal", "Veículo & Endereço", "Plataformas & PIX"];
   const [f, setF] = useState({
@@ -544,19 +496,21 @@ function EntregadorForm({ onSuccess }: { onSuccess: (email: string) => void }) {
   }
 
   async function submit() {
+    if (!f.email || !f.password) return toast.error("Informe e-mail e senha.");
+    if (f.password !== f.password2) return toast.error("As senhas não conferem.");
     setLoading(true);
-    const { error } = await signUp.email({
-      email: f.email,
-      password: f.password,
-      name: f.nome_completo,
-      role: "entregador",
-      callbackURL: `${window.location.origin}/dashboard`,
-    } as Parameters<typeof signUp.email>[0]);
-    if (error) { setLoading(false); return toast.error(translateAuthError(error.message ?? "Erro desconhecido")); }
+    const err = await createAccount("entregador", f.email, f.password, f.nome_completo || f.email, {
+      nome_completo: f.nome_completo, cpf: onlyDigits(f.cpf), cnpj: onlyDigits(f.cnpj),
+      data_nascimento: f.data_nascimento ? toISODate(f.data_nascimento) : null,
+      whatsapp: f.whatsapp, tipo_veiculo: f.tipo_veiculo, placa: f.placa,
+      cep: f.cep, rua: f.rua, numero: f.numero, complemento: f.complemento, bairro: f.bairro,
+      cidade: f.cidade, estado: f.estado, pix_tipo: f.pix_tipo, pix_chave: f.pix_chave, banco: f.banco,
+      turnos, plataformas,
+    });
     setLoading(false);
+    if (err) return toast.error(err);
     toast.success("Conta criada! Acesse seu painel.");
-    onSuccess(f.email);
-
+    onSuccess();
   }
 
   return (

@@ -136,7 +136,7 @@ export const empresas = pgTable("empresas", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   razaoSocial: text("razao_social").notNull(),
-  cnpj: text("cnpj").notNull().unique(),
+  cnpj: text("cnpj").unique(),
   nomeFantasia: text("nome_fantasia"),
   segmento: text("segmento"),
   cep: text("cep"),
@@ -164,7 +164,7 @@ export const entregadores = pgTable("entregadores", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   nomeCompleto: text("nome_completo").notNull(),
-  cpf: text("cpf").notNull().unique(),
+  cpf: text("cpf").unique(),
   whatsapp: text("whatsapp"),
   tipoVeiculo: veiculoTipoEnum("tipo_veiculo"),
   bairros: text("bairros").array().notNull().default([]),

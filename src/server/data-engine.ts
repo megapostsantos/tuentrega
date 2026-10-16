@@ -461,4 +461,83 @@ export async function runSetupBatch(sqlText: string, offset: number, limit: numb
   return { total: parts.length, offset, processed: slice.length, next: nextOffset < parts.length ? nextOffset : null, failed };
 }
 
+async function runTransaction(stmts: { text: string; params: unknown[] }[]) {
+  if (queryImpl) {
+    await queryImpl("begin", []);
+    try {
+      for (const st of stmts) await queryImpl(st.text, st.params);
+      await queryImpl("commit", []);
+    } catch (e) {
+      await queryImpl("rollback", []);
+      throw e;
+    }
+    return;
+  }
+  await (sqlClient() as any).transaction((t: any) => stmts.map((st) => t.query(st.text, st.params)));
+}
+
+const VEICULOS = ["walker", "biker", "motoboy", "carro", "caminhao", "moto_eletrica"];
+const PIX_TIPOS = ["cpf", "cnpj", "email", "telefone", "aleatoria"];
+const EMPRESA_FIELDS = ["razao_social", "cnpj", "nome_fantasia", "segmento", "cep", "rua", "numero", "complemento", "bairro", "cidade", "estado", "whatsapp", "responsavel"];
+const ENTREGADOR_FIELDS = ["nome_completo", "cpf", "cnpj", "whatsapp", "tipo_veiculo", "placa", "pix_tipo", "pix_chave", "banco", "data_nascimento", "cep", "rua", "numero", "complemento", "bairro", "cidade", "estado"];
+
+function clean(v: unknown): string | null {
+  if (v === undefined || v === null) return null;
+  const t = String(v).trim();
+  return t === "" ? null : t;
+}
+
+function insertStmt(table: string, obj: Record<string, unknown>, onConflictNothing = false) {
+  const cols = Object.keys(obj);
+  const text = `insert into ${q(table)} (${cols.map(q).join(", ")}) values (${cols.map((_, i) => `$${i + 1}`).join(", ")})${onConflictNothing ? " on conflict do nothing" : ""}`;
+  return { text, params: cols.map((c) => obj[c]) };
+}
+
+export async function registerProfile(
+  user: { id: string; name: string; role: string | null },
+  role: string,
+  data: Record<string, unknown>,
+): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+  if (role !== "empresa" && role !== "entregador") return { ok: false, status: 400, message: "Perfil inválido" };
+  if (user.role && user.role !== "entregador") return { ok: false, status: 409, message: "Perfil já cadastrado" };
+  const exists = await query(
+    `select 1 from "empresas" where "id" = $1 union all select 1 from "entregadores" where "id" = $1 limit 1`,
+    [user.id],
+  );
+  if (exists.length) return { ok: false, status: 409, message: "Perfil já cadastrado" };
+
+  const stmts: { text: string; params: unknown[] }[] = [
+    { text: `update "user" set "role" = $1, "updatedAt" = now() where "id" = $2`, params: [role, user.id] },
+    insertStmt("profiles", { id: user.id, full_name: clean(data.responsavel) ?? clean(data.nome_completo) ?? user.name, phone: clean(data.whatsapp), company_name: clean(data.razao_social) }, true),
+    { text: `insert into "user_roles" ("user_id","role") values ($1, $2::app_role) on conflict do nothing`, params: [user.id, role] },
+  ];
+
+  if (role === "empresa") {
+    const row: Record<string, unknown> = { id: user.id };
+    for (const f of EMPRESA_FIELDS) row[f] = clean(data[f]);
+    row.razao_social = row.razao_social ?? user.name;
+    stmts.push(insertStmt("empresas", row));
+  } else {
+    const row: Record<string, unknown> = { id: user.id };
+    for (const f of ENTREGADOR_FIELDS) row[f] = clean(data[f]);
+    row.nome_completo = row.nome_completo ?? user.name;
+    if (!VEICULOS.includes(String(row.tipo_veiculo))) row.tipo_veiculo = null;
+    if (!PIX_TIPOS.includes(String(row.pix_tipo))) row.pix_tipo = null;
+    if (Array.isArray(data.turnos)) row.turnos = data.turnos.map(String);
+    if (Array.isArray(data.plataformas)) row.plataformas = data.plataformas.map(String);
+    stmts.push(insertStmt("entregadores", row));
+  }
+
+  try {
+    await runTransaction(stmts);
+  } catch (e: any) {
+    const m = String(e?.message ?? e);
+    if (/cnpj/i.test(m) && /unique|duplicate/i.test(m)) return { ok: false, status: 409, message: "Este CNPJ já está cadastrado" };
+    if (/cpf/i.test(m) && /unique|duplicate/i.test(m)) return { ok: false, status: 409, message: "Este CPF já está cadastrado" };
+    console.error("[register] erro:", m);
+    return { ok: false, status: 500, message: "Não foi possível concluir o cadastro" };
+  }
+  return { ok: true };
+}
+
 export { query as rawQuery };

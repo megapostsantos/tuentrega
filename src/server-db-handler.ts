@@ -34,6 +34,22 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     return Response.json(await runSetupBatch(sqlText, offset, limit));
   }
 
+  if (url.pathname === "/api/db/register" && req.method === "POST") {
+    const { auth } = await import("./lib/auth");
+    const session = await auth.api.getSession({ headers: req.headers });
+    const user = session?.user as any;
+    if (!user) return Response.json({ error: "Não autenticado" }, { status: 401 });
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return Response.json({ error: "JSON inválido" }, { status: 400 });
+    }
+    const { registerProfile } = await import("./server/data-engine");
+    const r = await registerProfile({ id: user.id, name: user.name, role: user.role ?? null }, body?.role, body?.data ?? {});
+    return r.ok ? Response.json({ ok: true }) : Response.json({ error: r.message }, { status: r.status });
+  }
+
   if (url.pathname === "/api/db/query" && req.method === "POST") {
     const { auth } = await import("./lib/auth");
     const session = await auth.api.getSession({ headers: req.headers });

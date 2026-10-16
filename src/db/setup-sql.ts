@@ -1715,4 +1715,8 @@ CREATE INDEX IF NOT EXISTS "idx_pagamentos_entregador" ON "pagamentos" USING btr
 CREATE INDEX IF NOT EXISTS "idx_rotas_operacao_op" ON "rotas_operacao" USING btree ("operacao_id");
 -- @@
 CREATE UNIQUE INDEX IF NOT EXISTS "user_roles_user_role_idx" ON "user_roles" USING btree ("user_id","role");
+-- @@
+ALTER TABLE "empresas" ALTER COLUMN "cnpj" DROP NOT NULL;
+-- @@
+ALTER TABLE "entregadores" ALTER COLUMN "cpf" DROP NOT NULL;
 `;
