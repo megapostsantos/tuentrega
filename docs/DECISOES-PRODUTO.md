@@ -1,0 +1,58 @@
+# TuEntrega — Decisões de produto (conversa de 16/10/2026)
+
+Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugestão a validar.
+
+## Princípios
+- O entregador é **da plataforma TuEntrega**, não da empresa. A empresa nunca controla login/senha dele.
+- Empresas que trazem motoristas são **parceiras**: o motorista convidado fica **atrelado** a quem convidou.
+- A plataforma agrega valor à empresa com gestão (financeiro, contas a pagar, ciclos de pagamento).
+
+## Decidido
+1. **Senha:** só o admin redefine. A empresa não pode (evita travar o acesso do motorista).
+2. **Vínculo por convite:** quem convida fica atrelado a quem convidou.
+3. **Liberação:** 15 dias sem fazer rota para a empresa => o motorista passa a ver ofertas de outras.
+4. **Desvinculação paga:** o entregador pode pagar uma mensalidade para se desvincular e ver ofertas de todas as empresas.
+   (Já existe no admin o campo de mensalidade do entregador, padrão R$ 15,00, e `trial_days`.)
+5. **Blindagem anti-espionagem:** um dono de empresa não pode se cadastrar como motorista para ver o que concorrentes pagam.
+6. **Gestão para a empresa:** financeiro, contas a pagar, definição do ciclo de pagamento (semanal, mensal etc.).
+7. **Antecipação:** o motorista pode pedir antecipação de um valor a receber, com desconto; a empresa decide se paga.
+
+## Proposta (a validar)
+**Blindagem**
+- Segurança por perfil no banco **antes de tudo** (hoje qualquer usuário logado lê tudo, inclusive ofertas de concorrentes).
+- 1 CPF = 1 conta; 1 CNPJ = 1 conta; cruzar CPF do responsável da empresa com CPF de motorista (bloquear coincidência); telefone e e-mail únicos.
+- Aprovação manual do motorista pelo admin antes de ver ofertas (status pendente/aprovado/suspenso).
+- Ocultar nome da empresa e endereço exato de coleta até o aceite; o link público da oferta passa a exigir login.
+- Termos de uso proibindo uso indevido; registro de acessos; admin pode suspender.
+- Origem do cadastro (`convidado_por`) imutável e auditável, para evitar contas falsas de entregador.
+
+**Vínculo**
+- Convite por link de uso único (a empresa nunca vê senha); o motorista cria a própria senha e aceita o vínculo.
+- Contagem dos 15 dias começa no aceite e zera a cada rota concluída para a empresa; calculado na leitura (sem tarefa agendada).
+- Um vínculo ativo por motorista; admin pode liberar/transferir.
+- Exclusividade total vs prioridade de aceite: **decisão pendente**.
+
+**Financeiro da empresa**
+- Ciclo de pagamento configurável por empresa; fechamento por ciclo; contas a pagar com vencimento.
+- Pagamento marcado gera lançamento no financeiro automaticamente (hoje são telas separadas).
+
+**Antecipação**
+- Fase 1: marketplace simples. O motorista propõe um desconto, a empresa aceita ou recusa, o pagamento acontece fora do app e a plataforma registra.
+- Fase 2 (financiar com dinheiro da plataforma, custódia ou split): é atividade regulada. Validar com advogado/contador e usar um provedor de pagamentos licenciado (Asaas, Mercado Pago, Pagar.me) antes de tocar em dinheiro.
+
+## Ordem sugerida
+0. Segurança por perfil.
+1. Cadastro com aprovação e blindagem (CPF/CNPJ únicos, ocultação de identidade).
+2. Convite por link + vínculo de 15 dias.
+3. Botão do admin para redefinir senha.
+4. Assinatura do motorista para desvincular (precisa de provedor de pagamentos).
+5. Gestão financeira da empresa (ciclos, contas a pagar, integração com pagamentos).
+6. Antecipação, fase 1.
+7. "Esqueci minha senha" por e-mail (precisa de domínio e serviço de e-mail).
+
+## Perguntas em aberto
+- Exclusividade total ou prioridade de aceite enquanto vinculado?
+- A mensalidade desvincula de todas as empresas ou só do vínculo atual? Valor final?
+- O ciclo de pagamento é definido pela empresa ou pela plataforma?
+- Motorista novo precisa de aprovação manual do admin?
+- Antecipação: quem fica com o desconto e há taxa para a plataforma?
