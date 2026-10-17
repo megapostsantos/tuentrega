@@ -36,5 +36,25 @@ export default defineEventHandler(async (event) => {
     return Response.json({ id: rows[0]?.id ?? null });
   }
 
+  if (url.pathname === "/api/admin/reset-password" && req.method === "POST") {
+    const body: any = await req.json().catch(() => null);
+    const alvo = String(body?.userId ?? "");
+    if (!alvo) return Response.json({ error: "parâmetros inválidos" }, { status: 400 });
+    const existe = await rawQuery(`select "id", "name", "email" from "user" where "id" = $1`, [alvo]);
+    if (!existe.length) return Response.json({ error: "Usuário não encontrado" }, { status: 404 });
+    const alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    const bytes = crypto.getRandomValues(new Uint8Array(10));
+    const senha = Array.from(bytes, (b) => alfabeto[b % alfabeto.length]).join("");
+    try {
+      await auth.api.setUserPassword({ body: { userId: alvo, newPassword: senha }, headers: req.headers });
+      await auth.api.revokeUserSessions({ body: { userId: alvo }, headers: req.headers });
+    } catch (e: any) {
+      return Response.json({ error: e?.message ?? "Não foi possível redefinir a senha" }, { status: 500 });
+    }
+    await rawQuery(`update "user" set "mustChangePassword" = true where "id" = $1`, [alvo]);
+    await rawQuery(`insert into "admin_logs" ("admin_id","action","target") values ($1,'reset_senha',$2)`, [user.id, alvo]);
+    return Response.json({ senha, nome: existe[0].name, email: existe[0].email });
+  }
+
   return Response.json({ error: "not found" }, { status: 404 });
 });

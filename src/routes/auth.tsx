@@ -171,6 +171,9 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:opacity-90">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Entrar <ArrowRight className="ml-1 h-4 w-4" /></>}
         </Button>
+        <div className="text-center">
+          <Link to="/esqueci-senha" className="text-sm text-primary underline">Esqueci minha senha</Link>
+        </div>
       </form>
     </>
   );

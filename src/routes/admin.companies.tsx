@@ -1,6 +1,7 @@
+import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Download, ArrowRightCircle, Pause, Play, NotebookPen, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { KeyRound, Download, ArrowRightCircle, Pause, Play, NotebookPen, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ function CompaniesPage() {
   const [page, setPage] = useState(1);
   const [planDialog, setPlanDialog] = useState<{ id: string; current: string } | null>(null);
   const [noteDialog, setNoteDialog] = useState<Empresa | null>(null);
+  const [resetAlvo, setResetAlvo] = useState<{ id: string; nome: string; whatsapp?: string | null } | null>(null);
   const [note, setNote] = useState("");
   const [detailsDialog, setDetailsDialog] = useState<Empresa | null>(null);
   const [stats, setStats] = useState<Record<string, { ofertas: number; entregas: number; operacoes: number }>>({});
@@ -221,6 +223,7 @@ function CompaniesPage() {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button size="icon" variant="ghost" title="Impersonar" onClick={() => impersonate(e)}><ArrowRightCircle className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" title="Redefinir senha" onClick={() => setResetAlvo({ id: e.id, nome: e.nome_fantasia || e.razao_social, whatsapp: e.whatsapp })}><KeyRound className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" title="Adicionar nota" onClick={() => setNoteDialog(e)}><NotebookPen className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" title="Ver detalhes" onClick={() => setDetailsDialog(e)}><Eye className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" title="Mudar plano" onClick={() => setPlanDialog({ id: e.id, current: e.plano })}>
@@ -309,6 +312,7 @@ function CompaniesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ResetPasswordDialog alvo={resetAlvo} onClose={() => setResetAlvo(null)} />
     </div>
   );
 }

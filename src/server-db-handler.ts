@@ -42,6 +42,16 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     return Response.json(await runSetupBatch(sqlText, offset, limit));
   }
 
+  if (url.pathname === "/api/db/password-changed" && req.method === "POST") {
+    const { auth } = await import("./lib/auth");
+    const session = await auth.api.getSession({ headers: req.headers });
+    const u = session?.user as any;
+    if (!u) return Response.json({ error: "Não autenticado" }, { status: 401 });
+    const { rawQuery } = await import("./server/data-engine");
+    await rawQuery(`update "user" set "mustChangePassword" = false where "id" = $1`, [u.id]);
+    return Response.json({ ok: true });
+  }
+
   if (url.pathname === "/api/db/register" && req.method === "POST") {
     const { auth } = await import("./lib/auth");
     const session = await auth.api.getSession({ headers: req.headers });

@@ -6,7 +6,7 @@ export type AppRole = "admin" | "empresa" | "dispatcher" | "entregador";
 const PRECEDENCE: AppRole[] = ["admin", "dispatcher", "empresa", "entregador"];
 
 export interface AuthState {
-  user: { id: string; email: string; name: string; emailVerified: boolean; image?: string | null; role?: string | null } | null;
+  user: { id: string; email: string; name: string; emailVerified: boolean; image?: string | null; role?: string | null; mustChangePassword?: boolean | null } | null;
   session: { id: string; userId: string; expiresAt: Date } | null;
   role: AppRole | null;
   roles: AppRole[];

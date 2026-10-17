@@ -9,9 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as LandingRouteImport } from './routes/landing'
 import { Route as ExcluirContaRouteImport } from './routes/excluir-conta'
+import { Route as EsqueciSenhaRouteImport } from './routes/esqueci-senha'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
@@ -48,6 +50,11 @@ import { Route as AuthenticatedNexHistoricoRouteImport } from './routes/_authent
 import { Route as AuthenticatedPacotesDistribuirAlocacaoIdRouteImport } from './routes/_authenticated/pacotes.distribuir.$alocacaoId'
 import { Route as AuthenticatedPacotesAlocarOperacaoIdRouteImport } from './routes/_authenticated/pacotes.alocar.$operacaoId'
 
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
@@ -61,6 +68,11 @@ const LandingRoute = LandingRouteImport.update({
 const ExcluirContaRoute = ExcluirContaRouteImport.update({
   id: '/excluir-conta',
   path: '/excluir-conta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EsqueciSenhaRoute = EsqueciSenhaRouteImport.update({
+  id: '/esqueci-senha',
+  path: '/esqueci-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -248,9 +260,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/esqueci-senha': typeof EsqueciSenhaRoute
   '/excluir-conta': typeof ExcluirContaRoute
   '/landing': typeof LandingRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -287,9 +301,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/esqueci-senha': typeof EsqueciSenhaRoute
   '/excluir-conta': typeof ExcluirContaRoute
   '/landing': typeof LandingRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -328,9 +344,11 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/esqueci-senha': typeof EsqueciSenhaRoute
   '/excluir-conta': typeof ExcluirContaRoute
   '/landing': typeof LandingRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -369,9 +387,11 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/esqueci-senha'
     | '/excluir-conta'
     | '/landing'
     | '/privacidade'
+    | '/redefinir-senha'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
@@ -408,9 +428,11 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/esqueci-senha'
     | '/excluir-conta'
     | '/landing'
     | '/privacidade'
+    | '/redefinir-senha'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
@@ -448,9 +470,11 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/admin'
     | '/auth'
+    | '/esqueci-senha'
     | '/excluir-conta'
     | '/landing'
     | '/privacidade'
+    | '/redefinir-senha'
     | '/_authenticated/agenda'
     | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
@@ -489,15 +513,24 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  EsqueciSenhaRoute: typeof EsqueciSenhaRoute
   ExcluirContaRoute: typeof ExcluirContaRoute
   LandingRoute: typeof LandingRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   OfertaIdRoute: typeof OfertaIdRoute
   RastrearTokenRoute: typeof RastrearTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacidade': {
       id: '/privacidade'
       path: '/privacidade'
@@ -517,6 +550,13 @@ declare module '@tanstack/react-router' {
       path: '/excluir-conta'
       fullPath: '/excluir-conta'
       preLoaderRoute: typeof ExcluirContaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/esqueci-senha': {
+      id: '/esqueci-senha'
+      path: '/esqueci-senha'
+      fullPath: '/esqueci-senha'
+      preLoaderRoute: typeof EsqueciSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -867,9 +907,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  EsqueciSenhaRoute: EsqueciSenhaRoute,
   ExcluirContaRoute: ExcluirContaRoute,
   LandingRoute: LandingRoute,
   PrivacidadeRoute: PrivacidadeRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
   OfertaIdRoute: OfertaIdRoute,
   RastrearTokenRoute: RastrearTokenRoute,
 }

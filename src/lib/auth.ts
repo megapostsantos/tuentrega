@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins";
+import { sendEmail, emailRedefinirSenha } from "@/server/email";
 import { getDb } from "@/db";
 import * as schema from "@/db/schema";
 
@@ -28,6 +29,10 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: false,
     minPasswordLength: 6,
+    resetPasswordTokenExpiresIn: 3600,
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail({ to: user.email, subject: "Redefinir sua senha — TuEntrega", html: emailRedefinirSenha(user.name ?? "", url) });
+    },
   },
   user: {
     deleteUser: { enabled: true },
@@ -36,6 +41,12 @@ export const auth = betterAuth({
         type: "string",
         defaultValue: "entregador",
         fieldName: "role",
+        input: false,
+      },
+      mustChangePassword: {
+        type: "boolean",
+        defaultValue: false,
+        fieldName: "mustChangePassword",
         input: false,
       },
     },
@@ -53,6 +64,7 @@ export const auth = betterAuth({
     customRules: {
       "/sign-in/email": { window: 60, max: 8 },
       "/sign-up/email": { window: 60, max: 5 },
+      "/request-password-reset": { window: 300, max: 3 },
     },
   },
   onAPIError: {

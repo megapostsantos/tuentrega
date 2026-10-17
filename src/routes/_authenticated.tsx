@@ -8,6 +8,7 @@ import { ActiveRouteBanner } from "@/components/ActiveRouteBanner";
 import { AppTopBar } from "@/components/AppTopBar";
 import { AppDrawer } from "@/components/AppDrawer";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { ForcePasswordChange } from "@/components/ForcePasswordChange";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -30,6 +31,7 @@ function AuthenticatedLayout() {
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
   if (loading || !user) return <SplashScreen />;
+  if (user.mustChangePassword) return <ForcePasswordChange />;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">

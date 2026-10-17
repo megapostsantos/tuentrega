@@ -1,6 +1,7 @@
+import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Download, ArrowRightCircle, Pause, Play, NotebookPen, Award, Bike, Car, Footprints, Truck, Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { KeyRound, Download, ArrowRightCircle, Pause, Play, NotebookPen, Award, Bike, Car, Footprints, Truck, Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,7 @@ function DeliverersPage() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [noteDialog, setNoteDialog] = useState<Entregador | null>(null);
+  const [resetAlvo, setResetAlvo] = useState<{ id: string; nome: string; whatsapp?: string | null } | null>(null);
   const [note, setNote] = useState("");
   const [imgDialog, setImgDialog] = useState<{ url: string; title: string } | null>(null);
   const [scoreDialog, setScoreDialog] = useState<Entregador | null>(null);
@@ -250,6 +252,7 @@ function DeliverersPage() {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button size="icon" variant="ghost" title="Impersonar" onClick={() => impersonate(e)}><ArrowRightCircle className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" title="Redefinir senha" onClick={() => setResetAlvo({ id: e.id, nome: e.nome_completo, whatsapp: e.whatsapp })}><KeyRound className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" title="Aplicar evento de score" onClick={() => setScoreDialog(e)}><Award className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" title="Adicionar nota" onClick={() => setNoteDialog(e)}><NotebookPen className="h-4 w-4" /></Button>
                       {e.selfie_url && (
@@ -340,6 +343,7 @@ function DeliverersPage() {
           {imgDialog && <img src={imgDialog.url} alt="" className="w-full rounded-lg" />}
         </DialogContent>
       </Dialog>
+      <ResetPasswordDialog alvo={resetAlvo} onClose={() => setResetAlvo(null)} />
     </div>
   );
 }
