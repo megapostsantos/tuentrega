@@ -2171,3 +2171,15 @@ CREATE TABLE IF NOT EXISTS "ofertas_recusas" (
 );
 -- @@
 CREATE INDEX IF NOT EXISTS "idx_ofertas_recusas_oferta" ON "ofertas_recusas" ("oferta_id","entregador_id");
+-- @@
+ALTER TABLE "ofertas" ADD COLUMN IF NOT EXISTS "atribuida_em" timestamp;
+-- @@
+ALTER TABLE "ofertas" ADD COLUMN IF NOT EXISTS "iniciada_em" timestamp;
+-- @@
+ALTER TABLE "ofertas_recusas" ADD COLUMN IF NOT EXISTS "penalizada" boolean DEFAULT false NOT NULL;
+-- @@
+ALTER TABLE "ofertas_recusas" ADD COLUMN IF NOT EXISTS "pontos" integer;
+-- @@
+CREATE INDEX IF NOT EXISTS "idx_localizacao_oferta" ON "entregador_localizacao" ("oferta_id","registrado_em");
+-- @@
+CREATE INDEX IF NOT EXISTS "idx_localizacao_entregador" ON "entregador_localizacao" ("entregador_id","registrado_em");

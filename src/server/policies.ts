@@ -46,7 +46,7 @@ const operacaoDaEmpresa: Pred = (a, p, u) =>
   `exists (select 1 from "operacoes" op where op."id"::text = ${col(a, "operacao_id")}::text and op."empresa_id"::text = ${p(u)})`;
 
 const naoRecusada: Pred = (a, p, u) =>
-  `not exists (select 1 from "ofertas_recusas" rc where rc."oferta_id"::text = ${col(a, "id")}::text and rc."entregador_id"::text = ${p(u)})`;
+  `not exists (select 1 from "ofertas_recusas" rc where rc."oferta_id"::text = ${col(a, "id")}::text and rc."entregador_id"::text = ${p(u)} and rc."origem" <> 'sistema')`;
 const marketplace: Pred = (a, p, u) =>
   `(${col(a, "status")} = 'open' and coalesce(${col(a, "tipo")}, 'normal') <> 'private' and ${naoRecusada(a, p, u)})`;
 const convidado: Pred = (a, p, u) =>
@@ -176,14 +176,17 @@ export const POLICIES: Record<string, Policy> = {
     update: { empresa: eq("empresa_id"), entregador: or(eq("entregador_id"), ofertaAceitavel) },
     updateCols: {
       entregador: [
-        "status", "entregador_id", "pacotes_entregues", "pacotes_nao_entregues", "closed_at", "closing_notes", "updated_at",
+        "status", "entregador_id", "pacotes_entregues", "pacotes_nao_entregues", "closed_at", "closing_notes", "iniciada_em", "updated_at",
       ],
     },
     updateCheck: {
-      entregador: (v, uid) =>
-        v.entregador_id !== undefined && v.entregador_id !== null && String(v.entregador_id) !== uid
-          ? "Não é permitido atribuir a outro entregador"
-          : null,
+      entregador: (v, uid) => {
+        if (v.entregador_id !== undefined && (v.entregador_id === null || String(v.entregador_id) !== uid))
+          return "Não é permitido alterar o entregador da rota";
+        if (v.status !== undefined && !["in_progress", "completed"].includes(String(v.status)))
+          return "Status não permitido";
+        return null;
+      },
     },
     delete: { empresa: eq("empresa_id") },
     insert: {
@@ -261,9 +264,7 @@ export const POLICIES: Record<string, Policy> = {
 
   alocacoes: {
     read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
-    update: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
-    updateCols: { entregador: ["status"] },
-    updateCheck: { entregador: (v) => (v.status !== "recusada" ? "Status inválido" : null) },
+    update: { empresa: eq("empresa_id") },
     delete: { empresa: eq("empresa_id") },
     insert: { empresa: ownCol("empresa_id") },
     force: { empresa: { empresa_id: "uid" } },
@@ -311,18 +312,8 @@ export const POLICIES: Record<string, Policy> = {
 
   ofertas_recusas: {
     read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
-    insert: {
-      empresa: ownCol("empresa_id"),
-      entregador: async (row, uid, run) => {
-        if (row.entregador_id !== undefined && String(row.entregador_id) !== uid) return "Valor inválido em entregador_id";
-        const r = await run(
-          `select 1 from "ofertas" where "id"::text = $1 and "entregador_id"::text = $2 and "empresa_id" = $3`,
-          [String(row.oferta_id), uid, String(row.empresa_id)],
-        );
-        return r.length ? null : "Oferta não é sua";
-      },
-    },
-    force: { entregador: { entregador_id: "uid" }, empresa: { empresa_id: "uid" } },
+    insert: { empresa: ownCol("empresa_id") },
+    force: { empresa: { empresa_id: "uid" } },
   },
 
   agenda_compromissos: {

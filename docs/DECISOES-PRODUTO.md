@@ -20,6 +20,17 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 
 8. **Parceria após trabalhar junto (16/10):** o motorista entra pelo app por conta própria e aceita ofertas públicas de uma empresa uma ou duas vezes. Se a empresa gostar, pode **propor o vínculo**. Se ele aceitar, a empresa passa a poder **alocar rotas direto** para ele (sem oferta pública) e a plataforma dá benefícios para ele querer ficar atrelado.
 
+9. **Recusa de rota atribuída (17/10):** o entregador pode recusar sem penalidade **até as 18h do dia anterior** à rota; depois disso perde pontos (valor atual: -15, ajustável em `PENALIDADE_RECUSA_TARDIA`). Quem não responde em **2 horas** perde a atribuição (a rota volta ao mercado, sem penalidade). A empresa pode reofertar quando o entregador não aparece.
+10. **Rastro e painel (17/10):** o mapa ao vivo desenha o trajeto percorrido; a empresa tem um painel geral com início, tempo em rota, ritmo, previsão de término e estado (em movimento, parado, sem sinal).
+11. **Campanhas de incentivo (próxima fase):** prêmios e percentuais extras para quem termina rápido. Ver "Campanhas de incentivo" abaixo.
+
+## Campanhas de incentivo (proposta, ainda não construída)
+- **Quem cria:** a empresa (para os seus entregadores) e/ou a plataforma (campanhas gerais). Definir quem paga o bônus.
+- **Regras possíveis:** terminar a rota antes de um horário (ex.: até 14h); bater uma meta de pacotes/hora; zero problemas; sequência de dias com rotas concluídas.
+- **Prêmio:** percentual sobre o valor da rota (ex.: +5%) ou valor fixo; calculado no fechamento da rota e somado ao pagamento.
+- **Dados necessários (já coletados):** início da rota (`iniciada_em`), fim (`closed_at`), entregues/problemas e trajeto.
+- **Perguntas:** o bônus vale só para rota atribuída ou também ofertas do mercado? Tem teto por entregador? Como evitar que a pressa vire entrega ruim (exigir taxa mínima de sucesso)?
+
 ## Proposta (a validar)
 **Dois tipos de vínculo**
 - **De origem:** a empresa trouxe o motorista (convite por link). Vale a regra de liberação por inatividade da empresa.

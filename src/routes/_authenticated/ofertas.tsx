@@ -845,7 +845,7 @@ function DetailsDialog({
       if (!user) return;
       const { error } = await supabase
         .from("ofertas")
-        .update({ status: "in_progress", entregador_id: user.id })
+        .update({ status: "in_progress", entregador_id: user.id, iniciada_em: new Date().toISOString() } as any)
         .eq("id", o.id)
         .eq("status", "open");
       if (error) throw error;
@@ -865,7 +865,7 @@ function DetailsDialog({
 
   async function changeStatus(status: string) {
     setBusy(true);
-    const { error } = await supabase.from("ofertas").update({ status }).eq("id", o.id);
+    const { error } = await supabase.from("ofertas").update((status === "in_progress" ? { status, iniciada_em: new Date().toISOString() } : { status }) as any).eq("id", o.id);
     setBusy(false);
     if (error) return toast.error(error.message);
     if (status === "in_progress") {

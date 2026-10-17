@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, MapPin, Bike, CheckCircle2, AlertTriangle, Radio, RefreshCw, UserX, Undo2 } from "lucide-react";
+import { Loader2, MapPin, Bike, CheckCircle2, AlertTriangle, Radio, RefreshCw, UserX, Undo2, Timer, PauseCircle, Navigation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyModule } from "@/components/EmptyModule";
 import { LiveTrackingMap } from "@/components/LiveTrackingMap";
 import { reofertarRota } from "@/lib/reofertar";
+import { FleetMap, type FleetMarker } from "@/components/FleetMap";
+import { estadoMovimento, fmtDur, type EstadoMov, type Ponto } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +21,7 @@ type RotaOferta = {
   operacao_id: string | null;
   quantidade_pacotes: number | null;
   closed_at: string | null;
+  iniciada_em: string | null;
   updated_at: string | null;
   entregadores?: { nome_completo?: string | null; tipo_veiculo?: string | null } | null;
 };
@@ -30,6 +33,7 @@ type Recusa = {
 };
 type Contagem = { total: number; entregues: number; problemas: number };
 type Pos = { registrado_em: string };
+type PontoVel = Ponto & { vel: number | null };
 
 function ago(iso: string | undefined | null) {
   if (!iso) return null;
@@ -44,6 +48,7 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
   const [concluidas, setConcluidas] = useState<RotaOferta[]>([]);
   const [contagem, setContagem] = useState<Record<string, Contagem>>({});
   const [posicao, setPosicao] = useState<Record<string, Pos>>({});
+  const [pontos, setPontos] = useState<Record<string, PontoVel[]>>({});
   const [loading, setLoading] = useState(true);
   const [tracking, setTracking] = useState<RotaOferta | null>(null);
   const [recusas, setRecusas] = useState<Recusa[]>([]);
@@ -52,7 +57,7 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
 
   async function load(showSpinner = false) {
     if (showSpinner) setLoading(true);
-    const sel = "id, empresa_id, titulo, status, entregador_id, operacao_id, quantidade_pacotes, closed_at, updated_at, entregadores(nome_completo, tipo_veiculo)";
+    const sel = "id, empresa_id, titulo, status, entregador_id, operacao_id, quantidade_pacotes, closed_at, iniciada_em, updated_at, entregadores(nome_completo, tipo_veiculo)";
     let qa = supabase.from("ofertas").select(sel).in("status", ["accepted", "in_progress"]);
     if (empresaId) qa = qa.eq("empresa_id", empresaId);
     const { data: ativas } = await qa.order("updated_at", { ascending: false });
@@ -81,13 +86,23 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
 
     const entIds = [...new Set(a.map((o) => o.entregador_id).filter(Boolean))] as string[];
     if (entIds.length) {
+      const desde20 = new Date(Date.now() - 20 * 60000).toISOString();
       const { data: locs } = await supabase
-        .from("entregador_localizacao").select("entregador_id, registrado_em")
-        .in("entregador_id", entIds).order("registrado_em", { ascending: false }).limit(300);
+        .from("entregador_localizacao").select("entregador_id, lat, lng, registrado_em, velocidade_kmh")
+        .in("entregador_id", entIds).gte("registrado_em", desde20)
+        .order("registrado_em", { ascending: false }).limit(3000);
+      const pt: Record<string, PontoVel[]> = {};
       const p: Record<string, Pos> = {};
-      for (const l of (locs as any[]) ?? []) if (!p[l.entregador_id]) p[l.entregador_id] = { registrado_em: l.registrado_em };
+      for (const l of (locs as any[]) ?? []) {
+        (pt[l.entregador_id] ??= []).push({
+          lat: Number(l.lat), lng: Number(l.lng), t: new Date(l.registrado_em).getTime(),
+          vel: l.velocidade_kmh != null ? Number(l.velocidade_kmh) : null,
+        });
+        if (!p[l.entregador_id]) p[l.entregador_id] = { registrado_em: l.registrado_em };
+      }
+      setPontos(pt);
       setPosicao(p);
-    } else setPosicao({});
+    } else { setPosicao({}); setPontos({}); }
 
     const desde = new Date(Date.now() - 7 * 86400000).toISOString();
     let qr = supabase.from("ofertas_recusas")
@@ -134,6 +149,30 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
     return { total, entregues, problemas, pendentes: total - entregues - problemas };
   }, [rotas, contagem]);
 
+  const frota = useMemo(() => {
+    return rotas.filter((o) => o.entregador_id).map((o) => {
+      const pts = pontos[o.entregador_id!] ?? [];
+      const mov: EstadoMov = estadoMovimento(pts);
+      const c = contagem[o.id] ?? { total: o.quantidade_pacotes ?? 0, entregues: 0, problemas: 0 };
+      const inicio = o.iniciada_em ? new Date(o.iniciada_em).getTime() : null;
+      const decorrido = inicio ? Date.now() - inicio : null;
+      const horas = decorrido ? decorrido / 3600000 : 0;
+      const ritmo = horas > 0.05 && c.entregues > 0 ? c.entregues / horas : null;
+      const restantes = Math.max(0, c.total - c.entregues - c.problemas);
+      const previsaoMs = ritmo && restantes > 0 ? (restantes / ritmo) * 3600000 : null;
+      return { o, c, mov, pts, inicio, decorrido, ritmo, previsaoMs, vel: pts[0]?.vel ?? null };
+    });
+  }, [rotas, pontos, contagem]);
+
+  const marcadores: FleetMarker[] = frota
+    .filter((f) => f.pts[0])
+    .map((f) => ({ id: f.o.id, lat: f.pts[0].lat, lng: f.pts[0].lng, nome: f.o.entregadores?.nome_completo ?? "Entregador", estado: f.mov.estado }));
+  const contEstado = {
+    movimento: frota.filter((f) => f.mov.estado === "movimento").length,
+    parado: frota.filter((f) => f.mov.estado === "parado").length,
+    sem_sinal: frota.filter((f) => f.mov.estado === "sem_sinal").length,
+  };
+
   if (loading) {
     return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -151,6 +190,17 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
         <Stat label="Pendentes" value={resumo.pendentes} />
         <Stat label="Com problema" value={resumo.problemas} tone={resumo.problemas > 0 ? "warn" : undefined} />
       </div>
+
+      {frota.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-green-600" />Em movimento ({contEstado.movimento})</span>
+            <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500" />Parado ({contEstado.parado})</span>
+            <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-gray-400" />Sem sinal ({contEstado.sem_sinal})</span>
+          </div>
+          <FleetMap marcadores={marcadores} />
+        </section>
+      )}
 
       {rotas.length === 0 ? (
         <EmptyModule
@@ -191,6 +241,26 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
                       <div className="h-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
+
+                  {(() => {
+                    const f = frota.find((x) => x.o.id === o.id);
+                    if (!f) return null;
+                    return (
+                      <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/50 p-2 text-xs sm:grid-cols-4">
+                        <span className="flex items-center gap-1"><Timer className="h-3.5 w-3.5" />
+                          {f.inicio ? `Iniciou ${new Date(f.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "Ainda não iniciou"}
+                        </span>
+                        <span>{f.decorrido != null ? `Em rota há ${fmtDur(f.decorrido)}` : "—"}</span>
+                        <span>{f.ritmo ? `Ritmo ${f.ritmo.toFixed(0)} pacotes/h` : "Ritmo —"}</span>
+                        <span>{f.previsaoMs ? `Termina em ~${fmtDur(f.previsaoMs)}` : "Previsão —"}</span>
+                        <span className="col-span-2 flex items-center gap-1 sm:col-span-4">
+                          {f.mov.estado === "movimento" && <><Navigation className="h-3.5 w-3.5 text-green-600" />Em movimento{f.vel ? ` · ${f.vel.toFixed(0)} km/h` : ""}</>}
+                          {f.mov.estado === "parado" && <><PauseCircle className="h-3.5 w-3.5 text-amber-600" />Parado há {Math.floor(f.mov.paradoMin)} min{f.mov.paradoMin >= 19 ? "+" : ""}</>}
+                          {f.mov.estado === "sem_sinal" && <><Radio className="h-3.5 w-3.5 text-gray-500" />Sem sinal de GPS</>}
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex items-center justify-between">
                     <span className={`flex items-center gap-1 text-xs ${cor}`}>
@@ -242,7 +312,10 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
                 <CardContent className="flex items-center justify-between gap-2 p-3 text-sm">
                   <div className="min-w-0">
                     <div className="truncate font-medium">{o.titulo}</div>
-                    <div className="text-xs text-muted-foreground">{o.entregadores?.nome_completo ?? "—"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {o.entregadores?.nome_completo ?? "—"}
+                      {o.iniciada_em && o.closed_at ? ` · duração ${fmtDur(new Date(o.closed_at).getTime() - new Date(o.iniciada_em).getTime())}` : ""}
+                    </div>
                   </div>
                   <div className="flex items-center gap-3 text-xs">
                     <span className="flex items-center gap-1 text-green-700"><CheckCircle2 className="h-4 w-4" />{c?.entregues ?? 0}</span>

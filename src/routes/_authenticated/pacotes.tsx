@@ -572,6 +572,7 @@ function CreateOperation({
           valor_por_pacote: vp,
           status: r.entregador_id ? "accepted" : "open",
           entregador_id: r.entregador_id ?? null,
+          atribuida_em: r.entregador_id ? new Date().toISOString() : null,
           tipo_entrega: "package_delivery",
           operacao_id: createdOpId,
           rota_operacao_id: rotaId,
@@ -1065,6 +1066,7 @@ async function publishPendingRotas(op: Operacao, rotas: any[]): Promise<number> 
       valor_por_pacote: vp,
       status: donoDaRota.has(r.id) ? "accepted" : "open",
       entregador_id: donoDaRota.get(r.id) ?? null,
+      atribuida_em: donoDaRota.has(r.id) ? new Date().toISOString() : null,
       tipo_entrega: "package_delivery",
       operacao_id: op.id,
       rota_operacao_id: r.id,
@@ -1555,7 +1557,7 @@ function AllocationPanel({
       });
       if (error) throw error;
       if (rota.oferta_id) {
-        await sb.from("ofertas").update({ entregador_id: entId, status: "accepted" }).eq("id", rota.oferta_id);
+        await sb.from("ofertas").update({ entregador_id: entId, status: "accepted", atribuida_em: new Date().toISOString() }).eq("id", rota.oferta_id);
       }
       toast.success("Rota atribuída.");
       await load();
@@ -1584,7 +1586,7 @@ function AllocationPanel({
         });
         if (error) throw error;
         if (rota.oferta_id) {
-          await sb.from("ofertas").update({ entregador_id: ent.entregador_id, status: "accepted" }).eq("id", rota.oferta_id);
+          await sb.from("ofertas").update({ entregador_id: ent.entregador_id, status: "accepted", atribuida_em: new Date().toISOString() }).eq("id", rota.oferta_id);
         }
       }
       toast.success(`${Math.min(disponiveis.length, rotasLivres.length)} rota(s) alocadas.`);
@@ -1596,7 +1598,7 @@ function AllocationPanel({
     const sb = supabase as any;
     const ofertaIds = rotas.map((r) => r.oferta_id).filter(Boolean);
     if (ofertaIds.length) {
-      await sb.from("ofertas").update({ status: "in_progress" }).in("id", ofertaIds).not("entregador_id", "is", null);
+      await sb.from("ofertas").update({ status: "in_progress", iniciada_em: new Date().toISOString() }).in("id", ofertaIds).not("entregador_id", "is", null);
       const { notifyDestinatarioOferta } = await import("@/lib/whatsapp-notify");
       ofertaIds.forEach((id: string) => { notifyDestinatarioOferta(id).catch(() => {}); });
     }

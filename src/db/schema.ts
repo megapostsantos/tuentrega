@@ -224,6 +224,8 @@ export const ofertas = pgTable("ofertas", {
   horaFim: time("hora_fim"),
   expiraEm: timestamp("expira_em"),
   entregadorId: text("entregador_id"),
+  atribuidaEm: timestamp("atribuida_em"),
+  iniciadaEm: timestamp("iniciada_em"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   cancelamentoAte: timestamp("cancelamento_ate"),
@@ -474,6 +476,8 @@ export const ofertasRecusas = pgTable("ofertas_recusas", {
   entregadorId: text("entregador_id").notNull(),
   origem: text("origem").notNull().default("entregador"),
   motivo: text("motivo"),
+  penalizada: boolean("penalizada").notNull().default(false),
+  pontos: integer("pontos"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

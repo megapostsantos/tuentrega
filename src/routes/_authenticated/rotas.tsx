@@ -327,7 +327,7 @@ function EntregadorRotas() {
     ];
     async function iniciar() {
       setBusy(true);
-      const { error } = await supabase.from("ofertas").update({ status: "in_progress" }).eq("id", oferta!.id).eq("entregador_id", user!.id);
+      const { error } = await supabase.from("ofertas").update({ status: "in_progress", iniciada_em: new Date().toISOString() } as any).eq("id", oferta!.id).eq("entregador_id", user!.id);
       setBusy(false);
       if (error) return toast.error(error.message);
       load();
@@ -335,11 +335,12 @@ function EntregadorRotas() {
     async function recusar() {
       setBusy(true);
       try {
-        await recusarRotaAtribuida({
-          ofertaId: oferta!.id, empresaId: oferta!.empresa_id, entregadorId: user!.id,
+        const res = await recusarRotaAtribuida({
+          ofertaId: oferta!.id,
           motivo: MOTIVOS.find((m) => m[0] === motivoRecusa)?.[1] ?? motivoRecusa,
         });
-        toast.success("Rota recusada. Ela voltou para outros entregadores.");
+        if (res.penalizado) toast.warning(`Rota recusada fora do prazo (até 18h do dia anterior): ${res.pontos} pontos na sua nota.`);
+        else toast.success("Rota recusada sem penalidade. Ela voltou para outros entregadores.");
         setRecusando(false);
         load();
       } catch (e: any) {
@@ -380,7 +381,7 @@ function EntregadorRotas() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Recusar esta rota?</AlertDialogTitle>
-              <AlertDialogDescription>A empresa será avisada e a rota volta para outros entregadores. Ela não será oferecida a você de novo.</AlertDialogDescription>
+              <AlertDialogDescription>A rota volta para outros entregadores e não será oferecida a você de novo. Recusar depois das 18h do dia anterior à rota tira pontos da sua nota.</AlertDialogDescription>
             </AlertDialogHeader>
             <RadioGroup value={motivoRecusa} onValueChange={setMotivoRecusa} className="space-y-1">
               {MOTIVOS.map(([k, label]) => (

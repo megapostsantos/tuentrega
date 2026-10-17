@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Tooltip, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Loader2, MapPin, Bike } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { trailKm, fmtDur } from "@/lib/geo";
 
 type Pacote = {
   id: string;
@@ -90,14 +91,28 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId, operaca
   const [pacotes, setPacotes] = useState<Pacote[]>([]);
   const [entregador, setEntregador] = useState<Entregador | null>(null);
   const [loading, setLoading] = useState(true);
+  const [trail, setTrail] = useState<[number, number][]>([]);
+  const [iniciadaEm, setIniciadaEm] = useState<string | null>(null);
   const [, force] = useState(0);
 
   // Atualização periódica da posição e do andamento dos pacotes (substitui o tempo real)
   useEffect(() => {
     if (!open || !entregadorId) return;
     let alive = true;
+    const loadTrail = async () => {
+      const { data: pts } = await supabase.from("entregador_localizacao")
+        .select("lat, lng")
+        .eq("oferta_id", ofertaId)
+        .order("registrado_em", { ascending: true })
+        .limit(4000);
+      if (alive && pts) setTrail((pts as any[]).map((x) => [Number(x.lat), Number(x.lng)] as [number, number]));
+    };
+    loadTrail();
+    supabase.from("ofertas").select("iniciada_em").eq("id", ofertaId).maybeSingle()
+      .then(({ data }: any) => { if (alive) setIniciadaEm(data?.iniciada_em ?? null); });
     const refresh = async () => {
       if (document.visibilityState !== "visible") return;
+      loadTrail();
       const { data: locs } = await supabase.from("entregador_localizacao")
         .select("lat, lng, registrado_em, velocidade_kmh")
         .eq("entregador_id", entregadorId)
@@ -258,6 +273,9 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId, operaca
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
+                  {trail.length > 1 && (
+                    <Polyline positions={trail} pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.75 }} />
+                  )}
                   {loc && (
                     <Marker position={[loc.lat, loc.lng]} icon={pulseIcon()}>
                       <Tooltip direction="top" offset={[0, -12]}>Entregador</Tooltip>
@@ -307,6 +325,16 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId, operaca
                 {stats.done}<span className="text-base text-muted-foreground"> / {stats.total}</span>
               </p>
               <p className="text-xs text-muted-foreground">paradas concluídas</p>
+            </div>
+
+            <div className="rounded-lg border p-3 space-y-1">
+              <p className="text-xs text-muted-foreground">Percurso</p>
+              <p className="text-sm font-medium">{trail.length > 1 ? `${trailKm(trail.map(([lat, lng]) => ({ lat, lng }))).toFixed(1)} km percorridos` : "Sem trajeto ainda"}</p>
+              {iniciadaEm && (
+                <p className="text-xs text-muted-foreground">
+                  Iniciou às {new Date(iniciadaEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · há {fmtDur(Date.now() - new Date(iniciadaEm).getTime())}
+                </p>
+              )}
             </div>
 
             <div className="rounded-lg border p-3">

@@ -312,8 +312,96 @@ function fixTs(v: any): any {
   return v;
 }
 
-async function runRpc(req: QueryReq): Promise<QueryResp> {
+const PENALIDADE_RECUSA_TARDIA = -15;
+
+function scoreStatements(entregadorId: string, pontos: number, evento: string, descricao: string) {
+  return [
+    {
+      text: `insert into "confiabilidade_score" ("entregador_id","score","nivel","updated_at")
+             values ($1, greatest(0, least(100, 100 + $2::int)), 'gold', now())
+             on conflict ("entregador_id") do update
+               set "score" = greatest(0, least(100, "confiabilidade_score"."score" + $2::int)), "updated_at" = now()`,
+      params: [entregadorId, pontos],
+    },
+    {
+      text: `update "confiabilidade_score" set "nivel" = case when "score" >= 80 then 'gold' when "score" >= 50 then 'silver' else 'bronze' end where "entregador_id" = $1`,
+      params: [entregadorId],
+    },
+    {
+      text: `insert into "confiabilidade_historico" ("entregador_id","tipo","delta","motivo") values ($1,$2,$3,$4)`,
+      params: [entregadorId, evento, pontos, descricao],
+    },
+  ];
+}
+
+async function recusarRota(uid: string, args: Record<string, unknown>): Promise<QueryResp> {
+  const ofertaId = String(args._oferta_id ?? "");
+  const motivo = args._motivo == null ? null : String(args._motivo).slice(0, 200);
+  const rows = await query(
+    `select o."id", o."empresa_id", o."titulo",
+            (o."data_trabalho" is not null
+             and (((o."data_trabalho"::timestamp - interval '1 day') + interval '18 hours') at time zone 'America/Sao_Paulo') < now()) as tardia
+       from "ofertas" o
+      where o."id"::text = $1 and o."entregador_id"::text = $2 and o."status" = 'accepted'`,
+    [ofertaId, uid],
+  );
+  if (!rows.length) throw new Error("Esta rota não está disponível para recusa");
+  const o = rows[0];
+  const tardia = !!o.tardia;
+  const pontos = tardia ? PENALIDADE_RECUSA_TARDIA : 0;
+  const stmts: { text: string; params: unknown[] }[] = [
+    {
+      text: `insert into "ofertas_recusas" ("oferta_id","empresa_id","entregador_id","origem","motivo","penalizada","pontos") values ($1,$2,$3,'entregador',$4,$5,$6)`,
+      params: [ofertaId, o.empresa_id, uid, motivo, tardia, pontos || null],
+    },
+    {
+      text: `update "alocacoes" set "status" = 'recusada' where "oferta_id"::text = $1 and "entregador_id"::text = $2`,
+      params: [ofertaId, uid],
+    },
+    {
+      text: `update "ofertas" set "status" = 'open', "entregador_id" = null, "atribuida_em" = null, "updated_at" = now()
+              where "id"::text = $1 and "entregador_id"::text = $2 and "status" = 'accepted'`,
+      params: [ofertaId, uid],
+    },
+  ];
+  if (tardia) stmts.push(...scoreStatements(uid, pontos, "late_refusal", `Recusa tardia da rota ${o.titulo ?? ""}`.trim()));
+  await runTransaction(stmts);
+  return { data: { penalizado: tardia, pontos }, error: null, count: null };
+}
+
+let lastExpire = 0;
+async function expirarAtribuicoes() {
+  const now = Date.now();
+  if (now - lastExpire < 60_000) return;
+  lastExpire = now;
+  try {
+    await query(
+      `with alvo as (
+         select "id", "empresa_id", "entregador_id" from "ofertas"
+          where "status" = 'accepted' and "entregador_id" is not null
+            and coalesce("atribuida_em", "updated_at") < now() - interval '2 hours'),
+       rec as (
+         insert into "ofertas_recusas" ("oferta_id","empresa_id","entregador_id","origem","motivo")
+         select "id", "empresa_id", "entregador_id", 'sistema', 'Sem resposta em 2 horas' from alvo),
+       aloc as (
+         update "alocacoes" set "status" = 'recusada'
+          where "status" = 'allocated' and "oferta_id" in (select "id" from alvo)),
+       up as (
+         update "ofertas" set "status" = 'open', "entregador_id" = null, "atribuida_em" = null, "updated_at" = now()
+          where "id" in (select "id" from alvo))
+       select count(*)::int as n from alvo`,
+    );
+  } catch (e) {
+    console.error("[expirar] erro:", (e as Error)?.message);
+  }
+}
+
+async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   const { fn, args } = req.rpc!;
+  if (fn === "recusar_rota") {
+    if (!uid) throw Object.assign(new Error("Não autenticado"), { code: "401" });
+    return await recusarRota(uid, args);
+  }
   if (fn === "apply_reliability_event") {
     const id = String(args._entregador_id);
     const pontos = Number(args._pontos ?? 0);
@@ -347,12 +435,19 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
 
     if (req.op === "rpc") {
       if (scope) {
-        const a = req.rpc?.args ?? {};
-        const pontos = Number(a._pontos ?? 0);
-        if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
+        const fn = req.rpc?.fn;
+        if (fn === "apply_reliability_event") {
+          const a = req.rpc?.args ?? {};
+          const pontos = Number(a._pontos ?? 0);
+          if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
+        } else if (fn === "recusar_rota") {
+          if (scope.role === "empresa") forbidden();
+        } else forbidden();
       }
-      return await runRpc(req);
+      return await runRpc(req, scope?.uid ?? null);
     }
+
+    if (req.table === "ofertas" && req.op === "select") await expirarAtribuicoes();
 
     const info = tableInfo(req.table);
     const T = q(req.table);
