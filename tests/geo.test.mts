@@ -1,0 +1,13 @@
+import { estadoMovimento, trailKm, fmtDur } from "../src/lib/geo.ts";
+const t = (n: string, c: boolean, x?: any) => console.log(c ? "PASS" : "FAIL", n, c ? "" : JSON.stringify(x));
+const now = Date.now();
+const mk = (arr: [number, number, number][]) => arr.map(([lat, lng, minAtras]) => ({ lat, lng, t: now - minAtras * 60000 }));
+t("sem pontos = sem sinal", estadoMovimento([], now).estado === "sem_sinal");
+t("ponto antigo = sem sinal", estadoMovimento(mk([[-23.55, -46.63, 8]]), now).estado === "sem_sinal");
+let e = estadoMovimento(mk([[-23.55, -46.63, 0], [-23.5501, -46.6301, 4], [-23.5501, -46.6300, 9], [-23.54, -46.62, 12]]), now);
+t("parado há ~9 min (para ao achar ponto distante)", e.estado === "parado" && Math.round(e.paradoMin) === 9, e);
+e = estadoMovimento(mk([[-23.55, -46.63, 0], [-23.552, -46.632, 1], [-23.56, -46.64, 2]]), now);
+t("em movimento", e.estado === "movimento", e);
+const km = trailKm([{ lat: -23.55, lng: -46.63 }, { lat: -23.56, lng: -46.63 }]);
+t("1 grau ~ 11 km: 0,01° ≈ 1,1 km", km > 1.0 && km < 1.2, km);
+t("duração", fmtDur(135 * 60000) === "2h15" && fmtDur(40 * 60000) === "40min", [fmtDur(135 * 60000), fmtDur(40 * 60000)]);
