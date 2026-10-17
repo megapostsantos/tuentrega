@@ -2183,3 +2183,33 @@ ALTER TABLE "ofertas_recusas" ADD COLUMN IF NOT EXISTS "pontos" integer;
 CREATE INDEX IF NOT EXISTS "idx_localizacao_oferta" ON "entregador_localizacao" ("oferta_id","registrado_em");
 -- @@
 CREATE INDEX IF NOT EXISTS "idx_localizacao_entregador" ON "entregador_localizacao" ("entregador_id","registrado_em");
+-- @@
+CREATE TABLE IF NOT EXISTS "config_pagamento" (
+	"empresa_id" text PRIMARY KEY NOT NULL,
+	"ciclo" text DEFAULT 'quinzenal' NOT NULL,
+	"antecipacao_ativa" boolean DEFAULT false NOT NULL,
+	"antecipacao_percentual" numeric(5, 2) DEFAULT '10' NOT NULL,
+	"limite_percentual" integer DEFAULT 100 NOT NULL,
+	"valor_minimo" numeric(10, 2) DEFAULT '50' NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+-- @@
+CREATE TABLE IF NOT EXISTS "antecipacoes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"empresa_id" text NOT NULL,
+	"entregador_id" text NOT NULL,
+	"valor_bruto" numeric(10, 2) NOT NULL,
+	"percentual" numeric(5, 2) NOT NULL,
+	"desconto" numeric(10, 2) NOT NULL,
+	"valor_liquido" numeric(10, 2) NOT NULL,
+	"status" text DEFAULT 'solicitada' NOT NULL,
+	"observacao" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"decidida_em" timestamp,
+	"paga_em" timestamp,
+	"abatida_em" timestamp
+);
+-- @@
+CREATE INDEX IF NOT EXISTS "idx_antecipacoes_empresa" ON "antecipacoes" ("empresa_id","status");
+-- @@
+CREATE INDEX IF NOT EXISTS "idx_antecipacoes_entregador" ON "antecipacoes" ("entregador_id","created_at");

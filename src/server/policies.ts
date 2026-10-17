@@ -58,7 +58,9 @@ const ofertaAceitavel: Pred = (a, p, u) =>
 
 const entregadorTrabalhaParaEmpresa: Pred = (a, p, u) =>
   `(exists (select 1 from "ofertas" o where o."entregador_id"::text = ${col(a, "id")}::text and o."empresa_id"::text = ${p(u)})
-    or exists (select 1 from "dispatchers" d where d."entregador_id"::text = ${col(a, "id")}::text and d."empresa_id"::text = ${p(u)}))`;
+    or exists (select 1 from "dispatchers" d where d."entregador_id"::text = ${col(a, "id")}::text and d."empresa_id"::text = ${p(u)})
+    or exists (select 1 from "entregas" en where en."entregador_id"::text = ${col(a, "id")}::text and en."empresa_id"::text = ${p(u)})
+    or exists (select 1 from "antecipacoes" an where an."entregador_id"::text = ${col(a, "id")}::text and an."empresa_id"::text = ${p(u)}))`;
 const entregadorDoMeuTime: Pred = (a, p, u) =>
   `(${col(a, "id")}::text = ${p(u)} or exists (select 1 from "dispatcher_team" dt where dt."entregador_id"::text = ${col(a, "id")}::text and dt."dispatcher_id"::text in ${meDispatcherIds(u, p)}))`;
 const entregadorDaMinhaEmpresa: Pred = (a, p, u) =>
@@ -308,6 +310,25 @@ export const POLICIES: Record<string, Policy> = {
           `exists (select 1 from "agenda_compromissos" c where c."previsao_id"::text = ${col(a, "id")}::text and c."entregador_id"::text = ${p(u)} and c."status" <> 'cancelado')`,
       },
     },
+  },
+
+  config_pagamento: apenasEmpresa(),
+
+  antecipacoes: {
+    read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
+    update: {
+      empresa: (a, p, u) => `(${col(a, "empresa_id")}::text = ${p(u)} and ${col(a, "status")} in ('solicitada','aprovada','paga'))`,
+      entregador: (a, p, u) => `(${col(a, "entregador_id")}::text = ${p(u)} and ${col(a, "status")} = 'solicitada')`,
+    },
+    updateCols: {
+      empresa: ["status", "observacao", "decidida_em", "paga_em", "abatida_em"],
+      entregador: ["status"],
+    },
+    updateCheck: {
+      empresa: (v) => (v.status !== undefined && !["aprovada", "recusada", "paga"].includes(String(v.status)) ? "Status inválido" : null),
+      entregador: (v) => (v.status !== "cancelada" ? "Status inválido" : null),
+    },
+    mask: { entregador: { cols: ["percentual"] } },
   },
 
   ofertas_recusas: {

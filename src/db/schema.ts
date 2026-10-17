@@ -469,6 +469,32 @@ export const dispatcherAlocacoes = pgTable("dispatcher_alocacoes", {
   distributedAt: timestamp("distributed_at"),
 });
 
+export const configPagamento = pgTable("config_pagamento", {
+  empresaId: text("empresa_id").primaryKey(),
+  ciclo: text("ciclo").notNull().default("quinzenal"),
+  antecipacaoAtiva: boolean("antecipacao_ativa").notNull().default(false),
+  antecipacaoPercentual: numeric("antecipacao_percentual", { precision: 5, scale: 2 }).notNull().default("10"),
+  limitePercentual: integer("limite_percentual").notNull().default(100),
+  valorMinimo: numeric("valor_minimo", { precision: 10, scale: 2 }).notNull().default("50"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const antecipacoes = pgTable("antecipacoes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  empresaId: text("empresa_id").notNull(),
+  entregadorId: text("entregador_id").notNull(),
+  valorBruto: numeric("valor_bruto", { precision: 10, scale: 2 }).notNull(),
+  percentual: numeric("percentual", { precision: 5, scale: 2 }).notNull(),
+  desconto: numeric("desconto", { precision: 10, scale: 2 }).notNull(),
+  valorLiquido: numeric("valor_liquido", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("solicitada"),
+  observacao: text("observacao"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  decididaEm: timestamp("decidida_em"),
+  pagaEm: timestamp("paga_em"),
+  abatidaEm: timestamp("abatida_em"),
+});
+
 export const ofertasRecusas = pgTable("ofertas_recusas", {
   id: uuid("id").primaryKey().defaultRandom(),
   ofertaId: uuid("oferta_id").notNull(),

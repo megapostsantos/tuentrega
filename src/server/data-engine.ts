@@ -369,6 +369,58 @@ async function recusarRota(uid: string, args: Record<string, unknown>): Promise<
   return { data: { penalizado: tardia, pontos }, error: null, count: null };
 }
 
+async function infoAntecipacao(uid: string, empresaId: string) {
+  const rows = await query(
+    `select
+       coalesce((select sum("valor") from "entregas" where "entregador_id"::text = $1 and "empresa_id"::text = $2 and "status" in ('pendente','concluida')), 0)::float as total,
+       coalesce((select sum("valor_bruto") from "antecipacoes" where "entregador_id"::text = $1 and "empresa_id"::text = $2
+                  and "status" in ('solicitada','aprovada','paga') and "abatida_em" is null), 0)::float as aberto,
+       (select to_jsonb(c) from "config_pagamento" c where c."empresa_id"::text = $2) as cfg`,
+    [uid, empresaId],
+  );
+  const r = rows[0] ?? {};
+  const cfg = r.cfg ?? null;
+  const ativa = !!cfg?.antecipacao_ativa;
+  const total = Number(r.total ?? 0);
+  const aberto = Number(r.aberto ?? 0);
+  const limite = Number(cfg?.limite_percentual ?? 100);
+  const disponivel = ativa ? Math.max(0, Math.round((total * limite) / 100 * 100 - aberto * 100) / 100) : 0;
+  return {
+    ativa, total, aberto, disponivel,
+    minimo: Number(cfg?.valor_minimo ?? 50),
+    percentual: Number(cfg?.antecipacao_percentual ?? 0),
+  };
+}
+
+function calcAntecipacao(info: Awaited<ReturnType<typeof infoAntecipacao>>, valorIn: unknown) {
+  if (!info.ativa) throw new Error("Esta empresa não oferece antecipação");
+  const valor = Math.round(Number(valorIn) * 100) / 100;
+  if (!(valor > 0)) throw new Error("Informe um valor");
+  if (valor < info.minimo) throw new Error(`O valor mínimo para antecipar é R$ ${info.minimo.toFixed(2)}`);
+  if (valor > info.disponivel + 0.001) throw new Error(`O máximo disponível é R$ ${info.disponivel.toFixed(2)}`);
+  const desconto = Math.round(valor * info.percentual) / 100;
+  return { valor, desconto, liquido: Math.round((valor - desconto) * 100) / 100 };
+}
+
+async function runAntecipacao(fn: string, uid: string, args: Record<string, unknown>): Promise<QueryResp> {
+  const empresaId = String(args._empresa_id ?? "");
+  if (!empresaId) throw new Error("Empresa não informada");
+  const info = await infoAntecipacao(uid, empresaId);
+  if (fn === "saldo_antecipacao") {
+    return { data: { ativa: info.ativa, total: info.total, aberto: info.aberto, disponivel: info.disponivel, minimo: info.minimo }, error: null, count: null };
+  }
+  const c = calcAntecipacao(info, args._valor);
+  if (fn === "simular_antecipacao") {
+    return { data: { valor: c.valor, desconto: c.desconto, liquido: c.liquido }, error: null, count: null };
+  }
+  const rows = await query(
+    `insert into "antecipacoes" ("empresa_id","entregador_id","valor_bruto","percentual","desconto","valor_liquido")
+     values ($1,$2,$3,$4,$5,$6) returning "id"`,
+    [empresaId, uid, c.valor, info.percentual, c.desconto, c.liquido],
+  );
+  return { data: { id: rows[0]?.id, valor: c.valor, desconto: c.desconto, liquido: c.liquido }, error: null, count: null };
+}
+
 let lastExpire = 0;
 async function expirarAtribuicoes() {
   const now = Date.now();
@@ -401,6 +453,10 @@ async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   if (fn === "recusar_rota") {
     if (!uid) throw Object.assign(new Error("Não autenticado"), { code: "401" });
     return await recusarRota(uid, args);
+  }
+  if (fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
+    if (!uid) throw Object.assign(new Error("Não autenticado"), { code: "401" });
+    return await runAntecipacao(fn, uid, args);
   }
   if (fn === "apply_reliability_event") {
     const id = String(args._entregador_id);
@@ -440,7 +496,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           const a = req.rpc?.args ?? {};
           const pontos = Number(a._pontos ?? 0);
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
-        } else if (fn === "recusar_rota") {
+        } else if (fn === "recusar_rota" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
         } else forbidden();
       }

@@ -22,6 +22,7 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 
 9. **Recusa de rota atribuída (17/10):** o entregador pode recusar sem penalidade **até as 18h do dia anterior** à rota; depois disso perde pontos (valor atual: -15, ajustável em `PENALIDADE_RECUSA_TARDIA`). Quem não responde em **2 horas** perde a atribuição (a rota volta ao mercado, sem penalidade). A empresa pode reofertar quando o entregador não aparece.
 10. **Rastro e painel (17/10):** o mapa ao vivo desenha o trajeto percorrido; a empresa tem um painel geral com início, tempo em rota, ritmo, previsão de término e estado (em movimento, parado, sem sinal).
+12. **Antecipação de pagamento (17/10, fase 1):** o ciclo de pagamento é configurável por empresa (padrão quinzenal). O entregador pede adiantamento do que tem a receber; a empresa define o desconto (ex.: 10%), o limite antecipável e o valor mínimo, aprova ou recusa, faz o PIX fora do app e marca como pago; o valor antecipado é abatido do pagamento do ciclo. A plataforma só **registra** (não movimenta dinheiro). O percentual é configurado só pela empresa; o entregador vê o desconto em reais e o valor líquido.
 11. **Campanhas de incentivo (próxima fase):** prêmios e percentuais extras para quem termina rápido. Ver "Campanhas de incentivo" abaixo.
 
 ## Campanhas de incentivo (proposta, ainda não construída)

@@ -1,3 +1,5 @@
+import { AntecipacoesEmpresa } from "@/components/pagamentos/AntecipacoesEmpresa";
+import { AntecipacaoEntregador } from "@/components/pagamentos/AntecipacaoEntregador";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
@@ -29,7 +31,7 @@ const brl = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function PagamentosPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <PageHeader
@@ -40,7 +42,9 @@ function PagamentosPage() {
             : "Acompanhe seus recebimentos por rota"
         }
       />
+      {role === "empresa" && user && <AntecipacoesEmpresa empresaId={user.id} />}
       {role === "empresa" && <EmpresaFinanceiro />}
+      {role === "entregador" && user && <AntecipacaoEntregador userId={user.id} />}
       {role === "entregador" && <EntregadorFinanceiro />}
       {!role && <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />}
     </div>
