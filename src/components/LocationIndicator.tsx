@@ -28,6 +28,17 @@ export function LocationIndicator({ state }: { state: LocationTrackerState }) {
 
   if (!state.active) return null;
 
+  if (state.online === false || (state.pending ?? 0) > 5) {
+    return (
+      <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30">
+        <AlertTriangle className="h-3.5 w-3.5" />
+        <span>
+          Sem conexão com o servidor — {state.pending ?? 0} ponto(s) de GPS guardados no celular. Enviamos assim que a internet voltar. Mantenha esta tela aberta.
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 border-b border-green-200 dark:border-green-900 px-4 py-1.5 text-xs text-green-800 dark:text-green-200">
       <span className="relative flex h-2 w-2">

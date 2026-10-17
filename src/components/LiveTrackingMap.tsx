@@ -40,6 +40,11 @@ function pulseIcon() {
   return L.divIcon({ html, className: "live-tracker-marker", iconSize: [24, 24], iconAnchor: [12, 12] });
 }
 
+function startIcon() {
+  const html = `<div style="background:#16a34a;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)">S</div>`;
+  return L.divIcon({ html, className: "live-tracker-start", iconSize: [28, 28], iconAnchor: [14, 14] });
+}
+
 function stopIcon(n: number, done: boolean) {
   const color = done ? "#16a34a" : "#ea580c";
   const html = `<div style="background:${color};color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.4);border:2px solid #fff;">${done ? "✓" : n}</div>`;
@@ -275,6 +280,11 @@ export function LiveTrackingMap({ open, onClose, ofertaId, entregadorId, operaca
                   />
                   {trail.length > 1 && (
                     <Polyline positions={trail} pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.75 }} />
+                  )}
+                  {trail.length > 0 && (
+                    <Marker position={trail[0]} icon={startIcon()}>
+                      <Tooltip direction="top" offset={[0, -14]}>Saída</Tooltip>
+                    </Marker>
                   )}
                   {loc && (
                     <Marker position={[loc.lat, loc.lng]} icon={pulseIcon()}>

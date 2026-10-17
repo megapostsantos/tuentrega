@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Tooltip, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-export type FleetMarker = { id: string; lat: number; lng: number; nome: string; estado: "movimento" | "parado" | "sem_sinal" };
+export type FleetMarker = { id: string; lat: number; lng: number; nome: string; estado: "movimento" | "parado" | "sem_sinal"; trilha?: [number, number][] };
 
 const COR = { movimento: "#16a34a", parado: "#f59e0b", sem_sinal: "#9ca3af" } as const;
 
@@ -40,6 +40,9 @@ export function FleetMap({ marcadores }: { marcadores: FleetMarker[] }) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {marcadores.map((m) => m.trilha && m.trilha.length > 1 ? (
+          <Polyline key={`t-${m.id}`} positions={m.trilha} pathOptions={{ color: COR[m.estado], weight: 3, opacity: 0.6 }} />
+        ) : null)}
         {marcadores.map((m) => (
           <Marker key={m.id} position={[m.lat, m.lng]} icon={icone(m.estado, m.nome)}>
             <Tooltip direction="top" offset={[0, -14]}>{m.nome}</Tooltip>

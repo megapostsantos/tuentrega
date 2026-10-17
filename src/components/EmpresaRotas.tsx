@@ -166,7 +166,7 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
 
   const marcadores: FleetMarker[] = frota
     .filter((f) => f.pts[0])
-    .map((f) => ({ id: f.o.id, lat: f.pts[0].lat, lng: f.pts[0].lng, nome: f.o.entregadores?.nome_completo ?? "Entregador", estado: f.mov.estado }));
+    .map((f) => ({ id: f.o.id, lat: f.pts[0].lat, lng: f.pts[0].lng, nome: f.o.entregadores?.nome_completo ?? "Entregador", estado: f.mov.estado, trilha: [...f.pts].reverse().map((x) => [x.lat, x.lng] as [number, number]) }));
   const contEstado = {
     movimento: frota.filter((f) => f.mov.estado === "movimento").length,
     parado: frota.filter((f) => f.mov.estado === "parado").length,
