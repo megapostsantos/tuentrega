@@ -45,7 +45,6 @@ import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authen
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedNexSaidasRouteImport } from './routes/_authenticated/nex.saidas'
 import { Route as AuthenticatedNexHistoricoRouteImport } from './routes/_authenticated/nex.historico'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as AuthenticatedPacotesDistribuirAlocacaoIdRouteImport } from './routes/_authenticated/pacotes.distribuir.$alocacaoId'
 import { Route as AuthenticatedPacotesAlocarOperacaoIdRouteImport } from './routes/_authenticated/pacotes.alocar.$operacaoId'
 
@@ -232,12 +231,6 @@ const AuthenticatedNexHistoricoRoute =
     path: '/nex/historico',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const LovableEmailQueueProcessRoute =
-  LovableEmailQueueProcessRouteImport.update({
-    id: '/lovable/email/queue/process',
-    path: '/lovable/email/queue/process',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AuthenticatedPacotesDistribuirAlocacaoIdRoute =
   AuthenticatedPacotesDistribuirAlocacaoIdRouteImport.update({
     id: '/distribuir/$alocacaoId',
@@ -289,7 +282,6 @@ export interface FileRoutesByFullPath {
   '/nex/saidas': typeof AuthenticatedNexSaidasRoute
   '/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -329,7 +321,6 @@ export interface FileRoutesByTo {
   '/nex/saidas': typeof AuthenticatedNexSaidasRoute
   '/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -371,7 +362,6 @@ export interface FileRoutesById {
   '/_authenticated/nex/saidas': typeof AuthenticatedNexSaidasRoute
   '/_authenticated/pacotes/alocar/$operacaoId': typeof AuthenticatedPacotesAlocarOperacaoIdRoute
   '/_authenticated/pacotes/distribuir/$alocacaoId': typeof AuthenticatedPacotesDistribuirAlocacaoIdRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -413,7 +403,6 @@ export interface FileRouteTypes {
     | '/nex/saidas'
     | '/pacotes/alocar/$operacaoId'
     | '/pacotes/distribuir/$alocacaoId'
-    | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -453,7 +442,6 @@ export interface FileRouteTypes {
     | '/nex/saidas'
     | '/pacotes/alocar/$operacaoId'
     | '/pacotes/distribuir/$alocacaoId'
-    | '/lovable/email/queue/process'
   id:
     | '__root__'
     | '/'
@@ -494,7 +482,6 @@ export interface FileRouteTypes {
     | '/_authenticated/nex/saidas'
     | '/_authenticated/pacotes/alocar/$operacaoId'
     | '/_authenticated/pacotes/distribuir/$alocacaoId'
-    | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -507,7 +494,6 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   OfertaIdRoute: typeof OfertaIdRoute
   RastrearTokenRoute: typeof RastrearTokenRoute
-  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -764,13 +750,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNexHistoricoRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated/pacotes/distribuir/$alocacaoId': {
       id: '/_authenticated/pacotes/distribuir/$alocacaoId'
       path: '/distribuir/$alocacaoId'
@@ -893,7 +872,6 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   OfertaIdRoute: OfertaIdRoute,
   RastrearTokenRoute: RastrearTokenRoute,
-  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

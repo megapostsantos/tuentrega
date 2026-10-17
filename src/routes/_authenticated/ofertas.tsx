@@ -27,7 +27,7 @@ import { ProofsTab } from "@/components/ProofsTab";
 import { LiveTrackingMap } from "@/components/LiveTrackingMap";
 
 export const Route = createFileRoute("/_authenticated/ofertas")({
-  validateSearch: (s: Record<string, unknown>) => ({ close: typeof s.close === "string" ? s.close : undefined }),
+  validateSearch: (s: Record<string, unknown>): { close?: string } => (typeof s.close === "string" ? { close: s.close } : {}),
   component: OfertasPage,
 });
 
