@@ -11,6 +11,31 @@ export type LocationTrackerState = {
   lastUpdate: Date | null;
 };
 
+// Mantém a tela acesa enquanto a rota está ativa, para o GPS continuar enviando a posição.
+export function useKeepAwake(ativo: boolean) {
+  useEffect(() => {
+    if (!ativo || typeof navigator === "undefined" || !("wakeLock" in navigator)) return;
+    let lock: { release: () => Promise<void> } | null = null;
+    let cancelado = false;
+    const pedir = async () => {
+      try {
+        lock = await (navigator as any).wakeLock.request("screen");
+        if (cancelado) await lock?.release();
+      } catch {
+        /* sem permissão ou bateria baixa: segue sem manter a tela acesa */
+      }
+    };
+    const aoVoltar = () => { if (document.visibilityState === "visible") pedir(); };
+    pedir();
+    document.addEventListener("visibilitychange", aoVoltar);
+    return () => {
+      cancelado = true;
+      document.removeEventListener("visibilitychange", aoVoltar);
+      lock?.release().catch(() => {});
+    };
+  }, [ativo]);
+}
+
 export function useLocationTracker(ofertaId: string | null): LocationTrackerState {
   const { user } = useAuth();
   const watchIdRef = useRef<number | null>(null);

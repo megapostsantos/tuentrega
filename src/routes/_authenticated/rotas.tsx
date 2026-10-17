@@ -24,7 +24,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from "@/components/ui/sheet";
-import { useLocationTracker } from "@/hooks/use-location-tracker";
+import { useLocationTracker, useKeepAwake } from "@/hooks/use-location-tracker";
 import { LocationIndicator } from "@/components/LocationIndicator";
 import { EmpresaRotas } from "@/components/EmpresaRotas";
 import { recusarRotaAtribuida } from "@/lib/reofertar";
@@ -131,6 +131,7 @@ function EntregadorRotas() {
   const [confirmFinalizar, setConfirmFinalizar] = useState(false);
   const [busy, setBusy] = useState(false);
   const trackerState = useLocationTracker(oferta?.status === "in_progress" ? oferta.id : null);
+  useKeepAwake(oferta?.status === "in_progress");
   const [recusando, setRecusando] = useState(false);
   const [motivoRecusa, setMotivoRecusa] = useState("indisponivel");
 
