@@ -17,6 +17,14 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
   const { user, role, loading } = useAuth();
   const navigate = useNavigate();
+  const [mustChange, setMustChange] = useState(false);
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch("/api/db/must-change-password", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((j) => setMustChange(!!j?.must))
+      .catch(() => {});
+  }, [user?.id]);
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -31,7 +39,7 @@ function AuthenticatedLayout() {
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
   if (loading || !user) return <SplashScreen />;
-  if (user.mustChangePassword) return <ForcePasswordChange />;
+  if (mustChange) return <ForcePasswordChange />;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">

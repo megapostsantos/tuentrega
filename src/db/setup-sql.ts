@@ -2214,6 +2214,4 @@ CREATE TABLE IF NOT EXISTS "antecipacoes" (
 CREATE INDEX IF NOT EXISTS "idx_antecipacoes_empresa" ON "antecipacoes" ("empresa_id","status");
 -- @@
 CREATE INDEX IF NOT EXISTS "idx_antecipacoes_entregador" ON "antecipacoes" ("entregador_id","created_at");
--- @@
-ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "mustChangePassword" boolean DEFAULT false;
 `;

@@ -43,12 +43,6 @@ export const auth = betterAuth({
         fieldName: "role",
         input: false,
       },
-      mustChangePassword: {
-        type: "boolean",
-        defaultValue: false,
-        fieldName: "mustChangePassword",
-        input: false,
-      },
     },
   },
   plugins: [

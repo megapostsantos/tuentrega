@@ -42,13 +42,31 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     return Response.json(await runSetupBatch(sqlText, offset, limit));
   }
 
+  if (url.pathname === "/api/db/must-change-password" && req.method === "GET") {
+    const { auth } = await import("./lib/auth");
+    const session = await auth.api.getSession({ headers: req.headers });
+    const u = session?.user as any;
+    if (!u) return Response.json({ must: false });
+    const { rawQuery } = await import("./server/data-engine");
+    try {
+      const r = await rawQuery(`select 1 from "senhas_provisorias" where "user_id" = $1`, [u.id]);
+      return Response.json({ must: r.length > 0 }, { headers: { "cache-control": "no-store" } });
+    } catch {
+      return Response.json({ must: false });
+    }
+  }
+
   if (url.pathname === "/api/db/password-changed" && req.method === "POST") {
     const { auth } = await import("./lib/auth");
     const session = await auth.api.getSession({ headers: req.headers });
     const u = session?.user as any;
     if (!u) return Response.json({ error: "Não autenticado" }, { status: 401 });
     const { rawQuery } = await import("./server/data-engine");
-    await rawQuery(`update "user" set "mustChangePassword" = false where "id" = $1`, [u.id]);
+    try {
+      await rawQuery(`delete from "senhas_provisorias" where "user_id" = $1`, [u.id]);
+    } catch {
+      /* tabela ainda não existe: nada a limpar */
+    }
     return Response.json({ ok: true });
   }
 

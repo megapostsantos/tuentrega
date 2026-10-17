@@ -52,7 +52,6 @@ export const users = pgTable("user", {
   banned: boolean("banned").default(false),
   banReason: text("banReason"),
   banExpires: timestamp("banExpires"),
-  mustChangePassword: boolean("mustChangePassword").default(false),
 });
 
 export const sessions = pgTable("session", {

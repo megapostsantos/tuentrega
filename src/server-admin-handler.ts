@@ -51,7 +51,8 @@ export default defineEventHandler(async (event) => {
     } catch (e: any) {
       return Response.json({ error: e?.message ?? "Não foi possível redefinir a senha" }, { status: 500 });
     }
-    await rawQuery(`update "user" set "mustChangePassword" = true where "id" = $1`, [alvo]);
+    await rawQuery(`create table if not exists "senhas_provisorias" ("user_id" text primary key, "criada_em" timestamp not null default now())`);
+    await rawQuery(`insert into "senhas_provisorias" ("user_id") values ($1) on conflict ("user_id") do update set "criada_em" = now()`, [alvo]);
     await rawQuery(`insert into "admin_logs" ("admin_id","action","target") values ($1,'reset_senha',$2)`, [user.id, alvo]);
     return Response.json({ senha, nome: existe[0].name, email: existe[0].email });
   }
