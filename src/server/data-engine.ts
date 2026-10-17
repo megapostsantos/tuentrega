@@ -372,7 +372,8 @@ async function recusarRota(uid: string, args: Record<string, unknown>): Promise<
 async function infoAntecipacao(uid: string, empresaId: string) {
   const rows = await query(
     `select
-       coalesce((select sum("valor") from "entregas" where "entregador_id"::text = $1 and "empresa_id"::text = $2 and "status" in ('pendente','concluida')), 0)::float as total,
+       coalesce((select sum("valor") from "ofertas" where "entregador_id"::text = $1 and "empresa_id"::text = $2
+                  and "status" in ('completed','closed') and coalesce("payment_status",'pending') = 'pending'), 0)::float as total,
        coalesce((select sum("valor_bruto") from "antecipacoes" where "entregador_id"::text = $1 and "empresa_id"::text = $2
                   and "status" in ('solicitada','aprovada','paga') and "abatida_em" is null), 0)::float as aberto,
        (select to_jsonb(c) from "config_pagamento" c where c."empresa_id"::text = $2) as cfg`,

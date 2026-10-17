@@ -25,6 +25,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 
 export function AntecipacaoEntregador({ userId }: { userId: string }) {
   const [saldos, setSaldos] = useState<Array<{ empresaId: string; nome: string; saldo: Saldo }>>([]);
+  const [inativas, setInativas] = useState<string[]>([]);
   const [nomes, setNomes] = useState<Record<string, string>>({});
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [valor, setValor] = useState<Record<string, string>>({});
@@ -34,8 +35,8 @@ export function AntecipacaoEntregador({ userId }: { userId: string }) {
 
   async function load() {
     const sb = supabase as any;
-    const { data: ent } = await sb.from("entregas").select("empresa_id")
-      .eq("entregador_id", userId).in("status", ["pendente", "concluida"]);
+    const { data: ent } = await sb.from("ofertas").select("empresa_id")
+      .eq("entregador_id", userId).in("status", ["completed", "closed"]).eq("payment_status", "pending");
     const { data: ped } = await sb.from("antecipacoes")
       .select("id, empresa_id, valor_bruto, desconto, valor_liquido, status, created_at, abatida_em")
       .eq("entregador_id", userId).order("created_at", { ascending: false }).limit(30);
@@ -48,11 +49,14 @@ export function AntecipacaoEntregador({ userId }: { userId: string }) {
     setNomes(nm);
     setPedidos((ped as Pedido[]) ?? []);
     const lista: Array<{ empresaId: string; nome: string; saldo: Saldo }> = [];
+    const off: string[] = [];
     for (const id of [...new Set((ent ?? []).map((x: any) => x.empresa_id))] as string[]) {
       const { data } = await sb.rpc("saldo_antecipacao", { _empresa_id: id });
       if (data?.ativa) lista.push({ empresaId: id, nome: nm[id] ?? "Empresa", saldo: data as Saldo });
+      else off.push(nm[id] ?? "Empresa");
     }
     setSaldos(lista);
+    setInativas(off);
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [userId]);
@@ -85,7 +89,7 @@ export function AntecipacaoEntregador({ userId }: { userId: string }) {
   }
 
   if (loading) return null;
-  if (saldos.length === 0 && pedidos.length === 0) return null;
+  if (saldos.length === 0 && pedidos.length === 0 && inativas.length === 0) return null;
 
   return (
     <section className="space-y-3">
@@ -143,6 +147,16 @@ export function AntecipacaoEntregador({ userId }: { userId: string }) {
           </Card>
         );
       })}
+
+      {inativas.length > 0 && (
+        <Card>
+          <CardContent className="p-3 text-sm text-muted-foreground">
+            {saldos.length === 0 ? "Você tem valores a receber, mas " : ""}
+            {inativas.join(", ")} {inativas.length > 1 ? "ainda não ativaram" : "ainda não ativou"} a antecipação de pagamento.
+            Peça para a empresa ativar em Pagamentos → Configurar.
+          </CardContent>
+        </Card>
+      )}
 
       {pedidos.length > 0 && (
         <div className="space-y-2">
