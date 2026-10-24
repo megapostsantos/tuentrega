@@ -1,3 +1,4 @@
+import { AjusteRotas, EliminarRotaDialog, type RotaAjuste } from "@/components/pacotes/AjusteRotas";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -1098,6 +1099,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
   const [ofertas, setOfertas] = useState<any[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
   const [publishing, setPublishing] = useState(false);
+  const [eliminar, setEliminar] = useState<RotaAjuste | null>(null);
 
   useEffect(() => {
     if (!operacaoId) return;
@@ -1130,7 +1132,8 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
     );
   }
 
-  const totalPago = rotas.reduce((s, r) => s + Number(r.valor_total || 0), 0);
+  const ativas = rotas.filter((r) => r.status !== "cancelada");
+  const totalPago = ativas.reduce((s, r) => s + Number(r.valor_total || 0), 0);
   const receita = op.total_pacotes_sistema * Number(op.valor_ml_por_pacote);
   const margem = receita - totalPago;
 
@@ -1152,10 +1155,10 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
           {op.observacoes && (
             <div className="rounded border bg-muted/40 p-2"><strong>Obs:</strong> {op.observacoes}</div>
           )}
-          {rotas.some((r) => !r.oferta_id) && (
+          {ativas.some((r) => !r.oferta_id) && (
             <div className="rounded-lg border-2 border-primary bg-primary/5 p-3">
               <p className="font-medium">
-                {rotas.filter((r) => !r.oferta_id).length} rota(s) ainda sem oferta publicada
+                {ativas.filter((r) => !r.oferta_id).length} rota(s) ainda sem oferta publicada
               </p>
               <p className="mb-2 text-xs text-muted-foreground">
                 Publique agora para que os entregadores vejam e aceitem, ou atribua direto a um entregador abaixo.
@@ -1165,7 +1168,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
                 onClick={async () => {
                   setPublishing(true);
                   try {
-                    const n = await publishPendingRotas(op, rotas);
+                    const n = await publishPendingRotas(op, ativas);
                     toast.success(`${n} oferta(s) publicada(s)!`);
                     setReloadKey((k) => k + 1);
                   } catch (e: any) {
@@ -1176,7 +1179,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
                 }}
               >
                 {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Publicar {rotas.filter((r) => !r.oferta_id).length} oferta(s)
+                Publicar {ativas.filter((r) => !r.oferta_id).length} oferta(s)
               </Button>
             </div>
           )}
@@ -1190,32 +1193,42 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
                   <TableHead className="text-right">Paradas</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rotas.map((r) => {
                   const of = ofertas.find((o) => o.id === r.oferta_id);
                   return (
-                    <TableRow key={r.id}>
+                    <TableRow key={r.id} className={r.status === "cancelada" ? "opacity-50" : ""}>
                       <TableCell>{r.nome}</TableCell>
                       <TableCell className="text-right">{r.quantidade_pacotes}</TableCell>
                       <TableCell className="text-right">{r.quantidade_paradas}</TableCell>
                       <TableCell className="text-right">R$ {Number(r.valor_total).toFixed(2)}</TableCell>
-                      <TableCell>{of?.status ?? "Não publicada"}</TableCell>
+                      <TableCell>{r.status === "cancelada" ? "Eliminada" : of?.status ?? "Não publicada"}</TableCell>
+                      <TableCell className="text-right">
+                        {r.status !== "cancelada" && of?.status !== "completed" && (
+                          <Button size="icon" variant="ghost" title="Eliminar rota" className="text-red-600" onClick={() => setEliminar(r)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
           </div>
+          <AjusteRotas rotas={ativas as RotaAjuste[]} onChanged={() => setReloadKey((k) => k + 1)} />
           <div className="rounded bg-muted p-3">
             <div>Receita ML: <strong>R$ {receita.toFixed(2)}</strong></div>
             <div>Pago aos entregadores: <strong>R$ {totalPago.toFixed(2)}</strong></div>
             {showMargem && <div>Margem: <strong>R$ {margem.toFixed(2)}</strong></div>}
           </div>
-          <AllocationPanel operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={rotas} onChanged={() => setReloadKey((k) => k + 1)} />
-          <RouteMapButton ofertaIds={rotas.map((r: any) => r.oferta_id).filter(Boolean)} />
-          <OptimizeRouteButton operacaoId={op.id} ofertaIds={rotas.map((r: any) => r.oferta_id).filter(Boolean)} />
+          <AllocationPanel operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={ativas} onChanged={() => setReloadKey((k) => k + 1)} />
+          <RouteMapButton ofertaIds={ativas.map((r: any) => r.oferta_id).filter(Boolean)} />
+          <OptimizeRouteButton operacaoId={op.id} ofertaIds={ativas.map((r: any) => r.oferta_id).filter(Boolean)} />
+          <EliminarRotaDialog rota={eliminar} onClose={() => setEliminar(null)} onDone={() => setReloadKey((k) => k + 1)} />
         </div>
       </DialogContent>
     </Dialog>

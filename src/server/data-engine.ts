@@ -449,8 +449,113 @@ async function expirarAtribuicoes() {
   }
 }
 
+async function moverPacotes(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  const origemId = String(args._rota_origem ?? "");
+  const destId = String(args._rota_destino ?? "");
+  if (!origemId || !destId || origemId === destId) throw new Error("Escolha duas rotas diferentes");
+  const numeros = Array.isArray(args._numeros) ? (args._numeros as unknown[]).map(Number).filter((x) => Number.isInteger(x) && x > 0) : [];
+  let qtd = Math.floor(Number(args._quantidade ?? 0));
+  if (!numeros.length && !(qtd > 0)) throw new Error("Informe quantos pacotes mover");
+
+  const rows = await query(
+    `select r."id", r."operacao_id", r."status", r."quantidade_pacotes" as q, r."quantidade_paradas" as p, r."valor_total" as vt,
+            r."oferta_id", o."status" as ostatus, o."valor_por_pacote" as ovp
+       from "rotas_operacao" r left join "ofertas" o on o."id"::text = r."oferta_id"::text
+      where r."id"::text = any($1::text[]) and ($2::text is null or r."empresa_id" = $2)`,
+    [[origemId, destId], uid],
+  );
+  const o = rows.find((r) => String(r.id) === origemId);
+  const d = rows.find((r) => String(r.id) === destId);
+  if (!o || !d) throw new Error("Rota não encontrada");
+  if (String(o.operacao_id) !== String(d.operacao_id)) throw new Error("As rotas precisam ser da mesma operação");
+  for (const r of [o, d]) {
+    if (r.status === "cancelada" || ["cancelled", "completed"].includes(String(r.ostatus ?? ""))) throw new Error("Uma das rotas já está encerrada");
+  }
+
+  const stmts: { text: string; params: unknown[] }[] = [];
+  if (o.oferta_id && d.oferta_id) {
+    const sel = numeros.length
+      ? await query(
+          `select "id" from "entregas_pacotes" where "oferta_id"::text = $1 and "status" = 'pending' and "numero_pacote" = any($2::int[]) order by "numero_pacote"`,
+          [String(o.oferta_id), numeros],
+        )
+      : await query(
+          `select "id" from "entregas_pacotes" where "oferta_id"::text = $1 and "status" = 'pending' order by "numero_pacote" desc limit $2`,
+          [String(o.oferta_id), qtd],
+        );
+    const esperado = numeros.length ? numeros.length : qtd;
+    if (sel.length < esperado) throw new Error(`Só há ${sel.length} pacote(s) pendente(s) disponíveis para mover`);
+    qtd = sel.length;
+    const mx = await query(`select coalesce(max("numero_pacote"), 0)::int as m from "entregas_pacotes" where "oferta_id"::text = $1`, [String(d.oferta_id)]);
+    const base = Number(mx[0]?.m ?? 0);
+    stmts.push({
+      text: `update "entregas_pacotes" p set "oferta_id" = $1, "operacao_id" = $2, "numero_pacote" = v.n, "updated_at" = now()
+               from unnest($3::uuid[], $4::int[]) as v(id, n) where p."id" = v.id`,
+      params: [d.oferta_id, d.operacao_id, sel.map((x) => x.id), sel.map((_, i) => base + i + 1)],
+    });
+  } else if (qtd > Number(o.q)) {
+    throw new Error(`A rota de origem só tem ${o.q} pacote(s)`);
+  }
+
+  const oq = Number(o.q), dq = Number(d.q), op = Number(o.p), dp = Number(d.p);
+  let par = args._paradas == null || args._paradas === "" ? null : Math.floor(Number(args._paradas));
+  if (par == null || !Number.isFinite(par)) par = qtd >= oq ? op : Math.round((qtd * op) / Math.max(1, oq));
+  par = Math.max(0, Math.min(par, op));
+  const vpO = oq > 0 ? Number(o.vt) / oq : Number(o.ovp ?? 0);
+  const vpD = dq > 0 ? Number(d.vt) / dq : Number(d.ovp ?? vpO);
+  const novo = (r: any, q: number, p: number, vp: number) => {
+    stmts.push({
+      text: `update "rotas_operacao" set "quantidade_pacotes" = $2, "quantidade_paradas" = $3, "valor_total" = $4, "updated_at" = now() where "id"::text = $1`,
+      params: [r.id, q, p, Math.round(q * vp * 100) / 100],
+    });
+    if (r.oferta_id) {
+      stmts.push({
+        text: `update "ofertas" set "quantidade_pacotes" = $2, "quantidade_paradas" = $3, "valor" = $4, "updated_at" = now() where "id"::text = $1`,
+        params: [r.oferta_id, q, p, Math.round(q * vp * 100) / 100],
+      });
+    }
+  };
+  novo(o, oq - qtd, op - par, vpO);
+  novo(d, dq + qtd, dp + par, vpD);
+  await runTransaction(stmts);
+  return { data: { movidos: qtd, paradas: par }, error: null, count: null };
+}
+
+async function eliminarRota(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  const rotaId = String(args._rota_id ?? "");
+  const motivo = String(args._motivo ?? "Rota eliminada pela empresa").slice(0, 200);
+  const rows = await query(
+    `select r."id", r."status", r."oferta_id", o."status" as ostatus
+       from "rotas_operacao" r left join "ofertas" o on o."id"::text = r."oferta_id"::text
+      where r."id"::text = $1 and ($2::text is null or r."empresa_id" = $2)`,
+    [rotaId, uid],
+  );
+  const r = rows[0];
+  if (!r) throw new Error("Rota não encontrada");
+  if (r.status === "cancelada") throw new Error("Esta rota já foi eliminada");
+  if (r.ostatus === "completed") throw new Error("Esta rota já foi concluída");
+  const stmts: { text: string; params: unknown[] }[] = [];
+  if (r.oferta_id) {
+    const ent = await query(`select count(*)::int as n from "entregas_pacotes" where "oferta_id"::text = $1 and "status" = 'delivered'`, [String(r.oferta_id)]);
+    if (Number(ent[0]?.n ?? 0) > 0)
+      throw new Error("Esta rota já tem pacotes entregues. Finalize a rota em vez de eliminá-la.");
+    stmts.push(
+      { text: `update "ofertas" set "status" = 'cancelled', "closing_notes" = $2, "updated_at" = now() where "id"::text = $1`, params: [r.oferta_id, motivo] },
+      { text: `update "entregas_pacotes" set "status" = 'cancelado', "updated_at" = now() where "oferta_id"::text = $1 and "status" = 'pending'`, params: [r.oferta_id] },
+    );
+  }
+  stmts.push(
+    { text: `update "alocacoes" set "status" = 'removida' where "rota_id"::text = $1`, params: [rotaId] },
+    { text: `update "rotas_operacao" set "status" = 'cancelada', "updated_at" = now() where "id"::text = $1`, params: [rotaId] },
+  );
+  await runTransaction(stmts);
+  return { data: { ok: true }, error: null, count: null };
+}
+
 async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   const { fn, args } = req.rpc!;
+  if (fn === "mover_pacotes") return await moverPacotes(uid, args);
+  if (fn === "eliminar_rota") return await eliminarRota(uid, args);
   if (fn === "recusar_rota") {
     if (!uid) throw Object.assign(new Error("Não autenticado"), { code: "401" });
     return await recusarRota(uid, args);
@@ -499,6 +604,8 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
         } else if (fn === "recusar_rota" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
+        } else if (fn === "mover_pacotes" || fn === "eliminar_rota") {
+          if (scope.role !== "empresa") forbidden();
         } else forbidden();
       }
       return await runRpc(req, scope?.uid ?? null);

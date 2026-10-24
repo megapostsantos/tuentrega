@@ -133,6 +133,7 @@ function EntregadorRotas() {
   const trackerState = useLocationTracker(oferta?.status === "in_progress" ? oferta.id : null);
   useKeepAwake(oferta?.status === "in_progress");
   const [recusando, setRecusando] = useState(false);
+  const [cancelada, setCancelada] = useState<{ titulo: string; closing_notes: string | null } | null>(null);
   const [motivoRecusa, setMotivoRecusa] = useState("indisponivel");
 
   async function load() {
@@ -149,6 +150,14 @@ function EntregadorRotas() {
       let of = (ofs?.[0] as Oferta) ?? null;
 
       setOferta(of);
+      if (!of) {
+        const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+        const { data: canc } = await supabase
+          .from("ofertas").select("titulo, closing_notes")
+          .eq("entregador_id", user.id).eq("status", "cancelled").gte("updated_at", desde)
+          .order("updated_at", { ascending: false }).limit(1);
+        setCancelada((canc?.[0] as any) ?? null);
+      } else setCancelada(null);
 
       if (of && of.status === "in_progress") {
         await ensurePackagesForOferta(of);
@@ -314,6 +323,15 @@ function EntregadorRotas() {
     return (
       <div className="p-6">
         <PageHeader title="Rota em andamento" description="Acompanhe as paradas da sua rota ativa" />
+        {cancelada && (
+          <Card className="mb-4 border-orange-300 bg-orange-50">
+            <CardContent className="p-3 text-sm">
+              <div className="font-semibold text-orange-800">A empresa cancelou a rota "{cancelada.titulo}"</div>
+              {cancelada.closing_notes && <div className="text-xs text-orange-700">{cancelada.closing_notes}</div>}
+              <div className="mt-1 text-xs text-muted-foreground">Veja novas ofertas em Ofertas.</div>
+            </CardContent>
+          </Card>
+        )}
         <EmptyModule icon={MapPin} title="Nenhuma rota em andamento" description="Aceite uma oferta e inicie a rota para ver as paradas aqui." />
       </div>
     );
