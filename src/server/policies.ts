@@ -60,11 +60,17 @@ const entregadorTrabalhaParaEmpresa: Pred = (a, p, u) =>
   `(exists (select 1 from "ofertas" o where o."entregador_id"::text = ${col(a, "id")}::text and o."empresa_id"::text = ${p(u)})
     or exists (select 1 from "dispatchers" d where d."entregador_id"::text = ${col(a, "id")}::text and d."empresa_id"::text = ${p(u)})
     or exists (select 1 from "entregas" en where en."entregador_id"::text = ${col(a, "id")}::text and en."empresa_id"::text = ${p(u)})
-    or exists (select 1 from "antecipacoes" an where an."entregador_id"::text = ${col(a, "id")}::text and an."empresa_id"::text = ${p(u)}))`;
+    or exists (select 1 from "antecipacoes" an where an."entregador_id"::text = ${col(a, "id")}::text and an."empresa_id"::text = ${p(u)})
+    or exists (select 1 from "entregadores_gerenciados" g where g."entregador_id"::text = ${col(a, "id")}::text and g."empresa_id"::text = ${p(u)}))`;
 const entregadorDoMeuTime: Pred = (a, p, u) =>
   `(${col(a, "id")}::text = ${p(u)} or exists (select 1 from "dispatcher_team" dt where dt."entregador_id"::text = ${col(a, "id")}::text and dt."dispatcher_id"::text in ${meDispatcherIds(u, p)}))`;
 const entregadorDaMinhaEmpresa: Pred = (a, p, u) =>
   `exists (select 1 from "ofertas" o where o."entregador_id"::text = ${col(a, "entregador_id")}::text and o."empresa_id"::text = ${p(u)})`;
+
+const gerenciadoPorMim: Pred = (a, p, u) =>
+  `exists (select 1 from "entregadores_gerenciados" g where g."entregador_id"::text = ${col(a, "id")}::text and g."empresa_id"::text = ${p(u)})`;
+const naoGerenciadoPorOutra: Pred = (a, p, u) =>
+  `not exists (select 1 from "entregadores_gerenciados" g where g."entregador_id"::text = ${col(a, "id")}::text and g."empresa_id"::text <> ${p(u)})`;
 
 const dispatcherMeu = (c: string): Pred => (a, p, u) => `${col(a, c)}::text in ${meDispatcherIds(u, p)}`;
 
@@ -110,12 +116,17 @@ export const POLICIES: Record<string, Policy> = {
 
   entregadores: {
     read: {
-      empresa: or(eq("id"), (a, p) => `${col(a, "status")} = 'ativo'`, entregadorTrabalhaParaEmpresa),
+      empresa: or(eq("id"), and((a) => `${col(a, "status")} = 'ativo'`, naoGerenciadoPorOutra), entregadorTrabalhaParaEmpresa),
       entregador: eq("id"),
       dispatcher: or(eq("id"), (a) => `${col(a, "status")} = 'ativo'`, entregadorDoMeuTime),
     },
-    update: { entregador: eq("id") },
+    update: { entregador: eq("id"), empresa: gerenciadoPorMim },
     updateCols: {
+      empresa: [
+        "nome_completo", "cpf", "whatsapp", "tipo_veiculo", "marca_veiculo", "modelo_veiculo", "placa",
+        "pix_tipo", "pix_chave", "banco", "data_nascimento", "cep", "rua", "numero", "complemento", "bairro",
+        "cidade", "estado", "email", "tipo_pessoa", "status", "updated_at",
+      ],
       entregador: [
         "nome_completo", "cpf", "cnpj", "whatsapp", "tipo_veiculo", "marca_veiculo", "modelo_veiculo", "placa",
         "pix_tipo", "pix_chave", "banco", "data_nascimento", "selfie_url", "plataforma_comprovante_url",
@@ -228,7 +239,7 @@ export const POLICIES: Record<string, Policy> = {
     updateCols: {
       entregador: [
         "status", "assinatura_url", "foto_pod_url", "nome_recebedor", "observacao_entrega", "entregue_em",
-        "motivo_nao_entrega", "tentativas", "updated_at",
+        "motivo_nao_entrega", "tentativas", "codigo_pacote", "updated_at",
       ],
     },
     insert: {
@@ -260,8 +271,30 @@ export const POLICIES: Record<string, Policy> = {
 
   entregas_ocorrencias: {
     read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
-    insert: { entregador: ownCol("entregador_id") },
-    force: { entregador: { entregador_id: "uid" } },
+    insert: {
+      entregador: ownCol("entregador_id"),
+      empresa: async (row, uid, run) => {
+        if (String(row.empresa_id ?? uid) !== uid) return "Valor inválido em empresa_id";
+        const r = await run(`select 1 from "entregadores_gerenciados" where "entregador_id" = $1 and "empresa_id" = $2`, [String(row.entregador_id), uid]);
+        return r.length ? null : "Só é possível registrar ocorrência em nome de entregadores cadastrados por você";
+      },
+    },
+    force: { entregador: { entregador_id: "uid" }, empresa: { empresa_id: "uid" } },
+  },
+
+  entregadores_gerenciados: { read: { empresa: eq("empresa_id") } },
+
+  entregador_documentos: {
+    read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
+    delete: { empresa: eq("empresa_id") },
+    insert: {
+      empresa: async (row, uid, run) => {
+        if (String(row.empresa_id ?? uid) !== uid) return "Valor inválido em empresa_id";
+        const r = await run(`select 1 from "entregadores_gerenciados" where "entregador_id" = $1 and "empresa_id" = $2`, [String(row.entregador_id), uid]);
+        return r.length ? null : "Só é possível anexar documentos de entregadores cadastrados por você";
+      },
+    },
+    force: { empresa: { empresa_id: "uid" } },
   },
 
   alocacoes: {

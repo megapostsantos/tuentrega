@@ -11,6 +11,9 @@ import { estadoMovimento, fmtDur, type EstadoMov, type Ponto } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DevolucoesPendentes, OcorrenciasLista } from "@/components/rotas/DevolucoesPendentes";
+import { EntregadorRotas } from "@/components/rotas/EntregadorRotas";
 
 type RotaOferta = {
   id: string;
@@ -54,6 +57,9 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
   const [recusas, setRecusas] = useState<Recusa[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [, tick] = useState(0);
+  const [gerenciados, setGerenciados] = useState<Set<string>>(new Set());
+  const [operar, setOperar] = useState<RotaOferta | null>(null);
+  const [ocorr, setOcorr] = useState<RotaOferta | null>(null);
 
   async function load(showSpinner = false) {
     if (showSpinner) setLoading(true);
@@ -70,6 +76,8 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
     const c = (fim as RotaOferta[]) ?? [];
     setRotas(a);
     setConcluidas(c);
+    const { data: ger } = await supabase.from("entregadores_gerenciados").select("entregador_id");
+    setGerenciados(new Set(((ger as any[]) ?? []).map((g) => g.entregador_id)));
 
     const ids = [...a, ...c].map((o) => o.id);
     if (ids.length) {
@@ -191,6 +199,8 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
         <Stat label="Com problema" value={resumo.problemas} tone={resumo.problemas > 0 ? "warn" : undefined} />
       </div>
 
+      <DevolucoesPendentes empresaId={empresaId} onChanged={() => load()} />
+
       {frota.length > 0 && (
         <section className="space-y-3">
           <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -216,6 +226,7 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
             const pct = c.total ? (feitos / c.total) * 100 : 0;
             const pos = o.entregador_id ? posicao[o.entregador_id] : undefined;
             const seg = pos ? (Date.now() - new Date(pos.registrado_em).getTime()) / 1000 : null;
+            const gerenciado = !!o.entregador_id && gerenciados.has(o.entregador_id);
             const sinal = seg == null ? "sem sinal" : `há ${ago(pos!.registrado_em)}`;
             const cor = seg == null ? "text-red-600" : seg < 120 ? "text-green-600" : seg < 600 ? "text-amber-600" : "text-red-600";
             return (
@@ -229,7 +240,10 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
                         {o.entregadores?.nome_completo ?? "Entregador não identificado"}
                       </div>
                     </div>
-                    <Badge variant="outline">{o.status === "in_progress" ? "Em andamento" : "Aceita"}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline">{o.status === "in_progress" ? "Em andamento" : "Aceita"}</Badge>
+                      {gerenciado && <Badge variant="secondary">Sem app (gerenciado)</Badge>}
+                    </div>
                   </div>
 
                   <div>
@@ -263,14 +277,24 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
                   })()}
 
                   <div className="flex items-center justify-between">
-                    <span className={`flex items-center gap-1 text-xs ${cor}`}>
-                      <Radio className="h-3.5 w-3.5" /> Localização {sinal}
-                    </span>
-                    <div className="flex gap-2">
+                    {gerenciado ? (
+                      <span className="text-xs text-muted-foreground">Você opera esta rota</span>
+                    ) : (
+                      <span className={`flex items-center gap-1 text-xs ${cor}`}>
+                        <Radio className="h-3.5 w-3.5" /> Localização {sinal}
+                      </span>
+                    )}
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {gerenciado && o.entregador_id && (
+                        <Button size="sm" onClick={() => setOperar(o)}>Operar rota</Button>
+                      )}
+                      {c.problemas > 0 && (
+                        <Button size="sm" variant="outline" onClick={() => setOcorr(o)}>Ocorrências ({c.problemas})</Button>
+                      )}
                       <Button size="sm" variant="outline" className="text-red-600" disabled={!o.entregador_id || busyId === o.id} onClick={() => reofertar(o)}>
                         <UserX className="mr-1 h-4 w-4" /> Reofertar
                       </Button>
-                      <Button size="sm" disabled={!o.entregador_id} onClick={() => setTracking(o)}>
+                      <Button size="sm" variant={gerenciado ? "outline" : "default"} disabled={!o.entregador_id || gerenciado} onClick={() => setTracking(o)}>
                         <MapPin className="mr-1 h-4 w-4" /> Mapa ao vivo
                       </Button>
                     </div>
@@ -339,6 +363,19 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
           operacaoId={tracking.operacao_id}
         />
       )}
+
+      <Dialog open={!!operar} onOpenChange={(v) => !v && (setOperar(null), load())}>
+        <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto p-0">
+          <DialogHeader className="sr-only"><DialogTitle>Operar rota</DialogTitle></DialogHeader>
+          {operar?.entregador_id && <EntregadorRotas actingFor={{ ofertaId: operar.id, entregadorId: operar.entregador_id }} />}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!ocorr} onOpenChange={(v) => !v && setOcorr(null)}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogHeader><DialogTitle>Ocorrências — {ocorr?.titulo}</DialogTitle></DialogHeader>
+          {ocorr && <OcorrenciasLista ofertaId={ocorr.id} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

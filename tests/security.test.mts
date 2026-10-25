@@ -73,7 +73,8 @@ ok("D1 só enxerga a si mesmo", r.data.length === 1 && r.data[0].id === "D1", r)
 r = await run(D1, { table: "entregadores", op: "update", values: { reliability_score: 100, status: "ativo" }, filters: [{ k: "f", col: "id", op: "eq", val: "D1" }] });
 ok("entregador não altera score/status", !!r.error, r);
 r = await run(E1, { table: "entregadores", op: "update", values: { status: "suspenso" }, filters: [{ k: "f", col: "id", op: "eq", val: "D1" }] });
-ok("empresa não suspende entregador", !!r.error, r);
+const st = await run(D1, { table: "entregadores", op: "select", columns: "status", filters: [{ k: "f", col: "id", op: "eq", val: "D1" }] });
+ok("empresa não suspende entregador (não gerenciado)", !!r.error || st.data[0]?.status !== "suspenso", { r, st });
 
 // embeds respeitam política
 r = await run(E1, { table: "ofertas", op: "select", columns: "titulo, entregadores(nome_completo, cpf)", filters: [{ k: "f", col: "id", op: "eq", val: id1 }] });

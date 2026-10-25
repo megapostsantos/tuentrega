@@ -469,6 +469,22 @@ export const dispatcherAlocacoes = pgTable("dispatcher_alocacoes", {
   distributedAt: timestamp("distributed_at"),
 });
 
+export const entregadoresGerenciados = pgTable("entregadores_gerenciados", {
+  entregadorId: text("entregador_id").primaryKey(),
+  empresaId: text("empresa_id").notNull(),
+  criadoEm: timestamp("criado_em").notNull().defaultNow(),
+});
+
+export const entregadorDocumentos = pgTable("entregador_documentos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  entregadorId: text("entregador_id").notNull(),
+  empresaId: text("empresa_id").notNull(),
+  tipo: text("tipo").notNull(),
+  path: text("path").notNull(),
+  nomeArquivo: text("nome_arquivo"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const configPagamento = pgTable("config_pagamento", {
   empresaId: text("empresa_id").primaryKey(),
   ciclo: text("ciclo").notNull().default("quinzenal"),

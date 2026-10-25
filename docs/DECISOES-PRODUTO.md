@@ -84,3 +84,8 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 - O ciclo de pagamento é definido pela empresa ou pela plataforma?
 - Motorista novo precisa de aprovação manual do admin?
 - Antecipação: quem fica com o desconto e há taxa para a plataforma?
+
+## Insucesso, devolução e entregador sem app
+- Insucesso: entregador informa o ID do pacote, o motivo e tira foto (local para fechado/ausente/recusado; pacote se avariado). A empresa vê as fotos em "Ocorrências" e na tela de devoluções.
+- Fim da rota: 100% entregue encerra na hora. Com insucessos a rota fica "Aguardando devolução" até a empresa dar baixa nos pacotes devolvidos (ou encerrar como extraviado: -30 pts por pacote, máx. -60). Só então a rota vira "Concluída" e o valor (entregues × valor por pacote) fica disponível ao entregador.
+- Entregador gerenciado (sem app): cadastrado pela empresa, visível só a ela; empresa opera a rota por ele ("Operar rota"), sem GPS. Exige comprovante de residência + RG/CNH (bucket privado `entregador-docs`, legível só por quem enviou e admin) e aceite LGPD.

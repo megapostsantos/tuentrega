@@ -2214,4 +2214,26 @@ CREATE TABLE IF NOT EXISTS "antecipacoes" (
 CREATE INDEX IF NOT EXISTS "idx_antecipacoes_empresa" ON "antecipacoes" ("empresa_id","status");
 -- @@
 CREATE INDEX IF NOT EXISTS "idx_antecipacoes_entregador" ON "antecipacoes" ("entregador_id","created_at");
+-- @@
+CREATE TABLE IF NOT EXISTS "entregadores_gerenciados" (
+	"entregador_id" text PRIMARY KEY NOT NULL,
+	"empresa_id" text NOT NULL,
+	"criado_em" timestamp DEFAULT now() NOT NULL
+);
+-- @@
+CREATE TABLE IF NOT EXISTS "entregador_documentos" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"entregador_id" text NOT NULL,
+	"empresa_id" text NOT NULL,
+	"tipo" text NOT NULL,
+	"path" text NOT NULL,
+	"nome_arquivo" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+-- @@
+CREATE TABLE IF NOT EXISTS "senhas_provisorias" ("user_id" text PRIMARY KEY NOT NULL, "criada_em" timestamp DEFAULT now() NOT NULL);
+-- @@
+CREATE INDEX IF NOT EXISTS "idx_gerenciados_empresa" ON "entregadores_gerenciados" ("empresa_id");
+-- @@
+CREATE INDEX IF NOT EXISTS "idx_documentos_entregador" ON "entregador_documentos" ("entregador_id");
 `;

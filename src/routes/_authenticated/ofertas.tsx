@@ -75,6 +75,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   open: { label: "Aberta", cls: "bg-yellow-500/15 text-yellow-700" },
   accepted: { label: "Aceita", cls: "bg-green-500/15 text-green-700" },
   in_progress: { label: "Em andamento", cls: "bg-blue-500/15 text-blue-700" },
+  awaiting_return: { label: "Aguardando devolução", cls: "bg-amber-500/15 text-amber-700" },
   completed: { label: "Concluída", cls: "bg-emerald-500/15 text-emerald-700" },
   cancelled: { label: "Cancelada", cls: "bg-red-500/15 text-red-700" },
 };

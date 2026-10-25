@@ -1,20 +1,13 @@
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Share2, UserPlus, Check } from "lucide-react";
-import { inviteEntregador } from "@/lib/entregadores.functions";
+import { Loader2, UserPlus, FileCheck2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 type Props = {
   open: boolean;
@@ -25,181 +18,135 @@ type Props = {
 };
 
 const VEICULOS = [
-  { value: "moto", label: "Moto" },
+  { value: "motoboy", label: "Moto" },
   { value: "carro", label: "Carro" },
-  { value: "bike", label: "Bike" },
-  { value: "van", label: "Van" },
-  { value: "a_pe", label: "A pé" },
+  { value: "biker", label: "Bike" },
+  { value: "moto_eletrica", label: "Moto elétrica" },
+  { value: "caminhao", label: "Caminhão/Van" },
+  { value: "walker", label: "A pé" },
 ];
+const PIX = ["cpf", "cnpj", "email", "telefone", "aleatoria"];
 
-export function RegisterEntregadorDialog({
-  open,
-  onClose,
-  onCreated,
-  defaultTipoOperacao = "ambos",
-  title = "Cadastrar Entregador",
-}: Props) {
-  const invite = useServerFn(inviteEntregador);
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [tipoVeiculo, setTipoVeiculo] = useState<string>("");
-  const [modelo, setModelo] = useState("");
-  const [placa, setPlaca] = useState("");
-  const [tipoOp, setTipoOp] = useState<"nex" | "distribuicao" | "ambos">(defaultTipoOperacao);
+export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Cadastrar entregador (sem app)" }: Props) {
+  const [f, setF] = useState({ nome: "", cpf: "", whatsapp: "", email: "", veic: "", marca: "", modelo: "", placa: "", pixTipo: "", pixChave: "" });
+  const [resid, setResid] = useState<File | null>(null);
+  const [doc, setDoc] = useState<File | null>(null);
+  const [docTipo, setDocTipo] = useState("documento_identidade");
+  const [aceite, setAceite] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [done, setDone] = useState<null | { nome: string; email: string; whatsapp: string }>(null);
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
 
-  function reset() {
-    setNome(""); setEmail(""); setWhatsapp(""); setTipoVeiculo("");
-    setModelo(""); setPlaca(""); setTipoOp(defaultTipoOperacao); setDone(null);
+  function fechar() {
+    setF({ nome: "", cpf: "", whatsapp: "", email: "", veic: "", marca: "", modelo: "", placa: "", pixTipo: "", pixChave: "" });
+    setResid(null); setDoc(null); setAceite(false); onClose();
   }
 
-  function handleClose() {
-    reset();
-    onClose();
+  async function enviar(empresaId: string, entId: string, tipo: string, file: File) {
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const path = `${empresaId}/${entId}/${tipo}-${Date.now()}.${ext}`;
+    const up = await supabase.storage.from("entregador-docs").upload(path, file, { contentType: file.type });
+    if (up.error) throw new Error(up.error.message);
+    const ins = await supabase.from("entregador_documentos").insert({ entregador_id: entId, empresa_id: empresaId, tipo, path, nome_arquivo: file.name });
+    if (ins.error) throw new Error(ins.error.message);
   }
 
   async function submit() {
-    if (!nome.trim() || !email.trim()) {
-      toast.error("Nome e email são obrigatórios.");
-      return;
-    }
+    if (!f.nome.trim()) return toast.error("Informe o nome.");
+    if (!f.whatsapp.trim() && !f.email.trim()) return toast.error("Informe telefone ou e-mail.");
+    if (!resid || !doc) return toast.error("Anexe o comprovante de residência e o documento (RG/CNH).");
+    if (!aceite) return toast.error("Confirme a autorização de uso dos documentos.");
     setSaving(true);
     try {
-      const redirect =
-        typeof window !== "undefined" ? `${window.location.origin}/auth` : undefined;
-      await invite({
-        data: {
-          nome_completo: nome.trim(),
-          email: email.trim().toLowerCase(),
-          whatsapp: whatsapp.trim() || null,
-          tipo_veiculo: (tipoVeiculo || null) as any,
-          modelo_veiculo: modelo.trim() || null,
-          placa: placa.trim() || null,
-          tipo_operacao: tipoOp,
-          redirect_to: redirect,
-        },
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sessão expirada");
+      const { data, error } = await (supabase as any).rpc("cadastrar_entregador_gerenciado", {
+        nome_completo: f.nome, cpf: f.cpf, whatsapp: f.whatsapp, email: f.email,
+        tipo_veiculo: f.veic, marca_veiculo: f.marca, modelo_veiculo: f.modelo, placa: f.placa,
+        pix_tipo: f.pixTipo, pix_chave: f.pixChave,
       });
-      toast.success(`Entregador cadastrado! Convite enviado para ${email}`);
-      setDone({ nome: nome.trim(), email: email.trim(), whatsapp: whatsapp.trim() });
+      if (error) throw new Error(error.message);
+      const id = data.id as string;
+      await enviar(user.id, id, "comprovante_residencia", resid);
+      await enviar(user.id, id, docTipo, doc);
+      toast.success(`${f.nome} cadastrado. Você opera as rotas dele pelo painel.`);
       onCreated?.();
+      fechar();
     } catch (e: any) {
-      toast.error(e?.message || "Falha ao cadastrar entregador.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function shareWhats() {
-    if (!done) return;
-    const msg = `Olá ${done.nome}! Você foi cadastrado na TuEntrega. Em breve chegará um email com seu acesso. Qualquer dúvida, fale comigo aqui!`;
-    const phone = done.whatsapp.replace(/\D/g, "");
-    const url = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
-      : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank");
+      toast.error(e?.message || "Falha ao cadastrar.");
+    } finally { setSaving(false); }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-lg">
+    <Dialog open={open} onOpenChange={(o) => !o && fechar()}>
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            {done
-              ? "Convite enviado com sucesso. Você pode avisar por WhatsApp também."
-              : "O entregador receberá um email para criar a senha e acessar o sistema."}
+            A pessoa não precisa instalar o app: você aloca as rotas e dá baixa por ela. Os documentos ficam visíveis só para a sua empresa.
           </DialogDescription>
         </DialogHeader>
-
-        {done ? (
-          <div className="space-y-4">
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-              <div className="flex items-center gap-2 font-medium">
-                <Check className="h-4 w-4" /> {done.nome} cadastrado.
-              </div>
-              <p className="mt-1 text-xs">Convite enviado para {done.email}.</p>
-            </div>
-            <Button className="w-full" onClick={shareWhats}>
-              <Share2 className="h-4 w-4 mr-2" /> Avisar pelo WhatsApp
-            </Button>
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>Fechar</Button>
-              <Button variant="secondary" onClick={reset}>
-                <UserPlus className="h-4 w-4 mr-2" /> Cadastrar outro
-              </Button>
-            </DialogFooter>
+        <div className="grid gap-3">
+          <div className="space-y-1"><Label>Nome completo *</Label><Input value={f.nome} onChange={set("nome")} placeholder="Ex: Jefferson Silva" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>Telefone / WhatsApp</Label><Input value={f.whatsapp} onChange={set("whatsapp")} placeholder="(13) 99999-9999" /></div>
+            <div className="space-y-1"><Label>CPF</Label><Input value={f.cpf} onChange={set("cpf")} placeholder="000.000.000-00" /></div>
           </div>
-        ) : (
-          <>
-            <div className="grid gap-3">
-              <div className="space-y-1">
-                <Label>Nome completo *</Label>
-                <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: João Silva" />
-              </div>
-              <div className="space-y-1">
-                <Label>Email *</Label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="entregador@email.com"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Telefone / WhatsApp</Label>
-                <Input
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  placeholder="(13) 99999-9999"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Tipo de veículo</Label>
-                  <Select value={tipoVeiculo} onValueChange={setTipoVeiculo}>
-                    <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                    <SelectContent>
-                      {VEICULOS.map((v) => (
-                        <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label>Tipo de operação</Label>
-                  <Select value={tipoOp} onValueChange={(v) => setTipoOp(v as any)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ambos">Ambos (NEX + Distribuição)</SelectItem>
-                      <SelectItem value="distribuicao">Distribuição</SelectItem>
-                      <SelectItem value="nex">NEX</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Modelo do veículo</Label>
-                  <Input value={modelo} onChange={(e) => setModelo(e.target.value)} placeholder="Ex: Honda CG 160" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Placa</Label>
-                  <Input value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} placeholder="ABC1D23" />
-                </div>
-              </div>
+          <div className="space-y-1"><Label>E-mail (opcional)</Label><Input type="email" value={f.email} onChange={set("email")} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Veículo</Label>
+              <Select value={f.veic} onValueChange={(v) => setF((s) => ({ ...s, veic: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                <SelectContent>{VEICULOS.map((v) => <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-              <Button onClick={submit} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                  <><UserPlus className="h-4 w-4 mr-2" /> Cadastrar e enviar convite</>
-                )}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
+            <div className="space-y-1"><Label>Placa</Label><Input value={f.placa} onChange={(e) => setF((s) => ({ ...s, placa: e.target.value.toUpperCase() }))} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>Marca</Label><Input value={f.marca} onChange={set("marca")} /></div>
+            <div className="space-y-1"><Label>Modelo</Label><Input value={f.modelo} onChange={set("modelo")} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Tipo da chave PIX</Label>
+              <Select value={f.pixTipo} onValueChange={(v) => setF((s) => ({ ...s, pixTipo: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                <SelectContent>{PIX.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1"><Label>Chave PIX</Label><Input value={f.pixChave} onChange={set("pixChave")} /></div>
+          </div>
+
+          <div className="space-y-3 rounded-md border p-3">
+            <div className="flex items-center gap-2 text-sm font-medium"><FileCheck2 className="h-4 w-4" />Comprovação (obrigatória)</div>
+            <div className="space-y-1">
+              <Label>Comprovante de residência *</Label>
+              <Input type="file" accept="image/*,application/pdf" capture="environment" onChange={(e) => setResid(e.target.files?.[0] ?? null)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Documento com foto *</Label>
+              <Select value={docTipo} onValueChange={setDocTipo}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="documento_identidade">RG</SelectItem>
+                  <SelectItem value="cnh">CNH</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input type="file" accept="image/*,application/pdf" capture="environment" onChange={(e) => setDoc(e.target.files?.[0] ?? null)} />
+            </div>
+            <label className="flex items-start gap-2 text-xs text-muted-foreground">
+              <Checkbox checked={aceite} onCheckedChange={(v) => setAceite(!!v)} className="mt-0.5" />
+              Declaro que a pessoa autorizou o uso e o armazenamento destes documentos e dados para fins de cadastro e segurança das entregas (LGPD).
+            </label>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={fechar}>Cancelar</Button>
+          <Button onClick={submit} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserPlus className="mr-2 h-4 w-4" />Cadastrar</>}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

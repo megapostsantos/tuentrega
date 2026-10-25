@@ -1,6 +1,8 @@
 import { defineEventHandler } from "h3";
 
 const PUBLIC_BUCKETS = new Set(["provas-entrega"]);
+// buckets com dados pessoais: só o dono do upload (ou admin) lê
+const PRIVATE_BUCKETS = new Set(["entregador-docs", "financeiro-comprovantes"]);
 let ready = false;
 async function ensureTable(rawQuery: (t: string, p?: unknown[]) => Promise<any[]>) {
   if (ready) return;
@@ -29,6 +31,10 @@ export default defineEventHandler(async (event) => {
       const { auth } = await import("./lib/auth");
       const sess = await auth.api.getSession({ headers: req.headers });
       if (!sess?.user) return new Response("não autenticado", { status: 401 });
+      if (PRIVATE_BUCKETS.has(bucket) && (sess.user as any).role !== "admin") {
+        const own = await rawQuery(`select 1 from "storage_objects" where bucket=$1 and path=$2 and "owner"=$3`, [bucket, path, (sess.user as any).id]);
+        if (!own.length) return new Response("not found", { status: 404 });
+      }
     }
     const rows = await rawQuery(`select content_type, data from "storage_objects" where bucket=$1 and path=$2`, [bucket, path]);
     if (!rows.length) return new Response("not found", { status: 404 });
