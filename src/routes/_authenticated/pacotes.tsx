@@ -480,26 +480,20 @@ function CreateOperation({
       if (opErr) throw opErr;
       const opId = (opRow as any).id as string;
 
-      const rotaIds: string[] = [];
-      for (const r of rotas) {
-        const { data: rRow, error: rErr } = await supabase.from("rotas_operacao").insert({
-          operacao_id: opId,
-          empresa_id: empresaId,
-          nome: r.nome,
-          quantidade_pacotes: r.quantidade_pacotes,
-          quantidade_paradas: r.quantidade_paradas,
-          valor_total: r.valor_total,
-          status: "draft",
-        }).select("id").single();
-        if (rErr) throw rErr;
-        rotaIds.push((rRow as any).id);
-      }
-      for (let i = 0; i < rotas.length; i++) {
-        if (!rotas[i].entregador_id) continue;
-        const { error: aErr } = await supabase.from("alocacoes").insert({
-          operacao_id: opId, rota_id: rotaIds[i], entregador_id: rotas[i].entregador_id,
-          empresa_id: empresaId, status: "allocated",
-        } as any);
+      const { data: rRows, error: rErr } = await supabase.from("rotas_operacao").insert(
+        rotas.map((r) => ({
+          operacao_id: opId, empresa_id: empresaId, nome: r.nome,
+          quantidade_pacotes: r.quantidade_pacotes, quantidade_paradas: r.quantidade_paradas,
+          valor_total: r.valor_total, status: "draft",
+        })) as any,
+      ).select("id");
+      if (rErr) throw rErr;
+      const rotaIds: string[] = ((rRows as any[]) ?? []).map((x) => x.id);
+      const aloc = rotas
+        .map((r, i) => (r.entregador_id ? { operacao_id: opId, rota_id: rotaIds[i], entregador_id: r.entregador_id, empresa_id: empresaId, status: "allocated" } : null))
+        .filter(Boolean);
+      if (aloc.length) {
+        const { error: aErr } = await supabase.from("alocacoes").insert(aloc as any);
         if (aErr) throw aErr;
       }
 
@@ -554,46 +548,14 @@ function CreateOperation({
     if (!createdOpId) return;
     setSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Sessão expirada. Faça login novamente.");
-      await ensureEmpresa(user.id);
-
-      const published: typeof publishedOffers = [];
-      for (let i = 0; i < rotas.length; i++) {
-        const r = rotas[i];
-        const rotaId = createdRotaIds[i];
-        const vp = vpEfetivo(r);
-        const titulo = `${origemFinal} · ${r.nome} - ${new Date(dataOperacao).toLocaleDateString("pt-BR")}`;
-        const { data: of, error: ofErr } = await supabase.from("ofertas").insert({
-          empresa_id: user.id,
-          titulo,
-          descricao: observacoes || null,
-          quantidade_pacotes: r.quantidade_pacotes,
-          quantidade_paradas: r.quantidade_paradas,
-          valor: r.valor_total,
-          valor_por_pacote: vp,
-          status: r.entregador_id ? "accepted" : "open",
-          entregador_id: r.entregador_id ?? null,
-          atribuida_em: r.entregador_id ? new Date().toISOString() : null,
-          tipo_entrega: "package_delivery",
-          operacao_id: createdOpId,
-          rota_operacao_id: rotaId,
-          data_trabalho: dataOperacao,
-        } as any).select("id").single();
-        if (ofErr) throw ofErr;
-        const ofertaId = (of as any).id as string;
-        if (r.entregador_id) await supabase.from("alocacoes").update({ oferta_id: ofertaId } as any).eq("rota_id", rotaId);
-        await createPlaceholderPackages(ofertaId, createdOpId, r.quantidade_pacotes);
-        await supabase.from("rotas_operacao").update({ oferta_id: ofertaId, status: "open" }).eq("id", rotaId);
-        published.push({
-          id: ofertaId, titulo,
-          quantidade_pacotes: r.quantidade_pacotes,
-          quantidade_paradas: r.quantidade_paradas,
-          valor_total: r.valor_total,
-          valor_por_pacote: vp,
-        });
-      }
-      await supabase.from("operacoes").update({ status: "published" } as any).eq("id", createdOpId);
+      const { error } = await (supabase as any).rpc("publicar_rotas", { _operacao_id: createdOpId });
+      if (error) throw new Error(error.message);
+      const { data: ofs } = await supabase.from("ofertas")
+        .select("id, titulo, quantidade_pacotes, quantidade_paradas, valor, valor_por_pacote").eq("operacao_id", createdOpId).order("titulo");
+      const published: typeof publishedOffers = ((ofs as any[]) ?? []).map((o) => ({
+        id: o.id, titulo: o.titulo, quantidade_pacotes: o.quantidade_pacotes, quantidade_paradas: o.quantidade_paradas,
+        valor_total: Number(o.valor), valor_por_pacote: Number(o.valor_por_pacote),
+      }));
       setPublishedOffers(published);
       toast.success(`🎉 ${rotas.length} oferta(s) publicada(s)!`);
     } catch (e: any) {
@@ -1050,48 +1012,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 /* ============ Detail dialog ============ */
 
 async function publishPendingRotas(op: Operacao, rotas: any[]): Promise<number> {
-  let count = 0;
-  const { data: als } = await supabase.from("alocacoes").select("rota_id, entregador_id").eq("operacao_id", op.id);
-  const donoDaRota = new Map<string, string>(((als as any[]) ?? []).map((a) => [a.rota_id, a.entregador_id]));
-  for (const r of rotas) {
-    if (r.oferta_id) continue;
-    const qtd = Number(r.quantidade_pacotes || 0);
-    const vp = qtd > 0 && Number(r.valor_total) > 0 ? Number(r.valor_total) / qtd : Number(op.valor_por_pacote || 0);
-    const titulo = `${(op as any).origem || "Operação"} · ${r.nome} - ${new Date(op.data_operacao).toLocaleDateString("pt-BR")}`;
-    const { data: of, error } = await supabase.from("ofertas").insert({
-      empresa_id: op.empresa_id,
-      titulo,
-      descricao: op.observacoes || null,
-      quantidade_pacotes: qtd,
-      quantidade_paradas: Number(r.quantidade_paradas || 0),
-      valor: Number(r.valor_total || qtd * vp),
-      valor_por_pacote: vp,
-      status: donoDaRota.has(r.id) ? "accepted" : "open",
-      entregador_id: donoDaRota.get(r.id) ?? null,
-      atribuida_em: donoDaRota.has(r.id) ? new Date().toISOString() : null,
-      tipo_entrega: "package_delivery",
-      operacao_id: op.id,
-      rota_operacao_id: r.id,
-      data_trabalho: op.data_operacao,
-    } as any).select("id").single();
-    if (error) throw error;
-    const ofertaId = (of as any).id as string;
-    if (donoDaRota.has(r.id)) await supabase.from("alocacoes").update({ oferta_id: ofertaId } as any).eq("rota_id", r.id);
-    const { count: existing } = await supabase
-      .from("entregas_pacotes").select("id", { count: "exact", head: true }).eq("oferta_id", ofertaId);
-    if (!existing && qtd > 0) {
-      const rows = Array.from({ length: qtd }, (_, i) => ({
-        oferta_id: ofertaId, operacao_id: op.id, numero_pacote: i + 1, endereco_entrega: null, status: "pending",
-      }));
-      const { error: pErr } = await supabase.from("entregas_pacotes").insert(rows as any);
-      if (pErr) throw pErr;
-    }
-    const { error: rErr } = await supabase.from("rotas_operacao").update({ oferta_id: ofertaId, status: "open" }).eq("id", r.id);
-    if (rErr) throw rErr;
-    count++;
-  }
-  if (count > 0) await supabase.from("operacoes").update({ status: "published" } as any).eq("id", op.id);
-  return count;
+  const ids = rotas.filter((r) => !r.oferta_id).map((r) => r.id);
+  if (!ids.length) return 0;
+  const { data, error } = await (supabase as any).rpc("publicar_rotas", { _operacao_id: op.id, _rota_ids: ids });
+  if (error) throw new Error(error.message);
+  return Number(data?.publicadas ?? ids.length);
 }
 
 function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: string | null; onClose: () => void; showMargem: boolean }) {

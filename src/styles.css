@@ -173,3 +173,6 @@
   background-size: 800px 100%;
   animation: shimmer 1.4s linear infinite;
 }
+
+/* mapas Leaflet não podem ficar por cima de menus/diálogos */
+.leaflet-container { z-index: 0; isolation: isolate; }

@@ -747,8 +747,50 @@ async function cadastrarEntregadorGerenciado(uid: string | null, args: Record<st
   return { data: { id, codigo: email ? codigo : null }, error: null, count: null };
 }
 
+/** Publica de uma vez todas as rotas da operação que ainda não têm oferta (uma única transação). */
+async function publicarRotas(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  const opId = String(args._operacao_id ?? "");
+  const ops = await query(
+    `select * from "operacoes" where "id"::text = $1 and ($2::text is null or "empresa_id" = $2)`, [opId, uid]);
+  const op = ops[0] as any;
+  if (!op) throw new Error("Operação não encontrada");
+  const only = Array.isArray(args._rota_ids) ? (args._rota_ids as unknown[]).map(String) : null;
+  const rotas = await query(
+    `select r.*, a."entregador_id" as dono from "rotas_operacao" r
+       left join lateral (select "entregador_id" from "alocacoes" x where x."rota_id"::text = r."id"::text and x."status" not in ('recusada','removida') limit 1) a on true
+      where r."operacao_id"::text = $1 and r."oferta_id" is null and r."status" <> 'cancelada'
+        and ($2::text[] is null or r."id"::text = any($2::text[]))`, [opId, only]);
+  if (!rotas.length) return { data: { publicadas: 0 }, error: null, count: null };
+  const stmts: { text: string; params: unknown[] }[] = [];
+  const dataOp = op.data_operacao instanceof Date ? op.data_operacao.toISOString().slice(0, 10) : String(op.data_operacao).slice(0, 10);
+  const dataFmt = dataOp.split("-").reverse().join("/");
+  for (const r of rotas as any[]) {
+    const qtd = Number(r.quantidade_pacotes || 0);
+    const vp = qtd > 0 && Number(r.valor_total) > 0 ? Number(r.valor_total) / qtd : Number(op.valor_por_pacote || 0);
+    const id = crypto.randomUUID();
+    const dono = r.dono ? String(r.dono) : null;
+    stmts.push({
+      text: `insert into "ofertas" ("id","empresa_id","titulo","descricao","quantidade_pacotes","quantidade_paradas","valor","valor_por_pacote","status","entregador_id","atribuida_em","tipo_entrega","operacao_id","rota_operacao_id","data_trabalho")
+             values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'package_delivery',$12,$13,$14)`,
+      params: [id, op.empresa_id, `${op.origem || "Operação"} · ${r.nome} - ${dataFmt}`, op.observacoes || null, qtd, Number(r.quantidade_paradas || 0),
+        Number(r.valor_total || qtd * vp), vp, dono ? "accepted" : "open", dono, dono ? new Date().toISOString() : null, opId, String(r.id), dataOp],
+    });
+    if (qtd > 0)
+      stmts.push({
+        text: `insert into "entregas_pacotes" ("oferta_id","operacao_id","numero_pacote","status") select $1, $2, g, 'pending' from generate_series(1, $3::int) g`,
+        params: [id, opId, qtd],
+      });
+    stmts.push({ text: `update "rotas_operacao" set "oferta_id" = $1, "status" = 'open' where "id"::text = $2`, params: [id, String(r.id)] });
+    if (dono) stmts.push({ text: `update "alocacoes" set "oferta_id" = $1 where "rota_id"::text = $2 and "oferta_id" is null`, params: [id, String(r.id)] });
+  }
+  stmts.push({ text: `update "operacoes" set "status" = 'published' where "id"::text = $1`, params: [opId] });
+  await runTransaction(stmts);
+  return { data: { publicadas: rotas.length }, error: null, count: null };
+}
+
 async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   const { fn, args } = req.rpc!;
+  if (fn === "publicar_rotas") return await publicarRotas(uid, args);
   if (fn === "finalizar_rota") return await finalizarRota(uid, args);
   if (fn === "receber_devolucao") return await receberDevolucao(uid, args);
   if (fn === "cadastrar_entregador_gerenciado") return await cadastrarEntregadorGerenciado(uid, args);
@@ -803,7 +845,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
         } else if (fn === "recusar_rota" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }
