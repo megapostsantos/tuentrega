@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, UserPlus, FileCheck2 } from "lucide-react";
+import { Loader2, UserPlus, FileCheck2, Share2, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,18 +27,19 @@ const VEICULOS = [
 ];
 const PIX = ["cpf", "cnpj", "email", "telefone", "aleatoria"];
 
-export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Cadastrar entregador (sem app)" }: Props) {
+export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Cadastrar parceiro" }: Props) {
   const [f, setF] = useState({ nome: "", cpf: "", whatsapp: "", email: "", veic: "", marca: "", modelo: "", placa: "", pixTipo: "", pixChave: "" });
   const [resid, setResid] = useState<File | null>(null);
   const [doc, setDoc] = useState<File | null>(null);
   const [docTipo, setDocTipo] = useState("documento_identidade");
   const [aceite, setAceite] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string | null }>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
 
   function fechar() {
     setF({ nome: "", cpf: "", whatsapp: "", email: "", veic: "", marca: "", modelo: "", placa: "", pixTipo: "", pixChave: "" });
-    setResid(null); setDoc(null); setAceite(false); onClose();
+    setResid(null); setDoc(null); setAceite(false); setFeito(null); onClose();
   }
 
   async function enviar(empresaId: string, entId: string, tipo: string, file: File) {
@@ -53,8 +54,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
   async function submit() {
     if (!f.nome.trim()) return toast.error("Informe o nome.");
     if (!f.whatsapp.trim() && !f.email.trim()) return toast.error("Informe telefone ou e-mail.");
-    if (!resid || !doc) return toast.error("Anexe o comprovante de residência e o documento (RG/CNH).");
-    if (!aceite) return toast.error("Confirme a autorização de uso dos documentos.");
+    if ((resid || doc) && !aceite) return toast.error("Confirme a autorização de uso dos documentos.");
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -66,14 +66,47 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
       });
       if (error) throw new Error(error.message);
       const id = data.id as string;
-      await enviar(user.id, id, "comprovante_residencia", resid);
-      await enviar(user.id, id, docTipo, doc);
-      toast.success(`${f.nome} cadastrado. Você opera as rotas dele pelo painel.`);
+      if (resid) await enviar(user.id, id, "comprovante_residencia", resid);
+      if (doc) await enviar(user.id, id, docTipo, doc);
       onCreated?.();
-      fechar();
+      setFeito({ nome: f.nome.trim(), email: f.email.trim().toLowerCase(), whatsapp: f.whatsapp, codigo: data.codigo ?? null });
     } catch (e: any) {
       toast.error(e?.message || "Falha ao cadastrar.");
     } finally { setSaving(false); }
+  }
+
+  function whats() {
+    if (!feito) return;
+    const link = `${window.location.origin}/auth`;
+    const msg = `Olá ${feito.nome}! Te cadastrei na TuEntrega. Para criar sua senha, abra ${link}, toque na aba "Convite" e use o e-mail ${feito.email} e o código ${feito.codigo}.`;
+    const fone = feito.whatsapp.replace(/\D/g, "");
+    window.open(`https://wa.me/${fone ? (fone.length <= 11 ? "55" + fone : fone) : ""}?text=${encodeURIComponent(msg)}`, "_blank");
+  }
+
+  if (feito) {
+    return (
+      <Dialog open={open} onOpenChange={(o) => !o && fechar()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{feito.nome} cadastrado</DialogTitle>
+            <DialogDescription>Já pode receber rotas. {feito.codigo ? "Para ele(a) assumir a conta, envie o convite:" : "Sem e-mail, você opera as rotas dele(a) pelo painel."}</DialogDescription>
+          </DialogHeader>
+          {feito.codigo && (
+            <div className="space-y-3">
+              <div className="rounded-md border bg-muted/50 p-3 text-sm">
+                <div>E-mail: <strong>{feito.email}</strong></div>
+                <div>Código: <strong className="tracking-widest">{feito.codigo}</strong></div>
+              </div>
+              <Button className="w-full" onClick={whats}><Share2 className="mr-2 h-4 w-4" />Enviar convite pelo WhatsApp</Button>
+              <Button variant="outline" className="w-full" onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/auth — e-mail ${feito.email}, código ${feito.codigo}`); toast.success("Copiado"); }}>
+                <Copy className="mr-2 h-4 w-4" />Copiar dados
+              </Button>
+            </div>
+          )}
+          <DialogFooter><Button onClick={fechar}>Fechar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
@@ -82,7 +115,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            A pessoa não precisa instalar o app: você aloca as rotas e dá baixa por ela. Os documentos ficam visíveis só para a sua empresa.
+            Cadastre agora e aloque as rotas. Com e-mail, a pessoa cria a própria senha depois e mantém todo o histórico. Sem e-mail, você opera as rotas por ela. Os documentos ficam visíveis só para a sua empresa.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
@@ -91,7 +124,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
             <div className="space-y-1"><Label>Telefone / WhatsApp</Label><Input value={f.whatsapp} onChange={set("whatsapp")} placeholder="(13) 99999-9999" /></div>
             <div className="space-y-1"><Label>CPF</Label><Input value={f.cpf} onChange={set("cpf")} placeholder="000.000.000-00" /></div>
           </div>
-          <div className="space-y-1"><Label>E-mail (opcional)</Label><Input type="email" value={f.email} onChange={set("email")} /></div>
+          <div className="space-y-1"><Label>E-mail (para ele criar a senha depois)</Label><Input type="email" value={f.email} onChange={set("email")} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label>Veículo</Label>
@@ -118,13 +151,13 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
           </div>
 
           <div className="space-y-3 rounded-md border p-3">
-            <div className="flex items-center gap-2 text-sm font-medium"><FileCheck2 className="h-4 w-4" />Comprovação (obrigatória)</div>
+            <div className="flex items-center gap-2 text-sm font-medium"><FileCheck2 className="h-4 w-4" />Comprovação (recomendada)</div>
             <div className="space-y-1">
-              <Label>Comprovante de residência *</Label>
+              <Label>Comprovante de residência</Label>
               <Input type="file" accept="image/*,application/pdf" capture="environment" onChange={(e) => setResid(e.target.files?.[0] ?? null)} />
             </div>
             <div className="space-y-1">
-              <Label>Documento com foto *</Label>
+              <Label>Documento com foto</Label>
               <Select value={docTipo} onValueChange={setDocTipo}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>

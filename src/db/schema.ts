@@ -473,6 +473,7 @@ export const entregadoresGerenciados = pgTable("entregadores_gerenciados", {
   entregadorId: text("entregador_id").primaryKey(),
   empresaId: text("empresa_id").notNull(),
   criadoEm: timestamp("criado_em").notNull().defaultNow(),
+  codigoConvite: text("codigo_convite"),
 });
 
 export const entregadorDocumentos = pgTable("entregador_documentos", {

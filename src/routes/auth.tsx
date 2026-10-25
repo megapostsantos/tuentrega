@@ -116,13 +116,18 @@ function AuthPage() {
           </div>
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="login">Entrar</TabsTrigger>
               <TabsTrigger value="signup">Cadastrar</TabsTrigger>
+              <TabsTrigger value="convite">Convite</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login" className="mt-6">
               <LoginForm onSuccess={() => navigate({ to: "/dashboard" })} />
+            </TabsContent>
+
+            <TabsContent value="convite" className="mt-6">
+              <ConviteForm onSuccess={() => navigate({ to: "/dashboard" })} />
             </TabsContent>
 
             <TabsContent value="signup" className="mt-6">
@@ -132,6 +137,44 @@ function AuthPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ConviteForm({ onSuccess }: { onSuccess: () => void }) {
+  const [email, setEmail] = useState("");
+  const [codigo, setCodigo] = useState("");
+  const [senha, setSenha] = useState("");
+  const [loading, setLoading] = useState(false);
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const r = await fetch("/api/db/claim-invite", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, codigo, senha }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { toast.error(j?.error ?? "Não foi possível validar o convite."); return; }
+      const si = await signIn.email({ email, password: senha });
+      if (si.error) { toast.error("Conta criada. Entre na aba Entrar com sua senha."); return; }
+      onSuccess();
+    } catch (e: any) {
+      toast.error("Erro: " + (e?.message ?? String(e)));
+    } finally { setLoading(false); }
+  }
+  return (
+    <>
+      <h1 className="text-2xl font-bold">Tenho um convite</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Use o e-mail e o código que a empresa te enviou e crie sua senha. Seu histórico já está esperando por você.</p>
+      <form onSubmit={submit} className="mt-6 space-y-4">
+        <div className="space-y-2"><Label>E-mail</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+        <div className="space-y-2"><Label>Código do convite</Label><Input required value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} className="tracking-widest" /></div>
+        <div className="space-y-2"><Label>Crie uma senha</Label><Input type="password" required minLength={6} value={senha} onChange={(e) => setSenha(e.target.value)} /></div>
+        <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:opacity-90">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Ativar minha conta <ArrowRight className="ml-1 h-4 w-4" /></>}
+        </Button>
+      </form>
+    </>
   );
 }
 

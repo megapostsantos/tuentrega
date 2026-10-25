@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Package, Plus, Trash2, ArrowLeft, CheckCircle2, AlertTriangle, Eye, Users, Map as MapIcon, ScanLine, Sparkles, Save, Share2, Mail, Copy } from "lucide-react";
+import { RegisterEntregadorDialog } from "@/components/RegisterEntregadorDialog";
 import { ScanOperationDialog } from "@/components/ScanOperationDialog";
 import { geocodeAddress, geocodeMultiple } from "@/lib/geocoding";
 import { optimizeRoute, formatDuration, type Stop } from "@/lib/route-optimizer";
@@ -1155,13 +1156,14 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
           {op.observacoes && (
             <div className="rounded border bg-muted/40 p-2"><strong>Obs:</strong> {op.observacoes}</div>
           )}
+          <AllocationPanel op={op} operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={ativas} onChanged={() => setReloadKey((k) => k + 1)} />
           {ativas.some((r) => !r.oferta_id) && (
-            <div className="rounded-lg border-2 border-primary bg-primary/5 p-3">
+            <div className="rounded-lg border bg-muted/30 p-3">
               <p className="font-medium">
                 {ativas.filter((r) => !r.oferta_id).length} rota(s) ainda sem oferta publicada
               </p>
               <p className="mb-2 text-xs text-muted-foreground">
-                Publique agora para que os entregadores vejam e aceitem, ou atribua direto a um entregador abaixo.
+                Ou publique no mercado para qualquer entregador aceitar (sem escolher ninguém).
               </p>
               <Button
                 disabled={publishing}
@@ -1179,7 +1181,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
                 }}
               >
                 {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Publicar {ativas.filter((r) => !r.oferta_id).length} oferta(s)
+                Publicar no mercado ({ativas.filter((r) => !r.oferta_id).length})
               </Button>
             </div>
           )}
@@ -1225,7 +1227,6 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
             <div>Pago aos entregadores: <strong>R$ {totalPago.toFixed(2)}</strong></div>
             {showMargem && <div>Margem: <strong>R$ {margem.toFixed(2)}</strong></div>}
           </div>
-          <AllocationPanel operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={ativas} onChanged={() => setReloadKey((k) => k + 1)} />
           <RouteMapButton ofertaIds={ativas.map((r: any) => r.oferta_id).filter(Boolean)} />
           <OptimizeRouteButton operacaoId={op.id} ofertaIds={ativas.map((r: any) => r.oferta_id).filter(Boolean)} />
           <EliminarRotaDialog rota={eliminar} onClose={() => setEliminar(null)} onDone={() => setReloadKey((k) => k + 1)} />
@@ -1529,8 +1530,9 @@ function AuditByRanges({
 /* ============ Allocation panel ============ */
 
 function AllocationPanel({
-  operacaoId, empresaId, dataOperacao, rotas, onChanged,
-}: { operacaoId: string; empresaId: string; dataOperacao: string; rotas: any[]; onChanged?: () => void }) {
+  op, operacaoId, empresaId, dataOperacao, rotas, onChanged,
+}: { op: Operacao; operacaoId: string; empresaId: string; dataOperacao: string; rotas: any[]; onChanged?: () => void }) {
+  const [novoOpen, setNovoOpen] = useState(false);
   const [aceitos, setAceitos] = useState<any[]>([]);
   const [ativos, setAtivos] = useState<any[]>([]);
   const [escolha, setEscolha] = useState<Record<string, string>>({});
@@ -1558,20 +1560,26 @@ function AllocationPanel({
     setAtivos(ents ?? []);
   }
 
+  async function atribuir(rota: any, entId: string) {
+    const sb = supabase as any;
+    const { error } = await sb.from("alocacoes").insert({
+      operacao_id: operacaoId, rota_id: rota.id, entregador_id: entId,
+      oferta_id: rota.oferta_id, empresa_id: empresaId, status: "allocated",
+    });
+    if (error) throw error;
+    if (rota.oferta_id) {
+      await sb.from("ofertas").update({ entregador_id: entId, status: "accepted", atribuida_em: new Date().toISOString() }).eq("id", rota.oferta_id);
+    } else {
+      await publishPendingRotas(op, [rota]);
+    }
+  }
+
   async function atribuirManual(rota: any) {
     const entId = escolha[rota.id];
-    if (!entId) { toast.error("Escolha um entregador."); return; }
+    if (!entId) { toast.error("Escolha quem leva esta rota."); return; }
     setBusy(true);
     try {
-      const sb = supabase as any;
-      const { error } = await sb.from("alocacoes").insert({
-        operacao_id: operacaoId, rota_id: rota.id, entregador_id: entId,
-        oferta_id: rota.oferta_id, empresa_id: empresaId, status: "allocated",
-      });
-      if (error) throw error;
-      if (rota.oferta_id) {
-        await sb.from("ofertas").update({ entregador_id: entId, status: "accepted", atribuida_em: new Date().toISOString() }).eq("id", rota.oferta_id);
-      }
+      await atribuir(rota, entId);
       toast.success("Rota atribuída.");
       await load();
       onChanged?.();
@@ -1586,24 +1594,16 @@ function AllocationPanel({
   async function autoAllocate() {
     setBusy(true);
     try {
-      const sb = supabase as any;
       const disponiveis = aceitos.filter((a) => !alocacoes.some((al) => al.entregador_id === a.entregador_id));
       const rotasLivres = rotas.filter((r) => !alocadoPara(r.id));
       let i = 0;
       for (const rota of rotasLivres) {
         if (i >= disponiveis.length) break;
-        const ent = disponiveis[i++];
-        const { error } = await sb.from("alocacoes").insert({
-          operacao_id: operacaoId, rota_id: rota.id, entregador_id: ent.entregador_id,
-          oferta_id: rota.oferta_id, empresa_id: empresaId, status: "allocated",
-        });
-        if (error) throw error;
-        if (rota.oferta_id) {
-          await sb.from("ofertas").update({ entregador_id: ent.entregador_id, status: "accepted", atribuida_em: new Date().toISOString() }).eq("id", rota.oferta_id);
-        }
+        await atribuir(rota, disponiveis[i++].entregador_id);
       }
       toast.success(`${Math.min(disponiveis.length, rotasLivres.length)} rota(s) alocadas.`);
-      load();
+      await load();
+      onChanged?.();
     } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
   }
 
@@ -1620,59 +1620,59 @@ function AllocationPanel({
     load();
   }
 
+  const comprometidos = new Set(aceitos.map((a) => a.entregador_id));
+  const opcoes = [...ativos].sort((x, y) => Number(comprometidos.has(y.id)) - Number(comprometidos.has(x.id)));
+  const livres = rotas.filter((r) => !alocadoPara(r.id)).length;
+
   return (
-    <div className="rounded border p-3 space-y-3">
-      <div className="flex items-center gap-2 font-medium"><Users className="h-4 w-4" />Alocação ({alocacoes.length}/{rotas.length})</div>
-      <p className="text-sm text-muted-foreground">
-        {aceitos.length} entregador(es) se comprometeram na agenda para {new Date(dataOperacao).toLocaleDateString("pt-BR")}.
+    <div className="space-y-3 rounded-lg border-2 border-primary/40 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 font-semibold"><Users className="h-4 w-4" />Quem leva cada rota ({alocacoes.length}/{rotas.length})</div>
+        <Button size="sm" variant="outline" onClick={() => setNovoOpen(true)}><Plus className="mr-1 h-4 w-4" />Cadastrar parceiro</Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Escolha o parceiro em cada rota e toque em Atribuir — a oferta é criada sozinha. ★ = já confirmou na agenda de {new Date(dataOperacao).toLocaleDateString("pt-BR")}.
+        Não achou a pessoa? Cadastre acima (com e-mail ou só nome/telefone).
       </p>
 
-      <Table>
-        <TableHeader>
-          <TableRow><TableHead>Rota</TableHead><TableHead>Entregador</TableHead></TableRow>
-        </TableHeader>
-        <TableBody>
-          {rotas.map((r) => {
-            const a = alocadoPara(r.id);
-            return (
-              <TableRow key={r.id}>
-                <TableCell>{r.nome} · {r.quantidade_pacotes}p · R$ {Number(r.valor_total).toFixed(2)}</TableCell>
-                <TableCell>{a ? <span className="text-emerald-700">✅ {(a.entregadores as any)?.nome_completo}</span> : (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-muted-foreground">❌ ninguém</span>
-                    {r.oferta_id ? (
-                      <>
-                        <select
-                          className="h-8 rounded-md border bg-background px-2 text-xs"
-                          value={escolha[r.id] ?? ""}
-                          onChange={(e) => setEscolha((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                        >
-                          <option value="">Escolher entregador...</option>
-                          {ativos.map((en) => <option key={en.id} value={en.id}>{en.nome_completo}</option>)}
-                        </select>
-                        <Button size="sm" variant="outline" disabled={busy || !escolha[r.id]} onClick={() => atribuirManual(r)}>
-                          Atribuir
-                        </Button>
-                      </>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">(publique a oferta primeiro)</span>
-                    )}
-                  </div>
-                )}</TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      <div className="space-y-2">
+        {rotas.map((r) => {
+          const a = alocadoPara(r.id);
+          return (
+            <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm">
+              <div>
+                <div className="font-medium">{r.nome}</div>
+                <div className="text-xs text-muted-foreground">{r.quantidade_pacotes} pacotes · {r.quantidade_paradas} paradas · R$ {Number(r.valor_total).toFixed(2)}</div>
+              </div>
+              {a ? (
+                <span className="text-emerald-700">✅ {(a.entregadores as any)?.nome_completo}</span>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <select
+                    className="h-9 rounded-md border bg-background px-2 text-sm"
+                    value={escolha[r.id] ?? ""}
+                    onChange={(e) => setEscolha((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                  >
+                    <option value="">Escolher parceiro…</option>
+                    {opcoes.map((en) => <option key={en.id} value={en.id}>{comprometidos.has(en.id) ? "★ " : ""}{en.nome_completo}</option>)}
+                  </select>
+                  <Button size="sm" disabled={busy || !escolha[r.id]} onClick={() => atribuirManual(r)}>Atribuir</Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={autoAllocate} disabled={busy || aceitos.length === 0} className="bg-primary text-primary-foreground hover:bg-primary/90">
-          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Auto-alocar
-        </Button>
-        <Button variant="outline" onClick={startOperation} disabled={alocacoes.length === 0}>
-          Iniciar operação
-        </Button>
+        {aceitos.length > 0 && livres > 0 && (
+          <Button variant="outline" onClick={autoAllocate} disabled={busy}>
+            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Distribuir entre os confirmados na agenda
+          </Button>
+        )}
+        <Button onClick={startOperation} disabled={alocacoes.length === 0}>Iniciar operação</Button>
       </div>
+      <RegisterEntregadorDialog open={novoOpen} onClose={() => setNovoOpen(false)} onCreated={load} />
     </div>
   );
 }

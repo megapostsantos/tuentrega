@@ -558,6 +558,7 @@ const DDL_LAZY: string[] = [
 	"empresa_id" text NOT NULL,
 	"criado_em" timestamp DEFAULT now() NOT NULL
 );`,
+  `ALTER TABLE "entregadores_gerenciados" ADD COLUMN IF NOT EXISTS "codigo_convite" text;`,
   `CREATE TABLE IF NOT EXISTS "entregador_documentos" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"entregador_id" text NOT NULL,
@@ -729,6 +730,8 @@ async function cadastrarEntregadorGerenciado(uid: string | null, args: Record<st
   const enumPix = ["cpf", "cnpj", "email", "telefone", "aleatoria"];
   const veic = enumVeic.includes(String(args.tipo_veiculo)) ? String(args.tipo_veiculo) : null;
   const pix = enumPix.includes(String(args.pix_tipo)) ? String(args.pix_tipo) : null;
+  const alfa = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const codigo = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => alfa[b % alfa.length]).join("");
   const stmts: { text: string; params: unknown[] }[] = [
     { text: `insert into "user" ("id","name","email","emailVerified","role") values ($1,$2,$3,false,'entregador')`, params: [id, nome, emailFinal] },
     { text: `insert into "profiles" ("id","full_name","phone") values ($1,$2,$3) on conflict do nothing`, params: [id, nome, limpa(args.whatsapp)] },
@@ -738,10 +741,10 @@ async function cadastrarEntregadorGerenciado(uid: string | null, args: Record<st
              values ($1,$2,$3,$4,$5,$6::veiculo_tipo,$7,$8,$9,$10::pix_tipo,$11,'ativo')`,
       params: [id, nome, cpf, limpa(args.whatsapp), email, veic, limpa(args.marca_veiculo), limpa(args.modelo_veiculo), limpa(args.placa)?.toUpperCase() ?? null, pix, limpa(args.pix_chave)],
     },
-    { text: `insert into "entregadores_gerenciados" ("entregador_id","empresa_id") values ($1,$2)`, params: [id, uid] },
+    { text: `insert into "entregadores_gerenciados" ("entregador_id","empresa_id","codigo_convite") values ($1,$2,$3)`, params: [id, uid, codigo] },
   ];
   await runTransaction(stmts);
-  return { data: { id }, error: null, count: null };
+  return { data: { id, codigo: email ? codigo : null }, error: null, count: null };
 }
 
 async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
@@ -1097,3 +1100,35 @@ export async function registerProfile(
 }
 
 export { query as rawQuery };
+
+
+const tentativasConvite = new Map<string, { n: number; ate: number }>();
+
+/** Entregador pré-cadastrado pela empresa cria a própria senha e assume a conta (histórico preservado). */
+export async function resgatarConvite(email: string, codigo: string, senha: string): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+  const em = email.trim().toLowerCase();
+  const t = tentativasConvite.get(em);
+  if (t && t.ate > Date.now() && t.n >= 5) return { ok: false, status: 429, message: "Muitas tentativas. Aguarde alguns minutos." };
+  if (senha.length < 6) return { ok: false, status: 400, message: "A senha precisa ter pelo menos 6 caracteres." };
+  await garantirTabelas();
+  const rows = await query(
+    `select u."id", g."empresa_id", g."codigo_convite" from "user" u join "entregadores_gerenciados" g on g."entregador_id" = u."id"
+     where lower(u."email") = $1`, [em]);
+  const r = rows[0] as any;
+  const cod = codigo.trim().toUpperCase();
+  if (!r || !r.codigo_convite || r.codigo_convite !== cod) {
+    tentativasConvite.set(em, { n: (t && t.ate > Date.now() ? t.n : 0) + 1, ate: Date.now() + 10 * 60_000 });
+    return { ok: false, status: 400, message: "E-mail ou código de convite inválido." };
+  }
+  const { auth } = await import("@/lib/auth");
+  const ctx: any = await auth.$context;
+  const hash = await ctx.password.hash(senha);
+  await ctx.internalAdapter.linkAccount({ userId: r.id, providerId: "credential", accountId: r.id, password: hash });
+  await runTransaction([
+    { text: `delete from "entregadores_gerenciados" where "entregador_id" = $1`, params: [r.id] },
+    { text: `insert into "dispatchers" ("entregador_id","empresa_id","valor_por_pacote","status") values ($1,$2,0,'ativo') on conflict do nothing`, params: [r.id, r.empresa_id] },
+    { text: `update "user" set "emailVerified" = true where "id" = $1`, params: [r.id] },
+  ]);
+  tentativasConvite.delete(em);
+  return { ok: true };
+}

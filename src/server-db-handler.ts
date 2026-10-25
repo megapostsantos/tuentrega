@@ -70,6 +70,14 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     return Response.json({ ok: true });
   }
 
+  if (url.pathname === "/api/db/claim-invite" && req.method === "POST") {
+    const body: any = await req.json().catch(() => null);
+    if (!body?.email || !body?.codigo || !body?.senha) return Response.json({ error: "Preencha e-mail, código e senha." }, { status: 400 });
+    const { resgatarConvite } = await import("./server/data-engine");
+    const r = await resgatarConvite(String(body.email), String(body.codigo), String(body.senha));
+    return r.ok ? Response.json({ ok: true }) : Response.json({ error: r.message }, { status: r.status });
+  }
+
   if (url.pathname === "/api/db/register" && req.method === "POST") {
     const { auth } = await import("./lib/auth");
     const session = await auth.api.getSession({ headers: req.headers });
