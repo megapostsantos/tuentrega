@@ -16,6 +16,7 @@ import { DistribuicaoStats } from "@/components/summaries/DistribuicaoStats";
 import { EmptyModule } from "@/components/EmptyModule";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseZonas } from "@/lib/zonas";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -260,7 +261,9 @@ function OperationCard({ op, onView, showMargem }: { op: Operacao; onView: () =>
 
 /* ============ Create operation flow (4-step stepper) ============ */
 
-type DivisionMode = "auto" | "manual" | "single" | "agenda";
+type DivisionMode = "auto" | "manual" | "single" | "agenda" | "lista";
+
+
 type AgendaMembro = { entregador_id: string; nome: string; qtd: number };
 
 function repartir(total: number, pesos: number[]): number[] {
@@ -309,6 +312,10 @@ function CreateOperation({
 
   // Step 2
   const [divisionMode, setDivisionMode] = useState<DivisionMode>("auto");
+  const [listaTexto, setListaTexto] = useState("");
+  const zonasLista = useMemo(() => parseZonas(listaTexto), [listaTexto]);
+  const listaSomaP = zonasLista.reduce((s, z) => s + z.pacotes, 0);
+  const listaSomaS = zonasLista.reduce((s, z) => s + z.paradas, 0);
   const [numRotas, setNumRotas] = useState<number>(3);
   const [manualRotas, setManualRotas] = useState<Rota[]>([]);
   const [rotas, setRotas] = useState<Rota[]>([]);
@@ -411,6 +418,7 @@ function CreateOperation({
     if (divisionMode === "agenda") r = buildFromAgenda();
     else if (divisionMode === "auto") r = buildAuto(numRotas);
     else if (divisionMode === "single") r = buildSingle();
+    else if (divisionMode === "lista") r = zonasLista.map((z) => ({ nome: z.nome, quantidade_pacotes: z.pacotes, quantidade_paradas: z.paradas, valor_total: z.pacotes * valorPorPacote }));
     else r = manualRotas.map((x) => ({ ...x, valor_total: x.quantidade_pacotes * valorPorPacote }));
     setRotas(r);
     setStep(3);
@@ -471,7 +479,7 @@ function CreateOperation({
         total_pacotes_contados: totalPacotes,
         total_paradas: totalParadas,
         valor_por_pacote: valorPorPacote,
-        metodo_divisao: divisionMode,
+        metodo_divisao: divisionMode === "lista" ? "manual" : divisionMode,
         status: "draft",
         observacoes: observacoes || null,
         origem: origemFinal,
@@ -575,12 +583,13 @@ function CreateOperation({
     setObservacoes(""); setCreatedOpId(null); setCreatedRotaIds([]); setPublishedOffers([]);
   }
 
-  const step1Valid = !!origemFinal && totalPacotes > 0 && totalParadas > 0 && valorPorPacote > 0;
+  const step1Valid = !!origemFinal && totalPacotes > 0 && valorPorPacote > 0;
   const step2Valid =
     (divisionMode === "agenda" && !!agenda && totalPacotes > 0) ||
     divisionMode === "single" ||
     (divisionMode === "auto" && numRotas > 0) ||
-    (divisionMode === "manual" && manualRotas.length > 0 && manualSomaP === totalPacotes && manualSomaS === totalParadas);
+    (divisionMode === "lista" && zonasLista.length > 0 && listaSomaP === totalPacotes) ||
+    (divisionMode === "manual" && manualRotas.length > 0 && manualSomaP === totalPacotes && (totalParadas === 0 || manualSomaS === totalParadas));
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -654,14 +663,14 @@ function CreateOperation({
                   onChange={(e) => setTotalPacotes(Number(e.target.value) || 0)}
                 />
               </Field>
-              <Field label="Total de paradas">
+              <Field label="Total de paradas (opcional)">
                 <Input
                   type="number" min={0}
                   value={totalParadas || ""}
                   onChange={(e) => setTotalParadas(Number(e.target.value) || 0)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Média: <strong>{mediaPorParada > 0 ? mediaPorParada.toFixed(1) : "—"}</strong> pacotes por parada
+                  {mediaPorParada > 0 ? <>Média: <strong>{mediaPorParada.toFixed(1)}</strong> pacotes por parada</> : "Pode deixar em branco — o importante são os pacotes."}
                 </p>
               </Field>
             </div>
@@ -705,6 +714,7 @@ function CreateOperation({
                   ? [{ v: "agenda" as DivisionMode, title: "Pela agenda", d: `${agenda.membros.length} entregador(es) comprometido(s) para esta data: uma rota para cada um` }]
                   : []),
                 { v: "auto" as DivisionMode, title: "Divisão automática", d: "Sistema divide igualmente por quantidade de rotas" },
+                { v: "lista" as DivisionMode, title: "Colar lista de zonas", d: "Cole as zonas com a quantidade de pacotes de cada uma (ideal para muitas zonas)" },
                 { v: "manual" as DivisionMode, title: "Divisão manual", d: "Você define cada rota individualmente" },
                 { v: "single" as DivisionMode, title: "Rota única", d: "Tudo em uma única rota sem divisão" },
               ].map((opt) => (
@@ -731,7 +741,7 @@ function CreateOperation({
                   {agenda.valor > 0 && <> Valor por pacote da previsão: <strong>R$ {agenda.valor.toFixed(2)}</strong>.</>}
                   <ul className="mt-2 list-disc pl-5">
                     {buildFromAgenda().map((r, i) => (
-                      <li key={i}>{r.entregador_nome}: {r.quantidade_pacotes} pacotes · {r.quantidade_paradas} paradas · R$ {r.valor_total.toFixed(2)}</li>
+                      <li key={i}>{r.entregador_nome}: {r.quantidade_pacotes} pacotes{r.quantidade_paradas > 0 ? ` · ${r.quantidade_paradas} paradas` : ""} · R$ {r.valor_total.toFixed(2)}</li>
                     ))}
                   </ul>
                 </div>
@@ -747,10 +757,33 @@ function CreateOperation({
                   Prévia:
                   <ul className="mt-1 list-disc pl-5">
                     {buildAuto(numRotas).map((r, i) => (
-                      <li key={i}>{r.nome}: {r.quantidade_pacotes} pacotes · {r.quantidade_paradas} paradas · R$ {r.valor_total.toFixed(2)}</li>
+                      <li key={i}>{r.nome}: {r.quantidade_pacotes} pacotes{r.quantidade_paradas > 0 ? ` · ${r.quantidade_paradas} paradas` : ""} · R$ {r.valor_total.toFixed(2)}</li>
                     ))}
                   </ul>
                 </div>
+              </div>
+            )}
+
+            {divisionMode === "lista" && (
+              <div className="space-y-3 rounded-md border p-3">
+                <Label className="text-sm">Uma zona por linha: nome e quantidade de pacotes</Label>
+                <Textarea
+                  rows={10}
+                  value={listaTexto}
+                  onChange={(e) => setListaTexto(e.target.value)}
+                  placeholder={"Zona Norte 120\nZona Sul 85\nCentro 60\n\nOu com paradas (opcional): Zona Leste;90;40"}
+                />
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span><strong>{zonasLista.length}</strong> zonas · <strong>{listaSomaP}</strong> / {totalPacotes} pacotes{listaSomaS > 0 ? ` · ${listaSomaS} paradas` : ""}</span>
+                  {listaSomaP !== totalPacotes && listaSomaP > 0 && (
+                    <Button size="sm" variant="outline" onClick={() => setTotalPacotes(listaSomaP)}>Usar {listaSomaP} como total de pacotes</Button>
+                  )}
+                </div>
+                {zonasLista.length > 0 && listaSomaP !== totalPacotes && (
+                  <div className="rounded border border-amber-300 bg-amber-50 p-2 text-sm text-amber-900">
+                    ⚠️ A soma das zonas ({listaSomaP}) precisa bater com o total de pacotes ({totalPacotes}). Diferença: {totalPacotes - listaSomaP}.
+                  </div>
+                )}
               </div>
             )}
 
@@ -770,16 +803,16 @@ function CreateOperation({
                     <Field label="Pacotes">
                       <Input type="number" min={0} value={r.quantidade_pacotes || ""} onChange={(e) => updateManual(i, { quantidade_pacotes: Number(e.target.value) || 0 })} />
                     </Field>
-                    <Field label="Paradas">
+                    <Field label="Paradas (opcional)">
                       <Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => updateManual(i, { quantidade_paradas: Number(e.target.value) || 0 })} />
                     </Field>
                     <Button variant="ghost" size="icon" onClick={() => removeManual(i)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
                 <Button variant="outline" size="sm" onClick={addManual}><Plus className="mr-1 h-4 w-4" />Adicionar rota</Button>
-                {(manualSomaP !== totalPacotes || manualSomaS !== totalParadas) && manualRotas.length > 0 && (
+                {(manualSomaP !== totalPacotes || (totalParadas > 0 && manualSomaS !== totalParadas)) && manualRotas.length > 0 && (
                   <div className="rounded border border-amber-300 bg-amber-50 p-2 text-sm text-amber-900">
-                    ⚠️ Soma deve bater com totais: {totalPacotes} pacotes / {totalParadas} paradas
+                    ⚠️ Soma deve bater com o total: {totalPacotes} pacotes{totalParadas > 0 ? ` / ${totalParadas} paradas` : ""}
                   </div>
                 )}
               </div>
@@ -787,7 +820,7 @@ function CreateOperation({
 
             {divisionMode === "single" && (
               <div className="rounded-md border p-3 text-sm">
-                Uma única rota com <strong>{totalPacotes}</strong> pacotes · <strong>{totalParadas}</strong> paradas · <strong>R$ {totalEstimado.toFixed(2)}</strong>
+                Uma única rota com <strong>{totalPacotes}</strong> pacotes · {totalParadas > 0 && <><strong>{totalParadas}</strong> paradas · </>}<strong>R$ {totalEstimado.toFixed(2)}</strong>
               </div>
             )}
 
@@ -808,7 +841,7 @@ function CreateOperation({
               <div>Origem: <strong>{origemFinal}</strong></div>
               <div>Data: <strong>{new Date(dataOperacao).toLocaleDateString("pt-BR")}</strong></div>
               <div>Total pacotes: <strong>{totalPacotes}</strong></div>
-              <div>Total paradas: <strong>{totalParadas}</strong></div>
+              {totalParadas > 0 && <div>Total paradas: <strong>{totalParadas}</strong></div>}
               <div>Rotas: <strong>{rotas.length}</strong></div>
             </div>
 
@@ -838,7 +871,7 @@ function CreateOperation({
                   <Field label="Pacotes">
                     <Input type="number" min={0} value={r.quantidade_pacotes || ""} onChange={(e) => updateRota(i, { quantidade_pacotes: Number(e.target.value) || 0 })} />
                   </Field>
-                  <Field label="Paradas">
+                  <Field label="Paradas (opcional)">
                     <Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => updateRota(i, { quantidade_paradas: Number(e.target.value) || 0 })} />
                   </Field>
                   <Field label="Valor por pacote R$">
@@ -986,7 +1019,7 @@ function ManualRoutes({ rotas, setRotas, valorPorPacote }: { rotas: Rota[]; setR
           <Field label="Pacotes">
             <Input type="number" min={0} value={r.quantidade_pacotes || ""} onChange={(e) => update(i, { quantidade_pacotes: Number(e.target.value) || 0 })} />
           </Field>
-          <Field label="Paradas">
+          <Field label="Paradas (opcional)">
             <Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => update(i, { quantidade_paradas: Number(e.target.value) || 0 })} />
           </Field>
           <Field label="Valor">
@@ -1073,7 +1106,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
           <div className="grid gap-2 sm:grid-cols-2">
             <div>Pacotes (sistema): <strong>{op.total_pacotes_sistema}</strong></div>
             <div>Pacotes (contados): <strong>{op.total_pacotes_contados}</strong></div>
-            <div>Paradas: <strong>{op.total_paradas}</strong></div>
+            {Number(op.total_paradas) > 0 && <div>Paradas: <strong>{op.total_paradas}</strong></div>}
             <div>Valor por pacote: <strong>R$ {Number(op.valor_por_pacote).toFixed(2)}</strong></div>
             {op.pacotes_faltando > 0 && <div className="text-amber-700">Faltando: {op.pacotes_faltando}</div>}
             {op.pacotes_a_mais > 0 && <div className="text-amber-700">A mais: {op.pacotes_a_mais}</div>}
@@ -1567,7 +1600,7 @@ function AllocationPanel({
             <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm">
               <div>
                 <div className="font-medium">{r.nome}</div>
-                <div className="text-xs text-muted-foreground">{r.quantidade_pacotes} pacotes · {r.quantidade_paradas} paradas · R$ {Number(r.valor_total).toFixed(2)}</div>
+                <div className="text-xs text-muted-foreground">{r.quantidade_pacotes} pacotes{r.quantidade_paradas > 0 ? ` · ${r.quantidade_paradas} paradas` : ""} · R$ {Number(r.valor_total).toFixed(2)}</div>
               </div>
               {a ? (
                 <span className="text-emerald-700">✅ {(a.entregadores as any)?.nome_completo}</span>
@@ -1898,7 +1931,7 @@ function SharePublishedOffers({
   const buildMessage = () => {
     const lines = offers.map(
       (o) =>
-        `• ${o.titulo}\n  📦 ${o.quantidade_pacotes} pacotes · 🗺️ ${o.quantidade_paradas} paradas · 💰 ${brl(o.valor_por_pacote)}/pacote · 💵 ${brl(o.valor_total)}\n  🔗 ${base}/oferta/${o.id}`,
+        `• ${o.titulo}\n  📦 ${o.quantidade_pacotes} pacotes ·${o.quantidade_paradas > 0 ? ` 🗺️ ${o.quantidade_paradas} paradas ·` : ""} 💰 ${brl(o.valor_por_pacote)}/pacote · 💵 ${brl(o.valor_total)}\n  🔗 ${base}/oferta/${o.id}`,
     );
     return (
       `🚚 TuEntrega — Novas ofertas disponíveis!\n\n` +

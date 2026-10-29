@@ -138,7 +138,6 @@ function OfertasPage() {
     let q = supabase.from("ofertas").select("*").order("created_at", { ascending: false });
     if (role === "empresa" && user) q = q.eq("empresa_id", user.id);
     const { data, error } = await q;
-    console.log("[ofertas] role=", role, "rows=", data?.length, "error=", error?.message, data);
     if (error) toast.error(error.message);
     setOfertas((data ?? []) as Oferta[]);
     setLoading(false);
@@ -183,6 +182,23 @@ function EmpresaView({
   ofertas: Oferta[]; loading: boolean; open: boolean; setOpen: (b: boolean) => void; reload: () => void;
 }) {
   const [selected, setSelected] = useState<Oferta | null>(null);
+  const [filtro, setFiltro] = useState<string>("ativas");
+  const [busca, setBusca] = useState("");
+
+  const hoje = new Date().toLocaleDateString("en-CA");
+  const ATIVAS = ["open", "accepted", "in_progress", "awaiting_return"];
+  const FILTROS: { k: string; label: string; test: (o: Oferta) => boolean }[] = [
+    { k: "ativas", label: "Ativas", test: (o) => ATIVAS.includes(o.status) },
+    { k: "hoje", label: "Hoje", test: (o) => (o.data_trabalho ?? "").slice(0, 10) === hoje && o.status !== "cancelled" },
+    { k: "open", label: "Sem entregador", test: (o) => o.status === "open" },
+    { k: "accepted", label: "Aguardando início", test: (o) => o.status === "accepted" },
+    { k: "in_progress", label: "Em rota", test: (o) => o.status === "in_progress" },
+    { k: "awaiting_return", label: "Devolução", test: (o) => o.status === "awaiting_return" },
+    { k: "completed", label: "Concluídas", test: (o) => o.status === "completed" },
+    { k: "todas", label: "Todas", test: () => true },
+  ];
+  const filtroAtual = FILTROS.find((f) => f.k === filtro) ?? FILTROS[0];
+  const visiveis = ofertas.filter((o) => filtroAtual.test(o) && (!busca.trim() || o.titulo.toLowerCase().includes(busca.trim().toLowerCase())));
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -213,11 +229,33 @@ function EmpresaView({
           </Button>
         </CardContent></Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {ofertas.map((o) => (
-            <OfertaCard key={o.id} o={o} onDetails={() => setSelected(o)} role="empresa" reload={reload} />
-          ))}
-        </div>
+        <>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+            {FILTROS.map((f) => {
+              const n = ofertas.filter(f.test).length;
+              return (
+                <button
+                  key={f.k}
+                  type="button"
+                  onClick={() => setFiltro(f.k)}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${filtro === f.k ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"}`}
+                >
+                  {f.label} ({n})
+                </button>
+              );
+            })}
+          </div>
+          <Input placeholder="Buscar por zona ou rota…" value={busca} onChange={(e) => setBusca(e.target.value)} />
+          {visiveis.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma oferta neste filtro.</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {visiveis.map((o) => (
+                <OfertaCard key={o.id} o={o} onDetails={() => setSelected(o)} role="empresa" reload={reload} />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {selected && <DetailsDialog o={selected} onClose={() => setSelected(null)} role="empresa" reload={reload} />}

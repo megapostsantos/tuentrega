@@ -11,6 +11,7 @@ import { StatCard } from "@/components/StatCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { PendingAllocationBanner } from "@/components/PendingAllocationBanner";
+import { EmpresaPainel } from "@/components/dashboard/EmpresaPainel";
 import { DashboardOverview } from "@/components/summaries/DashboardOverview";
 
 
@@ -22,7 +23,7 @@ function Dashboard() {
   const { role, user } = useAuth();
   if (role === "admin") return <AdminDashboard />;
   if (role === "dispatcher") return <DispatcherDashboard userId={user?.id} />;
-  if (role === "empresa") return <EmpresaDashboard userId={user?.id} />;
+  if (role === "empresa") return <EmpresaPainel userId={user?.id} />;
   return <EntregadorDashboard userId={user?.id} />;
 }
 
