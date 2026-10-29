@@ -288,7 +288,7 @@ function CreateOperation({
   // Step 1
   const [origem, setOrigem] = useState<string>("Mercado Livre");
   const [origemCustom, setOrigemCustom] = useState<string>("");
-  const [dataOperacao, setDataOperacao] = useState(new Date().toISOString().slice(0, 10));
+  const [dataOperacao, setDataOperacao] = useState(new Date().toLocaleDateString("en-CA"));
   const [totalPacotes, setTotalPacotes] = useState<number>(0);
   const [totalParadas, setTotalParadas] = useState<number>(0);
   const [valorPorPacote, setValorPorPacote] = useState<number>(empresa?.tms_valor_padrao_pacote ?? 1.8);
@@ -576,7 +576,7 @@ function CreateOperation({
 
   function resetAll() {
     setStep(1); setOrigem("Mercado Livre"); setOrigemCustom("");
-    setDataOperacao(new Date().toISOString().slice(0, 10));
+    setDataOperacao(new Date().toLocaleDateString("en-CA"));
     setTotalPacotes(0); setTotalParadas(0);
     setValorPorPacote(empresa?.tms_valor_padrao_pacote ?? 1.8);
     setDivisionMode("auto"); setNumRotas(3); setManualRotas([]); setRotas([]);
@@ -645,6 +645,15 @@ function CreateOperation({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Data da operação">
                 <Input type="date" value={dataOperacao} onChange={(e) => setDataOperacao(e.target.value)} />
+                <div className="flex gap-2 pt-1">
+                  {[{ l: "Hoje", d: 0 }, { l: "Amanhã", d: 1 }, { l: "Depois de amanhã", d: 2 }].map((x) => {
+                    const v = new Date(Date.now() + x.d * 86400000).toLocaleDateString("en-CA");
+                    return (
+                      <Button key={x.l} type="button" size="sm" variant={dataOperacao === v ? "default" : "outline"} onClick={() => setDataOperacao(v)}>{x.l}</Button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">Dá para criar hoje a operação de outro dia: as ofertas aparecem para os entregadores já com a data.</p>
               </Field>
               <Field label="Valor por pacote (R$)">
                 <Input

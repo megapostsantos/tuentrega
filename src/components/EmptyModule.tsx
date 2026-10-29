@@ -10,7 +10,6 @@ export function EmptyModule({ icon: Icon, title, description }: {
       </div>
       <h3 className="mt-4 text-lg font-semibold">{title}</h3>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">{description}</p>
-      <p className="mt-4 text-xs text-muted-foreground">Em breve — este módulo será construído nas próximas iterações.</p>
     </div>
   );
 }

@@ -80,6 +80,23 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   cancelled: { label: "Cancelada", cls: "bg-red-500/15 text-red-700" },
 };
 
+function gruposPorData(lista: Oferta[]): [string, Oferta[]][] {
+  const m = new Map<string, Oferta[]>();
+  for (const o of lista) {
+    const k = (o.data_trabalho ?? "").slice(0, 10) || "sem-data";
+    m.set(k, [...(m.get(k) ?? []), o]);
+  }
+  return [...m.entries()].sort(([a], [b]) => (a === "sem-data" ? 1 : b === "sem-data" ? -1 : a.localeCompare(b)));
+}
+
+function rotuloData(k: string): string {
+  if (k === "sem-data") return "Sem data definida";
+  const hoje = new Date().toLocaleDateString("en-CA");
+  const amanha = new Date(Date.now() + 86400000).toLocaleDateString("en-CA");
+  const fmt = new Date(k + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
+  return k === hoje ? `Hoje · ${fmt}` : k === amanha ? `Amanhã · ${fmt}` : fmt;
+}
+
 function fmtMoney(n: number | null | undefined) {
   return `R$ ${Number(n ?? 0).toFixed(2)}`;
 }
@@ -706,9 +723,16 @@ function EntregadorView({
               {myVehicle && <p className="text-xs text-muted-foreground">Confira se seu veículo ({VEHICLE_MAP[myVehicle]?.label ?? myVehicle}) bate com as ofertas da sua região</p>}
             </CardContent></Card>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {available.map((o) => (
-                <OfertaCard key={o.id} o={o} onDetails={() => setSelected(o)} role="entregador" reload={reload} />
+            <div className="space-y-5">
+              {gruposPorData(available).map(([data, lista]) => (
+                <div key={data} className="space-y-2">
+                  <h3 className="text-sm font-semibold capitalize">{rotuloData(data)} <span className="font-normal text-muted-foreground">· {lista.length} rota(s)</span></h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {lista.map((o) => (
+                      <OfertaCard key={o.id} o={o} onDetails={() => setSelected(o)} role="entregador" reload={reload} />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           )}
