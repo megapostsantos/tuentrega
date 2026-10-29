@@ -26,7 +26,7 @@ export function ResetPasswordDialog({
   }
 
   const msg = senha
-    ? `Olá ${alvo?.nome.split(" ")[0]}! Sua senha da TuEntrega foi redefinida.\nSenha provisória: ${senha}\nAcesse https://tuentrega.megapostsantos.workers.dev/auth — você vai criar uma nova senha no primeiro acesso.`
+    ? `Olá ${alvo?.nome.split(" ")[0]}! Sua senha da TuEntrega foi redefinida.\nSenha provisória: ${senha}\nAcesse ${window.location.origin}/auth — você vai criar uma nova senha no primeiro acesso.`
     : "";
   const fone = (alvo?.whatsapp ?? "").replace(/\D/g, "");
 

@@ -72,6 +72,8 @@ export const auth = betterAuth({
   trustedOrigins: [
     "http://localhost:5173",
     "https://tuentrega.megapostsantos.workers.dev",
+    "https://tuentrega.com.br",
+    "https://www.tuentrega.com.br",
     process.env.BETTER_AUTH_URL || "https://tuentrega.megapostsantos.workers.dev",
   ],
 });
