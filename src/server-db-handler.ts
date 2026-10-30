@@ -70,6 +70,17 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     return Response.json({ ok: true });
   }
 
+  if (url.pathname === "/api/db/equipe-me" && req.method === "GET") {
+    const { auth } = await import("./lib/auth");
+    const session = await auth.api.getSession({ headers: req.headers });
+    const user = session?.user as any;
+    if (!user) return Response.json({ error: "Não autenticado" }, { status: 401 });
+    if (user.role !== "operador") return Response.json({ operador: false });
+    const { empresaDoOperador } = await import("./server/data-engine");
+    const emp = await empresaDoOperador(user.id);
+    return Response.json({ operador: true, ativo: !!emp, empresaId: emp?.empresaId ?? null });
+  }
+
   if (url.pathname === "/api/db/claim-invite" && req.method === "POST") {
     const body: any = await req.json().catch(() => null);
     if (!body?.email || !body?.codigo || !body?.senha) return Response.json({ error: "Preencha e-mail, código e senha." }, { status: 400 });
@@ -105,7 +116,13 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     } catch {
       return Response.json({ data: null, error: { message: "JSON inválido" }, count: null }, { status: 400 });
     }
-    const resp = await executeQuery(body, { userId: user?.id ?? null, role: user?.role ?? null });
+    let ctx: { userId: string | null; role: string | null; operador?: boolean } = { userId: user?.id ?? null, role: user?.role ?? null };
+    if (user?.role === "operador") {
+      const { empresaDoOperador } = await import("./server/data-engine");
+      const emp = await empresaDoOperador(user.id);
+      ctx = emp ? { userId: emp.empresaId, role: "empresa", operador: true } : { userId: user.id, role: "operador" };
+    }
+    const resp = await executeQuery(body, ctx);
     return Response.json(resp, { headers: { "cache-control": "no-store" } });
   }
 

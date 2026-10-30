@@ -88,7 +88,8 @@ function periodRange(p: Periodo, custom?: { from?: Date; to?: Date }) {
 }
 
 function FinanceiroPage() {
-  const { role, loading, user } = useAuth();
+  const { role, loading, user, isOperador } = useAuth();
+  if (isOperador) return <div className="p-6 text-muted-foreground">Esta área é restrita ao dono da empresa.</div>;
 
   if (loading) {
     return (

@@ -89,3 +89,10 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 - Insucesso: entregador informa o ID do pacote, o motivo e tira foto (local para fechado/ausente/recusado; pacote se avariado). A empresa vê as fotos em "Ocorrências" e na tela de devoluções.
 - Fim da rota: 100% entregue encerra na hora. Com insucessos a rota fica "Aguardando devolução" até a empresa dar baixa nos pacotes devolvidos (ou encerrar como extraviado: -30 pts por pacote, máx. -60). Só então a rota vira "Concluída" e o valor (entregues × valor por pacote) fica disponível ao entregador.
 - Entregador gerenciado (sem app): cadastrado pela empresa, visível só a ela; empresa opera a rota por ele ("Operar rota"), sem GPS. Exige comprovante de residência + RG/CNH (bucket privado `entregador-docs`, legível só por quem enviou e admin) e aceite LGPD.
+
+## Equipe da empresa (funcionário / operador)
+- O dono cadastra funcionários em **Equipe** (nome + e-mail). O funcionário ativa a conta pela aba **Convite** do login (e-mail + código) e define a senha.
+- O funcionário opera o dia a dia: cria operações (colar zonas), aloca parceiros, acompanha rotas, encerra rotas pelo gestor, confere devoluções.
+- **Não vê nem digita valores**: o servidor devolve valores nulos e usa o **valor padrão por pacote** definido pelo dono. Sem acesso a pagamentos, financeiro, antecipação nem PIX. Não apaga nada.
+- Só o **dono** apaga: eliminar rota (inclusive "apagar de vez") e "Apagar histórico de testes" (Configurações). O admin tem a limpeza geral em /admin/limpeza.
+- O "dispatcher" antigo continua sendo outro conceito: parceiro entregador que gerencia time próprio.

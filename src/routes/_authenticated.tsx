@@ -39,6 +39,8 @@ function AuthenticatedLayout() {
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
   if (loading || !user) return <SplashScreen />;
+  if (!role && (user as any).role === "operador")
+    return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Seu acesso à equipe foi desativado. Fale com o dono da empresa.</div>;
   if (mustChange) return <ForcePasswordChange />;
 
   return (

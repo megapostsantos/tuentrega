@@ -486,6 +486,16 @@ export const entregadorDocumentos = pgTable("entregador_documentos", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const equipeEmpresa = pgTable("equipe_empresa", {
+  userId: text("user_id").primaryKey(),
+  empresaId: text("empresa_id").notNull(),
+  nome: text("nome"),
+  email: text("email"),
+  ativo: boolean("ativo").notNull().default(true),
+  codigoConvite: text("codigo_convite"),
+  criadoEm: timestamp("criado_em").notNull().defaultNow(),
+});
+
 export const fechamentosGestor = pgTable("fechamentos_gestor", {
   id: uuid("id").primaryKey().defaultRandom(),
   ofertaId: text("oferta_id").notNull(),

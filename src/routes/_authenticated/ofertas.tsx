@@ -98,6 +98,7 @@ function rotuloData(k: string): string {
 }
 
 function fmtMoney(n: number | null | undefined) {
+  if (n == null) return "—";
   return `R$ ${Number(n ?? 0).toFixed(2)}`;
 }
 
@@ -198,6 +199,7 @@ function EmpresaView({
 }: {
   ofertas: Oferta[]; loading: boolean; open: boolean; setOpen: (b: boolean) => void; reload: () => void;
 }) {
+  const { isOperador } = useAuth();
   const [selected, setSelected] = useState<Oferta | null>(null);
   const [filtro, setFiltro] = useState<string>("ativas");
   const [busca, setBusca] = useState("");
@@ -221,7 +223,7 @@ function EmpresaView({
     <div className="space-y-6 p-4 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <PageHeader title="Minhas ofertas" description="Crie ofertas e acompanhe seus entregadores" />
-        <Dialog open={open} onOpenChange={setOpen}>
+        {!isOperador && <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:opacity-90">
               <Plus className="mr-1 h-4 w-4" /> Nova oferta
@@ -231,7 +233,7 @@ function EmpresaView({
             <DialogHeader><DialogTitle>Criar oferta</DialogTitle></DialogHeader>
             <NewOfertaForm onCreated={() => { setOpen(false); reload(); }} />
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       {loading ? (
@@ -241,9 +243,11 @@ function EmpresaView({
           <Store className="mx-auto h-12 w-12 text-muted-foreground" />
           <p className="font-medium">Você ainda não tem ofertas</p>
           <p className="text-sm text-muted-foreground">Crie sua primeira oferta e encontre entregadores na sua região</p>
-          <Button onClick={() => setOpen(true)} className="bg-primary text-primary-foreground hover:opacity-90">
-            <Plus className="mr-1 h-4 w-4" /> Criar oferta
-          </Button>
+          {!isOperador && (
+            <Button onClick={() => setOpen(true)} className="bg-primary text-primary-foreground hover:opacity-90">
+              <Plus className="mr-1 h-4 w-4" /> Criar oferta
+            </Button>
+          )}
         </CardContent></Card>
       ) : (
         <>
@@ -786,7 +790,8 @@ function OfertaCard({
     reload();
   }
 
-  const canEdit = role === "empresa" && o.status === "open";
+  const { isOperador } = useAuth();
+  const canEdit = role === "empresa" && o.status === "open" && !isOperador;
   const canShare = role === "empresa" && ["open", "accepted", "in_progress"].includes(o.status);
 
   return (
@@ -801,7 +806,7 @@ function OfertaCard({
               {o.hora_fim && ` - ${o.hora_fim.slice(0, 5)}`}
             </p>
           </div>
-          <p className="text-xl font-bold text-primary">{fmtMoney(o.valor)}</p>
+          {o.valor != null && <p className="text-xl font-bold text-primary">{fmtMoney(o.valor)}</p>}
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -997,7 +1002,7 @@ function DetailsDialog({
 
         <div className="space-y-4 text-sm">
           <div className="rounded-lg bg-muted/40 p-3">
-            <p className="text-2xl font-bold text-primary">{fmtMoney(o.valor)}</p>
+            {o.valor != null && <p className="text-2xl font-bold text-primary">{fmtMoney(o.valor)}</p>}
             {o.valor_por_pacote && <p className="text-xs text-muted-foreground">Por pacote: {fmtMoney(o.valor_por_pacote)}</p>}
           </div>
 

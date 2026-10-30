@@ -71,3 +71,23 @@ export async function executarLimpeza(modo: "operacional" | "contas", manter: st
   await runTransaction(stmts);
   return { ok: true, modo, tabelasLimpas: OPERACIONAIS.filter((t) => tem(t)).length, contasRemovidas: removidos };
 }
+
+/** Apaga o histórico de UMA empresa (operações, rotas, ofertas, pacotes, ocorrências, pagamentos). Cadastros e contas ficam. */
+export async function limparEmpresa(empresaId: string) {
+  const cols = await existentes();
+  const tem = (t: string, c?: string) => (c ? cols.has(`${t}.${c}`) : [...cols].some((k) => k.startsWith(`${t}.`)));
+  const stmts: { text: string; params: unknown[] }[] = [];
+  const del = (t: string, where: string) => { if (tem(t)) stmts.push({ text: `delete from "${t}" where ${where}`, params: [empresaId] }); };
+  const minhasOfertas = `select "id"::text from "ofertas" where "empresa_id"::text = $1`;
+  const minhasOps = `select "id"::text from "operacoes" where "empresa_id"::text = $1`;
+  del("entregas_pacotes", `"oferta_id"::text in (${minhasOfertas}) or "operacao_id"::text in (${minhasOps})`);
+  del("entregador_localizacao", `"oferta_id"::text in (${minhasOfertas})`);
+  del("agenda_compromissos", `"empresa_id"::text = $1`);
+  for (const t of ["entregas_ocorrencias", "ofertas_recusas", "entregas", "fechamentos_gestor", "antecipacoes", "alocacoes", "agenda_previsoes",
+    "rotas_operacao", "auditoria_faixas", "pagamentos", "extratos_mensais", "financeiro_lancamentos", "saidas_nex", "insucessos_nex"])
+    if (tem(t, "empresa_id")) del(t, `"empresa_id"::text = $1`);
+  del("ofertas", `"empresa_id"::text = $1`);
+  del("operacoes", `"empresa_id"::text = $1`);
+  await runTransaction(stmts);
+  return { ok: true };
+}

@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 });
 
 function Settings() {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, isOperador } = useAuth();
   const navigate = useNavigate();
 
   async function logout() {
@@ -40,7 +40,11 @@ function Settings() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader title="Meu perfil" description="Atualize seus dados cadastrais" />
-      {role === "empresa" && <EmpresaProfile />}
+      {role === "empresa" && !isOperador && <EmpresaProfile />}
+      {role === "empresa" && !isOperador && <ZonaDePerigo />}
+      {isOperador && (
+        <Card><CardContent className="p-4 text-sm text-muted-foreground">Você acessa a empresa como funcionário. Os dados da empresa são gerenciados pelo dono.</CardContent></Card>
+      )}
       {role === "entregador" && <EntregadorProfile />}
       {role === "admin" && <AdminBasic />}
       <PasswordChange />
@@ -53,6 +57,43 @@ function Settings() {
         Sair da conta
       </Button>
     </div>
+  );
+}
+
+/* ============ zona de perigo (dono) ============ */
+
+function ZonaDePerigo() {
+  const [aberto, setAberto] = useState(false);
+  const [conf, setConf] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function apagar() {
+    setBusy(true);
+    const { error } = await (supabase as any).rpc("limpar_meus_dados", { _confirmar: "APAGAR" });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Histórico apagado. Seus cadastros foram mantidos.");
+    setAberto(false); setConf("");
+  }
+  return (
+    <Card className="border-red-300">
+      <CardHeader><CardTitle className="text-base text-red-700">Apagar histórico de testes</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Apaga todas as operações, rotas, ofertas, pacotes, ocorrências, pagamentos e agenda da sua empresa. Os cadastros (entregadores, equipe, perfil) ficam. Não dá para desfazer.
+        </p>
+        {!aberto ? (
+          <Button variant="outline" className="border-red-300 text-red-700" onClick={() => setAberto(true)}>Apagar histórico…</Button>
+        ) : (
+          <div className="space-y-2">
+            <Input placeholder="Digite APAGAR para confirmar" value={conf} onChange={(e) => setConf(e.target.value)} />
+            <div className="flex gap-2">
+              <Button variant="destructive" disabled={busy || conf !== "APAGAR"} onClick={apagar}>{busy ? "Apagando…" : "Apagar tudo"}</Button>
+              <Button variant="ghost" onClick={() => { setAberto(false); setConf(""); }}>Cancelar</Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

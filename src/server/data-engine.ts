@@ -1,3 +1,4 @@
+import { OPERADOR_NEGADAS, OPERADOR_SEM_ESCRITA, OPERADOR_RPC_NEGADAS, mascarado, preencheFinanceiro, removeMascaradas } from "./operador";
 import { neon } from "@neondatabase/serverless";
 import { is } from "drizzle-orm";
 import { PgTable, getTableConfig } from "drizzle-orm/pg-core";
@@ -9,6 +10,8 @@ export interface EngineCtx {
   userId: string | null;
   role: string | null;
   internal?: boolean;
+  /** funcionário da empresa: userId já é o id da empresa; sem valores e sem exclusões */
+  operador?: boolean;
 }
 
 type Fk = { col: string; table: string; refCol: string };
@@ -39,6 +42,7 @@ interface Scope {
   uid: string;
   role: Role;
   P: (v: unknown) => string;
+  operador?: boolean;
 }
 
 function makeScope(ctx: EngineCtx, params: unknown[]): Scope | null {
@@ -47,7 +51,7 @@ function makeScope(ctx: EngineCtx, params: unknown[]): Scope | null {
   if (!ctx.userId) throw Object.assign(new Error("Não autenticado"), { code: "401" });
   if (role !== "empresa" && role !== "entregador" && role !== "dispatcher")
     throw Object.assign(new Error("Sem permissão"), { code: "403" });
-  return { uid: ctx.userId, role, P: (v) => `$${params.push(v)}` };
+  return { uid: ctx.userId, role, P: (v) => `$${params.push(v)}`, operador: !!ctx.operador };
 }
 
 function forbidden(msg = "Sem permissão"): never {
@@ -56,6 +60,7 @@ function forbidden(msg = "Sem permissão"): never {
 
 function readGuard(table: string, alias: string, scope: Scope | null): { deny: boolean; sql?: string } {
   if (!scope) return { deny: false };
+  if (scope.operador && OPERADOR_NEGADAS.has(table)) return { deny: true };
   const rule = ruleFor(POLICIES[table]?.read, scope.role);
   if (rule === undefined || rule === false) return { deny: true };
   if (rule === true) return { deny: false };
@@ -64,6 +69,7 @@ function readGuard(table: string, alias: string, scope: Scope | null): { deny: b
 
 function maskExpr(table: string, alias: string, col: string, scope: Scope | null): string | null {
   if (!scope) return null;
+  if (scope.operador && mascarado(table, col)) return "null";
   const m = ruleFor(POLICIES[table]?.mask, scope.role);
   if (!m || !m.cols.includes(col)) return null;
   return m.unless ? `(case when ${m.unless(alias, scope.P, scope.uid)} then "${alias}"."${col}" else null end)` : "null";
@@ -532,6 +538,25 @@ async function eliminarRota(uid: string | null, args: Record<string, unknown>): 
   );
   const r = rows[0];
   if (!r) throw new Error("Rota não encontrada");
+  if (args._apagar === true) {
+    if (r.oferta_id) {
+      const pg = await query(`select coalesce("payment_status",'pending') as ps from "ofertas" where "id"::text = $1`, [String(r.oferta_id)]);
+      if (["paid", "pago"].includes(String(pg[0]?.ps ?? ""))) throw new Error("Esta rota já foi paga e não pode ser apagada");
+    }
+    const oid = r.oferta_id ? String(r.oferta_id) : null;
+    const del: { text: string; params: unknown[] }[] = [];
+    if (oid) {
+      for (const t of ["entregas_pacotes", "entregas_ocorrencias", "entregador_localizacao", "ofertas_recusas", "entregas", "fechamentos_gestor"])
+        del.push({ text: `delete from "${t}" where "oferta_id"::text = $1`, params: [oid] });
+      del.push({ text: `delete from "alocacoes" where "oferta_id"::text = $1 or "rota_id"::text = $2`, params: [oid, rotaId] });
+      del.push({ text: `delete from "ofertas" where "id"::text = $1`, params: [oid] });
+    } else {
+      del.push({ text: `delete from "alocacoes" where "rota_id"::text = $1`, params: [rotaId] });
+    }
+    del.push({ text: `delete from "rotas_operacao" where "id"::text = $1`, params: [rotaId] });
+    await runTransaction(del);
+    return { data: { ok: true, apagada: true }, error: null, count: null };
+  }
   if (r.status === "cancelada") throw new Error("Esta rota já foi eliminada");
   if (r.ostatus === "completed") throw new Error("Esta rota já foi concluída");
   const stmts: { text: string; params: unknown[] }[] = [];
@@ -581,6 +606,15 @@ const DDL_LAZY: string[] = [
 	"nota" text,
 	"criado_em" timestamp DEFAULT now() NOT NULL,
 	"conferido_em" timestamp
+);`,
+  `CREATE TABLE IF NOT EXISTS "equipe_empresa" (
+	"user_id" text PRIMARY KEY NOT NULL,
+	"empresa_id" text NOT NULL,
+	"nome" text,
+	"email" text,
+	"ativo" boolean DEFAULT true NOT NULL,
+	"codigo_convite" text,
+	"criado_em" timestamp DEFAULT now() NOT NULL
 );`,
   `CREATE TABLE IF NOT EXISTS "senhas_provisorias" ("user_id" text PRIMARY KEY NOT NULL, "criada_em" timestamp DEFAULT now() NOT NULL);`,
 ];
@@ -805,6 +839,36 @@ async function cadastrarEntregadorGerenciado(uid: string | null, args: Record<st
   return { data: { id, codigo: email ? codigo : null }, error: null, count: null };
 }
 
+/** Dono cadastra um funcionário (operador). Ele ativa a conta pela aba Convite, com e-mail e código. */
+async function cadastrarMembroEquipe(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Informe a empresa");
+  const nome = String(args.nome_completo ?? "").trim();
+  const email = String(args.email ?? "").trim().toLowerCase();
+  if (!nome) throw new Error("Informe o nome");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Informe um e-mail válido");
+  const ja = await query(`select 1 from "user" where lower("email") = $1`, [email]);
+  if (ja.length) throw new Error("Já existe uma conta com este e-mail");
+  const id = crypto.randomUUID().replace(/-/g, "");
+  const alfa = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const codigo = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => alfa[b % alfa.length]).join("");
+  const fone = args.whatsapp == null || String(args.whatsapp).trim() === "" ? null : String(args.whatsapp).trim();
+  await runTransaction([
+    { text: `insert into "user" ("id","name","email","emailVerified","role") values ($1,$2,$3,false,'operador')`, params: [id, nome, email] },
+    { text: `insert into "profiles" ("id","full_name","phone") values ($1,$2,$3) on conflict do nothing`, params: [id, nome, fone] },
+    { text: `insert into "equipe_empresa" ("user_id","empresa_id","nome","email","codigo_convite") values ($1,$2,$3,$4,$5)`, params: [id, uid, nome, email, codigo] },
+  ]);
+  return { data: { id, codigo }, error: null, count: null };
+}
+
+/** Dono apaga o histórico (operações, rotas, ofertas, pacotes, ocorrências...) da própria empresa. Cadastros ficam. */
+async function limparMeusDados(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Informe a empresa");
+  if (args._confirmar !== "APAGAR") throw new Error("Confirmação inválida");
+  const { limparEmpresa } = await import("./limpeza");
+  const r = await limparEmpresa(uid);
+  return { data: r, error: null, count: null };
+}
+
 /** Publica de uma vez todas as rotas da operação que ainda não têm oferta (uma única transação). */
 async function publicarRotas(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
   const opId = String(args._operacao_id ?? "");
@@ -849,6 +913,8 @@ async function publicarRotas(uid: string | null, args: Record<string, unknown>):
 async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   const { fn, args } = req.rpc!;
   if (fn === "publicar_rotas") return await publicarRotas(uid, args);
+  if (fn === "cadastrar_membro_equipe") return await cadastrarMembroEquipe(uid, args);
+  if (fn === "limpar_meus_dados") return await limparMeusDados(uid, args);
   if (fn === "fechar_rota_gestor") return await fecharRotaGestor(uid, args);
   if (fn === "finalizar_rota") return await finalizarRota(uid, args);
   if (fn === "receber_devolucao") return await receberDevolucao(uid, args);
@@ -898,13 +964,14 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
     if (req.op === "rpc") {
       if (scope) {
         const fn = req.rpc?.fn;
+        if (scope.operador && fn && OPERADOR_RPC_NEGADAS.has(fn)) forbidden("Somente o dono da empresa pode fazer isso");
         if (fn === "apply_reliability_event") {
           const a = req.rpc?.args ?? {};
           const pontos = Number(a._pontos ?? 0);
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
         } else if (fn === "recusar_rota" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "fechar_rota_gestor" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "limpar_meus_dados" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }
@@ -974,6 +1041,14 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
     }
 
     // ----- escritas -----
+    if (scope?.operador) {
+      if (OPERADOR_NEGADAS.has(req.table) || OPERADOR_SEM_ESCRITA.has(req.table) || req.op === "delete") forbidden("Somente o dono da empresa pode fazer isso");
+    }
+    let vpOperador = 0;
+    if (scope?.operador && ["operacoes", "rotas_operacao", "ofertas", "agenda_previsoes"].includes(req.table) && (req.op === "insert" || req.op === "upsert")) {
+      const e = await query(`select "tms_valor_padrao_pacote" as v from "empresas" where "id" = $1`, [scope.uid]);
+      vpOperador = Number(e[0]?.v ?? 0) || 0;
+    }
     const forced = scope ? ruleFor(pol?.force, scope.role) : undefined;
     const allowedCols = scope ? ruleFor(pol?.updateCols, scope.role) : undefined;
 
@@ -988,6 +1063,9 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
     if (req.op === "insert" || req.op === "upsert") {
       const rows = ((Array.isArray(req.values) ? req.values : [req.values]) as Record<string, unknown>[]).map((r) => ({ ...r }));
       if (!rows.length || !rows[0]) return { data: req.returning ? [] : null, error: null, count: null };
+      if (scope?.operador && vpOperador >= 0 && ["operacoes", "rotas_operacao", "ofertas", "agenda_previsoes"].includes(req.table)) {
+        for (const r of rows) preencheFinanceiro(req.table, r, vpOperador);
+      }
       if (scope) {
         const ins = ruleFor(pol?.insert, scope.role);
         if (ins === undefined || ins === false) forbidden();
@@ -1033,8 +1111,11 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
       }
     } else if (req.op === "update") {
       const vals = (req.values ?? {}) as Record<string, unknown>;
-      const keys = Object.keys(vals).filter((k) => vals[k] !== undefined);
-      if (!keys.length) throw new Error("Nenhum valor para atualizar");
+      const keys = Object.keys(vals).filter((k) => vals[k] !== undefined && !(scope?.operador && mascarado(req.table, k)));
+      if (!keys.length) {
+        if (scope?.operador) return { data: null, error: null, count: null };
+        throw new Error("Nenhum valor para atualizar");
+      }
       const pred = updPred();
       if (scope) {
         if (allowedCols) for (const k of keys) if (!allowedCols.includes(k)) forbidden(`Coluna não permitida: ${k}`);
@@ -1068,7 +1149,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
       return { data: null, error: null, count: null };
     }
     const rows = await query(`with m as (${stmt} returning *) select to_jsonb(m) as r from m`, params);
-    const data = rows.map((x) => fixTs(x.r));
+    const data = rows.map((x) => (scope?.operador ? removeMascaradas(req.table, fixTs(x.r)) : fixTs(x.r)));
     if (req.single === "single" || req.single === "maybe") return { data: data[0] ?? null, error: null, count: null };
     return { data, error: null, count: null };
   } catch (e: any) {
@@ -1212,9 +1293,13 @@ export async function resgatarConvite(email: string, codigo: string, senha: stri
   if (t && t.ate > Date.now() && t.n >= 5) return { ok: false, status: 429, message: "Muitas tentativas. Aguarde alguns minutos." };
   if (senha.length < 6) return { ok: false, status: 400, message: "A senha precisa ter pelo menos 6 caracteres." };
   await garantirTabelas();
-  const rows = await query(
-    `select u."id", g."empresa_id", g."codigo_convite" from "user" u join "entregadores_gerenciados" g on g."entregador_id" = u."id"
+  let rows = await query(
+    `select u."id", g."empresa_id", g."codigo_convite", 'entregador' as tipo from "user" u join "entregadores_gerenciados" g on g."entregador_id" = u."id"
      where lower(u."email") = $1`, [em]);
+  if (!rows.length)
+    rows = await query(
+      `select u."id", g."empresa_id", g."codigo_convite", 'equipe' as tipo from "user" u join "equipe_empresa" g on g."user_id" = u."id"
+       where lower(u."email") = $1 and g."ativo"`, [em]);
   const r = rows[0] as any;
   const cod = codigo.trim().toUpperCase();
   if (!r || !r.codigo_convite || r.codigo_convite !== cod) {
@@ -1225,11 +1310,26 @@ export async function resgatarConvite(email: string, codigo: string, senha: stri
   const ctx: any = await auth.$context;
   const hash = await ctx.password.hash(senha);
   await ctx.internalAdapter.linkAccount({ userId: r.id, providerId: "credential", accountId: r.id, password: hash });
-  await runTransaction([
-    { text: `delete from "entregadores_gerenciados" where "entregador_id" = $1`, params: [r.id] },
-    { text: `insert into "dispatchers" ("entregador_id","empresa_id","valor_por_pacote","status") values ($1,$2,0,'ativo') on conflict do nothing`, params: [r.id, r.empresa_id] },
-    { text: `update "user" set "emailVerified" = true where "id" = $1`, params: [r.id] },
-  ]);
+  await runTransaction(
+    r.tipo === "equipe"
+      ? [
+          { text: `update "equipe_empresa" set "codigo_convite" = null where "user_id" = $1`, params: [r.id] },
+          { text: `update "user" set "emailVerified" = true where "id" = $1`, params: [r.id] },
+        ]
+      : [
+          { text: `delete from "entregadores_gerenciados" where "entregador_id" = $1`, params: [r.id] },
+          { text: `insert into "dispatchers" ("entregador_id","empresa_id","valor_por_pacote","status") values ($1,$2,0,'ativo') on conflict do nothing`, params: [r.id, r.empresa_id] },
+          { text: `update "user" set "emailVerified" = true where "id" = $1`, params: [r.id] },
+        ],
+  );
   tentativasConvite.delete(em);
   return { ok: true };
+}
+
+
+/** Funcionário ativo → id da empresa onde trabalha (ou null). */
+export async function empresaDoOperador(userId: string): Promise<{ empresaId: string; nome: string | null } | null> {
+  await garantirTabelas();
+  const r = await query(`select "empresa_id", "nome" from "equipe_empresa" where "user_id" = $1 and "ativo"`, [userId]);
+  return r[0] ? { empresaId: String(r[0].empresa_id), nome: r[0].nome ?? null } : null;
 }

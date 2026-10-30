@@ -207,6 +207,7 @@ function statusInfo(op: Operacao, hasOpen: boolean, allDone: boolean) {
 }
 
 function OperationCard({ op, onView, showMargem }: { op: Operacao; onView: () => void; showMargem: boolean }) {
+  const { isOperador } = useAuth();
   const [stats, setStats] = useState<{ rotas: number; pagoEntregadores: number; hasOpen: boolean; allDone: boolean }>({
     rotas: 0, pagoEntregadores: 0, hasOpen: false, allDone: false,
   });
@@ -248,8 +249,9 @@ function OperationCard({ op, onView, showMargem }: { op: Operacao; onView: () =>
           <Badge className={info.color}><Icon className="mr-1 h-3 w-3" />{info.label}</Badge>
         </div>
         <div className="text-sm text-muted-foreground">
-          {op.total_pacotes_sistema} pacotes · {stats.rotas} rotas · R$ {stats.pagoEntregadores.toFixed(2)} aos entregadores
-          {showMargem && <> · Margem R$ {margem.toFixed(2)}</>}
+          {op.total_pacotes_sistema} pacotes · {stats.rotas} rotas
+          {!isOperador && <> · R$ {stats.pagoEntregadores.toFixed(2)} aos entregadores</>}
+          {!isOperador && showMargem && <> · Margem R$ {margem.toFixed(2)}</>}
         </div>
       </div>
       <Button variant="outline" size="sm" onClick={onView}>
@@ -291,6 +293,7 @@ function CreateOperation({
   const [dataOperacao, setDataOperacao] = useState(new Date().toLocaleDateString("en-CA"));
   const [totalPacotes, setTotalPacotes] = useState<number>(0);
   const [totalParadas, setTotalParadas] = useState<number>(0);
+  const { isOperador } = useAuth();
   const [valorPorPacote, setValorPorPacote] = useState<number>(empresa?.tms_valor_padrao_pacote ?? 1.8);
   const [scanOpen, setScanOpen] = useState(false);
   const [filialId, setFilialId] = useState<string>("none");
@@ -584,7 +587,7 @@ function CreateOperation({
     setObservacoes(""); setCreatedOpId(null); setCreatedRotaIds([]); setPublishedOffers([]);
   }
 
-  const step1Valid = !!origemFinal && totalPacotes > 0 && valorPorPacote > 0;
+  const step1Valid = !!origemFinal && totalPacotes > 0 && (isOperador || valorPorPacote > 0);
   const step2Valid =
     (divisionMode === "agenda" && !!agenda && totalPacotes > 0) ||
     divisionMode === "single" ||
@@ -656,16 +659,18 @@ function CreateOperation({
                 </div>
                 <p className="text-xs text-muted-foreground">Dá para criar hoje a operação de outro dia: as ofertas aparecem para os entregadores já com a data.</p>
               </Field>
-              <Field label="Valor por pacote (R$)">
-                <Input
-                  type="number" step="0.01" min={0}
-                  value={valorPorPacote || ""}
-                  onChange={(e) => setValorPorPacote(Number(e.target.value) || 0)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Total estimado: <strong>R$ {totalEstimado.toFixed(2)}</strong>
-                </p>
-              </Field>
+              {!isOperador && (
+                <Field label="Valor por pacote (R$)">
+                  <Input
+                    type="number" step="0.01" min={0}
+                    value={valorPorPacote || ""}
+                    onChange={(e) => setValorPorPacote(Number(e.target.value) || 0)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Total estimado: <strong>R$ {totalEstimado.toFixed(2)}</strong>
+                  </p>
+                </Field>
+              )}
               <Field label="Total de pacotes">
                 <Input
                   type="number" min={0}
@@ -865,6 +870,7 @@ function CreateOperation({
               <div>Rotas: <strong>{rotas.length}</strong></div>
             </div>
 
+            {!isOperador && (
             <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-[1fr_auto] sm:items-end">
               <Field label="Valor por pacote — R$ (aplicado a todas as rotas)">
                 <Input
@@ -879,11 +885,12 @@ function CreateOperation({
                 Personalizar por rota
               </label>
             </div>
+            )}
 
             <div className="space-y-2">
               <div className="text-sm font-medium">Rotas</div>
               {rotas.map((r, i) => (
-                <div key={i} className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_90px_90px_130px_130px] sm:items-end">
+                <div key={i} className={`grid gap-2 rounded border p-3 sm:items-end ${isOperador ? "sm:grid-cols-[1fr_90px_90px]" : "sm:grid-cols-[1fr_90px_90px_130px_130px]"}`}>
                   <Field label="Nome">
                     <Input value={r.nome} onChange={(e) => updateRota(i, { nome: e.target.value })} />
                     {r.entregador_nome && <Badge variant="secondary" className="mt-1">Entregador: {r.entregador_nome}</Badge>}
@@ -894,17 +901,21 @@ function CreateOperation({
                   <Field label="Paradas (opcional)">
                     <Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => updateRota(i, { quantidade_paradas: Number(e.target.value) || 0 })} />
                   </Field>
-                  <Field label="Valor por pacote R$">
-                    <Input
-                      type="number" step="0.01" min={0}
-                      value={personalizarPorRota ? (r.valor_por_pacote ?? valorPorPacote) : valorPorPacote}
-                      disabled={!personalizarPorRota}
-                      onChange={(e) => updateRota(i, { valor_por_pacote: Number(e.target.value) || 0 })}
-                    />
-                  </Field>
-                  <Field label="Total da rota">
-                    <Input disabled value={`R$ ${r.valor_total.toFixed(2)}`} />
-                  </Field>
+                  {!isOperador && (
+                    <Field label="Valor por pacote R$">
+                      <Input
+                        type="number" step="0.01" min={0}
+                        value={personalizarPorRota ? (r.valor_por_pacote ?? valorPorPacote) : valorPorPacote}
+                        disabled={!personalizarPorRota}
+                        onChange={(e) => updateRota(i, { valor_por_pacote: Number(e.target.value) || 0 })}
+                      />
+                    </Field>
+                  )}
+                  {!isOperador && (
+                    <Field label="Total da rota">
+                      <Input disabled value={`R$ ${r.valor_total.toFixed(2)}`} />
+                    </Field>
+                  )}
                 </div>
               ))}
             </div>
@@ -913,28 +924,30 @@ function CreateOperation({
               <Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Notas internas, instruções especiais..." />
             </Field>
 
-            <Field label="ML paga à empresa — R$ (opcional, para cálculo de margem)">
-              <Input
-                type="number" step="0.01" min={0}
-                value={valorReceitaEmpresa || ""}
-                onChange={(e) => setValorReceitaEmpresa(Number(e.target.value) || 0)}
-                placeholder="Ex: 2.60 × total de pacotes"
-              />
-            </Field>
+            {!isOperador && (
+              <Field label="ML paga à empresa — R$ (opcional, para cálculo de margem)">
+                <Input
+                  type="number" step="0.01" min={0}
+                  value={valorReceitaEmpresa || ""}
+                  onChange={(e) => setValorReceitaEmpresa(Number(e.target.value) || 0)}
+                  placeholder="Ex: 2.60 × total de pacotes"
+                />
+              </Field>
+            )}
 
             <div className="space-y-1 rounded-md bg-muted p-3 text-sm">
               <div>Pacotes distribuídos: <strong>{totalPkgRotas}</strong> / {totalPacotes}</div>
-              {!personalizarPorRota && (
+              {!isOperador && !personalizarPorRota && (
                 <div>Valor por pacote: <strong>R$ {valorPorPacote.toFixed(2)}</strong></div>
               )}
-              <div>Total a pagar entregadores: <strong>R$ {totalGeral.toFixed(2)}</strong></div>
-              {valorReceitaEmpresa > 0 && (
+              {!isOperador && <div>Total a pagar entregadores: <strong>R$ {totalGeral.toFixed(2)}</strong></div>}
+              {!isOperador && valorReceitaEmpresa > 0 && (
                 <>
                   <div>ML paga à empresa: <strong>R$ {valorReceitaEmpresa.toFixed(2)}</strong></div>
                   <div>Margem: <strong className={margem >= 0 ? "text-emerald-700" : "text-red-700"}>R$ {margem.toFixed(2)}</strong></div>
                 </>
               )}
-              <div className="pt-1">Total geral: <strong className="text-lg">R$ {totalGeral.toFixed(2)}</strong></div>
+              {!isOperador && <div className="pt-1">Total geral: <strong className="text-lg">R$ {totalGeral.toFixed(2)}</strong></div>}
               {totalPkgRotas !== totalPacotes && (
                 <div className="mt-2 text-amber-700">⚠️ Soma das rotas difere do total declarado.</div>
               )}
@@ -1073,6 +1086,7 @@ async function publishPendingRotas(op: Operacao, rotas: any[]): Promise<number> 
 }
 
 function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: string | null; onClose: () => void; showMargem: boolean }) {
+  const { isOperador, role } = useAuth();
   const [op, setOp] = useState<Operacao | null>(null);
   const [rotas, setRotas] = useState<any[]>([]);
   const [ofertas, setOfertas] = useState<any[]>([]);
@@ -1127,7 +1141,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
             <div>Pacotes (sistema): <strong>{op.total_pacotes_sistema}</strong></div>
             <div>Pacotes (contados): <strong>{op.total_pacotes_contados}</strong></div>
             {Number(op.total_paradas) > 0 && <div>Paradas: <strong>{op.total_paradas}</strong></div>}
-            <div>Valor por pacote: <strong>R$ {Number(op.valor_por_pacote).toFixed(2)}</strong></div>
+            {!isOperador && <div>Valor por pacote: <strong>R$ {Number(op.valor_por_pacote).toFixed(2)}</strong></div>}
             {op.pacotes_faltando > 0 && <div className="text-amber-700">Faltando: {op.pacotes_faltando}</div>}
             {op.pacotes_a_mais > 0 && <div className="text-amber-700">A mais: {op.pacotes_a_mais}</div>}
           </div>
@@ -1171,7 +1185,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
                   <TableHead>Rota</TableHead>
                   <TableHead className="text-right">Pacotes</TableHead>
                   <TableHead className="text-right">Paradas</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
+                  {!isOperador && <TableHead className="text-right">Valor</TableHead>}
                   <TableHead>Status</TableHead>
                   <TableHead />
                 </TableRow>
@@ -1184,10 +1198,10 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
                       <TableCell>{r.nome}</TableCell>
                       <TableCell className="text-right">{r.quantidade_pacotes}</TableCell>
                       <TableCell className="text-right">{r.quantidade_paradas}</TableCell>
-                      <TableCell className="text-right">R$ {Number(r.valor_total).toFixed(2)}</TableCell>
+                      {!isOperador && <TableCell className="text-right">R$ {Number(r.valor_total).toFixed(2)}</TableCell>}
                       <TableCell>{r.status === "cancelada" ? "Eliminada" : of?.status ?? "Não publicada"}</TableCell>
                       <TableCell className="text-right">
-                        {r.status !== "cancelada" && of?.status !== "completed" && (
+                        {!isOperador && of?.status !== "completed" && (
                           <Button size="icon" variant="ghost" title="Eliminar rota" className="text-red-600" onClick={() => setEliminar(r)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -1200,11 +1214,13 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
             </Table>
           </div>
           <AjusteRotas rotas={ativas as RotaAjuste[]} onChanged={() => setReloadKey((k) => k + 1)} />
-          <div className="rounded bg-muted p-3">
-            <div>Receita ML: <strong>R$ {receita.toFixed(2)}</strong></div>
-            <div>Pago aos entregadores: <strong>R$ {totalPago.toFixed(2)}</strong></div>
-            {showMargem && <div>Margem: <strong>R$ {margem.toFixed(2)}</strong></div>}
-          </div>
+          {!isOperador && (
+            <div className="rounded bg-muted p-3">
+              <div>Receita ML: <strong>R$ {receita.toFixed(2)}</strong></div>
+              <div>Pago aos entregadores: <strong>R$ {totalPago.toFixed(2)}</strong></div>
+              {showMargem && <div>Margem: <strong>R$ {margem.toFixed(2)}</strong></div>}
+            </div>
+          )}
           <RouteMapButton ofertaIds={ativas.map((r: any) => r.oferta_id).filter(Boolean)} />
           <OptimizeRouteButton operacaoId={op.id} ofertaIds={ativas.map((r: any) => r.oferta_id).filter(Boolean)} />
           <EliminarRotaDialog rota={eliminar} onClose={() => setEliminar(null)} onDone={() => setReloadKey((k) => k + 1)} />
@@ -1510,6 +1526,7 @@ function AuditByRanges({
 function AllocationPanel({
   op, operacaoId, empresaId, dataOperacao, rotas, onChanged,
 }: { op: Operacao; operacaoId: string; empresaId: string; dataOperacao: string; rotas: any[]; onChanged?: () => void }) {
+  const { isOperador } = useAuth();
   const [novoOpen, setNovoOpen] = useState(false);
   const [aceitos, setAceitos] = useState<any[]>([]);
   const [ativos, setAtivos] = useState<any[]>([]);
@@ -1620,7 +1637,7 @@ function AllocationPanel({
             <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm">
               <div>
                 <div className="font-medium">{r.nome}</div>
-                <div className="text-xs text-muted-foreground">{r.quantidade_pacotes} pacotes{r.quantidade_paradas > 0 ? ` · ${r.quantidade_paradas} paradas` : ""} · R$ {Number(r.valor_total).toFixed(2)}</div>
+                <div className="text-xs text-muted-foreground">{r.quantidade_pacotes} pacotes{r.quantidade_paradas > 0 ? ` · ${r.quantidade_paradas} paradas` : ""}{!isOperador && ` · R$ ${Number(r.valor_total).toFixed(2)}`}</div>
               </div>
               {a ? (
                 <span className="text-emerald-700">✅ {(a.entregadores as any)?.nome_completo}</span>
@@ -1945,13 +1962,14 @@ function SharePublishedOffers({
   offers: Array<{ id: string; titulo: string; quantidade_pacotes: number; quantidade_paradas: number; valor_total: number; valor_por_pacote: number }>;
   onDone: () => void;
 }) {
+  const { isOperador } = useAuth();
   const base = typeof window !== "undefined" ? window.location.origin : "https://tuentrega.lovable.app";
   const brl = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 
   const buildMessage = () => {
     const lines = offers.map(
       (o) =>
-        `• ${o.titulo}\n  📦 ${o.quantidade_pacotes} pacotes ·${o.quantidade_paradas > 0 ? ` 🗺️ ${o.quantidade_paradas} paradas ·` : ""} 💰 ${brl(o.valor_por_pacote)}/pacote · 💵 ${brl(o.valor_total)}\n  🔗 ${base}/oferta/${o.id}`,
+        `• ${o.titulo}\n  📦 ${o.quantidade_pacotes} pacotes ·${o.quantidade_paradas > 0 ? ` 🗺️ ${o.quantidade_paradas} paradas` : ""}${isOperador ? "" : ` · 💰 ${brl(o.valor_por_pacote)}/pacote · 💵 ${brl(o.valor_total)}`}\n  🔗 ${base}/oferta/${o.id}`,
     );
     return (
       `🚚 TuEntrega — Novas ofertas disponíveis!\n\n` +

@@ -26,14 +26,16 @@ export function EliminarRotaDialog({
 }: { rota: RotaAjuste | null; onClose: () => void; onDone: () => void }) {
   const [motivo, setMotivo] = useState(MOTIVOS[0]);
   const [busy, setBusy] = useState(false);
+  const [apagar, setApagar] = useState(false);
 
   async function confirmar() {
     if (!rota) return;
     setBusy(true);
-    const { error } = await rpc("eliminar_rota", { _rota_id: rota.id, _motivo: motivo });
+    const { error } = await rpc("eliminar_rota", { _rota_id: rota.id, _motivo: motivo, _apagar: apagar });
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("Rota eliminada.");
+    toast.success(apagar ? "Rota apagada de vez." : "Rota eliminada.");
+    setApagar(false);
     onClose();
     onDone();
   }
@@ -54,10 +56,14 @@ export function EliminarRotaDialog({
             </label>
           ))}
         </RadioGroup>
+        <label className="flex cursor-pointer items-start gap-2 rounded border border-red-300 bg-red-50 p-2 text-sm text-red-900">
+          <input type="checkbox" className="mt-1" checked={apagar} onChange={(e) => setApagar(e.target.checked)} />
+          <span><strong>Apagar de vez</strong> (remove a rota, a oferta e os pacotes do sistema, sem deixar histórico). Use para rotas criadas por engano ou teste.</span>
+        </label>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={busy}>Voltar</Button>
           <Button variant="destructive" onClick={confirmar} disabled={busy}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}Eliminar rota
+            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}{apagar ? "Apagar de vez" : "Eliminar rota"}
           </Button>
         </DialogFooter>
       </DialogContent>

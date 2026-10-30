@@ -31,7 +31,8 @@ const brl = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function PagamentosPage() {
-  const { role, user } = useAuth();
+  const { role, user, isOperador } = useAuth();
+  if (isOperador) return <div className="p-6 text-muted-foreground">Esta área é restrita ao dono da empresa.</div>;
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <PageHeader

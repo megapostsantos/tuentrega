@@ -68,7 +68,8 @@ const GROUPS: Group[] = [
     label: "Sistema",
     items: [
       { title: "Configurações", url: "/configuracoes", icon: Settings, roles: ALL },
-      { title: "Funcionários", url: "/funcionarios", icon: Users, roles: ADMIN_ONLY },
+      { title: "Equipe", url: "/equipe", icon: Users, roles: ["empresa"] },
+    { title: "Funcionários", url: "/funcionarios", icon: Users, roles: ADMIN_ONLY },
     ],
   },
 ];
@@ -76,8 +77,11 @@ const GROUPS: Group[] = [
 // Entregador restrictions: only Dashboard, Ofertas, Agenda, Configurações
 const ENTREGADOR_URLS = new Set(["/dashboard", "/ofertas", "/agenda", "/configuracoes"]);
 
-function itemVisible(item: Item, role: AppRole | null): boolean {
+const SO_DONO = new Set(["/financeiro", "/pagamentos", "/equipe"]);
+
+function itemVisible(item: Item, role: AppRole | null, isOperador = false): boolean {
   if (!role) return false;
+  if (isOperador && SO_DONO.has(item.url)) return false;
   if (!item.roles.includes(role)) return false;
   if (role === "entregador" && !ENTREGADOR_URLS.has(item.url)) return false;
   return true;
@@ -85,7 +89,7 @@ function itemVisible(item: Item, role: AppRole | null): boolean {
 
 export function AppSidebar({ role }: { role: AppRole | null }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isOperador } = useAuth();
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (p: string) => currentPath === p;
 
@@ -116,7 +120,7 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
       <SidebarContent className="bg-[#0B0B0D]">
         <RoleSwitcher />
         {GROUPS.map((group) => {
-          const visibleItems = group.items.filter((i) => itemVisible(i, role));
+          const visibleItems = group.items.filter((i) => itemVisible(i, role, isOperador));
           if (visibleItems.length === 0) return null;
           return (
             <SidebarGroup key={group.label}>

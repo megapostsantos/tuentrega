@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CalendarPlus, Loader2, Users, Lock, Unlock, Trash2 } from "lucide-react";
@@ -126,7 +127,7 @@ export function PrevisoesEmpresa({ empresaId }: { empresaId: string }) {
                     <div>
                       <div className="font-semibold capitalize">{fmtData(p.data_prevista)}{p.hora_abertura ? ` · ${p.hora_abertura}` : ""}</div>
                       <div className="text-xs text-muted-foreground">
-                        {p.pacotes_estimados} pacotes · {p.rotas_estimadas} rota(s) · {brl(p.valor_por_pacote)}/pacote
+                        {p.pacotes_estimados} pacotes · {p.rotas_estimadas} rota(s){p.valor_por_pacote != null && ` · ${brl(p.valor_por_pacote)}/pacote`}
                         {p.veiculo_necessario ? ` · ${p.veiculo_necessario}` : ""}
                       </div>
                     </div>
@@ -199,6 +200,7 @@ function NovaPrevisao({
   const [data, setData] = useState(amanha);
   const [pacotes, setPacotes] = useState("150");
   const [porRota, setPorRota] = useState("50");
+  const { isOperador } = useAuth();
   const [valor, setValor] = useState("1.80");
   const [veiculo, setVeiculo] = useState("");
   const [coleta, setColeta] = useState("");
@@ -248,9 +250,9 @@ function NovaPrevisao({
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1"><Label>Pacotes</Label><Input type="number" min={1} value={pacotes} onChange={(e) => setPacotes(e.target.value)} /></div>
             <div className="space-y-1"><Label>Pacotes/rota</Label><Input type="number" min={1} value={porRota} onChange={(e) => setPorRota(e.target.value)} /></div>
-            <div className="space-y-1"><Label>R$/pacote</Label><Input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} /></div>
+            {!isOperador && <div className="space-y-1"><Label>R$/pacote</Label><Input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} /></div>}
           </div>
-          <p className="text-xs text-muted-foreground">≈ {rotas} rota(s) · {brl(nPac * (Number(valor) || 0))} no total</p>
+          <p className="text-xs text-muted-foreground">≈ {rotas} rota(s){!isOperador && ` · ${brl(nPac * (Number(valor) || 0))} no total`}</p>
           <div className="space-y-1"><Label>Veículo necessário (opcional)</Label><Input placeholder="Ex.: moto, carro, van" value={veiculo} onChange={(e) => setVeiculo(e.target.value)} /></div>
           <div className="space-y-1">
             <Label>Local de coleta (só aparece depois que o entregador se comprometer)</Label>

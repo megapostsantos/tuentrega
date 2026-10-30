@@ -44,14 +44,18 @@ const GROUPS: Group[] = [
   ]},
   { label: "Sistema", items: [
     { title: "Configurações", url: "/configuracoes", icon: Settings, roles: ALL },
+    { title: "Equipe", url: "/equipe", icon: Users, roles: ["empresa"] },
     { title: "Funcionários", url: "/funcionarios", icon: Users, roles: ADMIN_ONLY },
   ]},
 ];
 
 const ENTREGADOR_URLS = new Set(["/dashboard", "/ofertas", "/agenda", "/configuracoes"]);
 
-function itemVisible(item: Item, role: AppRole | null): boolean {
+const SO_DONO = new Set(["/financeiro", "/pagamentos", "/equipe"]);
+
+function itemVisible(item: Item, role: AppRole | null, isOperador = false): boolean {
   if (!role) return false;
+  if (isOperador && SO_DONO.has(item.url)) return false;
   if (!item.roles.includes(role)) return false;
   if (role === "entregador" && !ENTREGADOR_URLS.has(item.url)) return false;
   return true;
@@ -59,7 +63,7 @@ function itemVisible(item: Item, role: AppRole | null): boolean {
 
 export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () => void; role: AppRole | null }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isOperador } = useAuth();
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (p: string) => currentPath === p;
 
@@ -117,7 +121,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
         {/* Groups */}
         <nav className="flex-1 overflow-y-auto px-2 py-3">
           {GROUPS.map((group) => {
-            const visible = group.items.filter((i) => itemVisible(i, role));
+            const visible = group.items.filter((i) => itemVisible(i, role, isOperador));
             if (visible.length === 0) return null;
             return (
               <div key={group.label} className="mb-4">
