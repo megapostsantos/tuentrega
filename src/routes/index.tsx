@@ -1,3 +1,4 @@
+import { CONTATO_WHATSAPP, CONTATO_TELEFONE, CONTATO_TEL } from "@/lib/contato";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Truck,
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/")({
 
 const NAVY = "#0D1B2A";
 const YELLOW = "#FFB700";
-const WHATSAPP = "https://wa.me/5513991105065";
+const WHATSAPP = CONTATO_WHATSAPP;
 const MAPS =
   "https://www.google.com/maps/search/?api=1&query=Rua+Carvalho+de+Mendonça+71+Santos+SP";
 
@@ -457,7 +458,7 @@ function Landing() {
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-widest text-[#0D1B2A]/60" style={heading}>Telefone</p>
-                  <a href="tel:+5513991105065" className="text-base" style={heading}>(13) 99110-5065</a>
+                  <a href={CONTATO_TEL} className="text-base" style={heading}>{CONTATO_TELEFONE}</a>
                 </div>
               </div>
               <div className="flex items-start gap-4">

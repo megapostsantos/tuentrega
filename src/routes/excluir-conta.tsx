@@ -1,3 +1,4 @@
+import { CONTATO_WHATSAPP, CONTATO_TELEFONE } from "@/lib/contato";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -47,7 +48,7 @@ function DeleteAccountPage() {
           <p>Entre na sua conta para solicitar a exclusão.</p>
           <Button asChild className="bg-primary text-primary-foreground"><Link to="/auth">Entrar</Link></Button>
           <p className="text-muted-foreground">
-            Sem acesso à conta? Escreva para o e-mail de contato da Política de Privacidade.
+            Sem acesso à conta? Fale com a gente pelo WhatsApp <a className="text-primary underline" href={CONTATO_WHATSAPP}>{CONTATO_TELEFONE}</a>.
           </p>
         </div>
       ) : (

@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/Logo";
+import { CONTATO_WHATSAPP, CONTATO_TELEFONE } from "@/lib/contato";
 
 export const Route = createFileRoute("/privacidade")({
   head: () => ({ meta: [{ title: "Política de Privacidade — TuEntrega" }] }),
   component: PrivacyPage,
 });
 
-const CONTATO_EMAIL = "lgramirodecampos@gmail.com";
 const ATUALIZADO_EM = "14 de outubro de 2026";
 
 function PrivacyPage() {
@@ -82,7 +82,7 @@ function PrivacyPage() {
             Você pode solicitar confirmação de tratamento, acesso, correção, anonimização, portabilidade, informação
             sobre compartilhamento e a exclusão dos seus dados. Para excluir sua conta diretamente, acesse{" "}
             <Link to="/excluir-conta" className="text-primary underline">Excluir minha conta</Link>. Para outras solicitações,
-            escreva para <a className="text-primary underline" href={`mailto:${CONTATO_EMAIL}`}>{CONTATO_EMAIL}</a>.
+            fale conosco pelo WhatsApp <a className="text-primary underline" href={CONTATO_WHATSAPP}>{CONTATO_TELEFONE}</a>.
           </p>
         </section>
 
@@ -98,7 +98,7 @@ function PrivacyPage() {
           <h2 className="text-lg font-semibold">9. Alterações e contato</h2>
           <p>
             Podemos atualizar esta política; a data de atualização fica no topo da página. Dúvidas:{" "}
-            <a className="text-primary underline" href={`mailto:${CONTATO_EMAIL}`}>{CONTATO_EMAIL}</a>.
+            <a className="text-primary underline" href={CONTATO_WHATSAPP}>WhatsApp {CONTATO_TELEFONE}</a>.
           </p>
         </section>
       </div>

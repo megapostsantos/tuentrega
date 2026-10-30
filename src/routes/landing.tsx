@@ -1,3 +1,4 @@
+import { CONTATO_WHATSAPP, CONTATO_TELEFONE, CONTATO_TEL } from "@/lib/contato";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Package,
@@ -45,7 +46,7 @@ const NAVY = "#0D1B2A";
 const NAVY_LIGHT = "#152A42";
 const YELLOW = "#FFB700";
 const DARK = "#060E17";
-const WA = "https://wa.me/5513991105065";
+const WA = CONTATO_WHATSAPP;
 
 function LandingPage() {
   const navigate = useNavigate();
@@ -494,7 +495,7 @@ function LandingPage() {
                   <div className="text-xs font-bold uppercase text-white/50">
                     Telefone
                   </div>
-                  <div className="text-sm font-bold">(13) 99110-5065</div>
+                  <div className="text-sm font-bold">{CONTATO_TELEFONE}</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -604,7 +605,7 @@ function LandingPage() {
             ENVIE · RETIRE · COMPRE
           </div>
           <div className="text-xs font-bold text-white/70">
-            @tuentrega · (13) 99110-5065
+            @tuentrega · {CONTATO_TELEFONE}
           </div>
         </div>
       </footer>
