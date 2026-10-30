@@ -89,19 +89,19 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
       {/* Drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-[#0D1B2A] text-white shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-[#14121F] text-white shadow-2xl transition-transform duration-300",
           open ? "translate-x-0" : "-translate-x-full",
         )}
         aria-hidden={!open}
       >
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FFB700] text-[#0D1B2A] font-black text-sm">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#7C5CFF] text-white font-black text-sm">
             TE
           </div>
           <div className="flex flex-1 flex-col leading-tight min-w-0">
             <span className="text-sm font-bold tracking-tight text-white">TuEntrega</span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-[#FFB700]">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[#7C5CFF]">
               last mile delivery
             </span>
           </div>
@@ -121,7 +121,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
             if (visible.length === 0) return null;
             return (
               <div key={group.label} className="mb-4">
-                <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#FFB700]/40">
+                <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#7C5CFF]/40">
                   {group.label}
                 </p>
                 <ul className="space-y-0.5">
@@ -135,8 +135,8 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
                           className={cn(
                             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                             active
-                              ? "bg-[#FFB700] font-semibold text-[#0D1B2A]"
-                              : "text-white/80 hover:bg-[#FFB700]/10 hover:text-white",
+                              ? "bg-[#7C5CFF] font-semibold text-white"
+                              : "text-white/80 hover:bg-[#7C5CFF]/10 hover:text-white",
                           )}
                         >
                           <item.icon className="h-[18px] w-[18px]" />
@@ -164,7 +164,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
           </div>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-[#FFB700]/10 hover:text-white"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-[#7C5CFF]/10 hover:text-white"
           >
             <LogOut className="h-4 w-4" />
             Sair

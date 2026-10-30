@@ -49,7 +49,7 @@ export function ModuleSummary({
             </div>
             <p
               className="mt-2 text-[28px] font-bold leading-none tracking-tight"
-              style={{ color: "#FFB700" }}
+              style={{ color: "#7C5CFF" }}
             >
               {it.value}
             </p>

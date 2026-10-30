@@ -301,8 +301,8 @@ function BigRoleCard({
       className={cn(
         "relative w-full rounded-2xl border-2 p-5 text-left transition-all press-scale",
         active
-          ? "border-[#FFB700] shadow-lg ring-4 ring-[#FFB700]/20"
-          : "border-border hover:border-[#FFB700]/60",
+          ? "border-[#7C5CFF] shadow-lg ring-4 ring-[#7C5CFF]/20"
+          : "border-border hover:border-[#7C5CFF]/60",
       )}
     >
       <div className="flex items-start gap-4">
@@ -310,8 +310,8 @@ function BigRoleCard({
           className={cn(
             "grid h-14 w-14 shrink-0 place-content-center rounded-xl",
             variant === "yellow"
-              ? "bg-[#FFB700] text-[#0D1B2A]"
-              : "bg-[#0D1B2A] text-[#FFB700] border-2 border-[#FFB700]",
+              ? "bg-[#7C5CFF] text-white"
+              : "bg-[#14121F] text-[#7C5CFF] border-2 border-[#7C5CFF]",
           )}
         >
           <Icon className="h-7 w-7" strokeWidth={2.5} />
@@ -321,7 +321,7 @@ function BigRoleCard({
           <p className="mt-1 text-sm text-muted-foreground leading-snug">{desc}</p>
         </div>
         {active && (
-          <div className="absolute right-4 top-4 grid h-6 w-6 place-content-center rounded-full bg-[#FFB700] text-[#0D1B2A]">
+          <div className="absolute right-4 top-4 grid h-6 w-6 place-content-center rounded-full bg-[#7C5CFF] text-white">
             <Check className="h-4 w-4" strokeWidth={3} />
           </div>
         )}

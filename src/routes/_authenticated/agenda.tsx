@@ -29,7 +29,7 @@ const TIPO_COR: Record<Tipo, string> = {
   pagamento: "#7C3AED",
   coleta: "#2563EB",
   oferta: "#16A34A",
-  disponibilidade: "#FFB700",
+  disponibilidade: "#7C5CFF",
   outro: "#6B7280",
 };
 
