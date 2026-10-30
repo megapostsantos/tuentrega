@@ -1062,7 +1062,7 @@ export async function runSetupBatch(sqlText: string, offset: number, limit: numb
   return { total: parts.length, offset, processed: slice.length, next: nextOffset < parts.length ? nextOffset : null, failed };
 }
 
-async function runTransaction(stmts: { text: string; params: unknown[] }[]) {
+export async function runTransaction(stmts: { text: string; params: unknown[] }[]) {
   if (queryImpl) {
     await queryImpl("begin", []);
     try {

@@ -57,5 +57,22 @@ export default defineEventHandler(async (event) => {
     return Response.json({ senha, nome: existe[0].name, email: existe[0].email });
   }
 
+  if (url.pathname === "/api/admin/limpeza" && req.method === "GET") {
+    const { previaLimpeza } = await import("./server/limpeza");
+    return Response.json(await previaLimpeza());
+  }
+
+  if (url.pathname === "/api/admin/limpeza" && req.method === "POST") {
+    const body: any = await req.json().catch(() => null);
+    if (body?.confirmar !== "LIMPAR" || !["operacional", "contas"].includes(body?.modo))
+      return Response.json({ error: "Confirmação inválida" }, { status: 400 });
+    const { executarLimpeza } = await import("./server/limpeza");
+    try {
+      return Response.json(await executarLimpeza(body.modo, Array.isArray(body.manter) ? body.manter : [], user.id));
+    } catch (e: any) {
+      return Response.json({ error: e?.message ?? "Falha na limpeza" }, { status: 500 });
+    }
+  }
+
   return Response.json({ error: "not found" }, { status: 404 });
 });

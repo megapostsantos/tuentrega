@@ -1,0 +1,32 @@
+import { PGlite } from "@electric-sql/pglite";
+import fs from "fs";
+import { __setQueryImpl, runSetupBatch, executeQuery } from "../src/server/data-engine.ts";
+import { previaLimpeza, executarLimpeza } from "../src/server/limpeza.ts";
+const pg = new PGlite(); __setQueryImpl(async (q, p) => (await pg.query(q, p as any[])).rows as any[]);
+const sql = fs.readFileSync(new URL("../src/db/setup.sql", import.meta.url), "utf8");
+let off: number | null = 0; while (off !== null) { const r = await runSetupBatch(sql, off, 40); off = r.next; }
+for (const [i, r] of [["A1","admin"],["E1","empresa"],["E2","empresa"],["D1","entregador"],["D2","entregador"]]) await pg.query(`insert into "user" (id,name,email,role) values ($1,$1,$1||'@x.com',$2)`, [i, r]);
+await pg.query(`insert into empresas (id,razao_social) values ('E1','A'),('E2','B')`);
+await pg.query(`insert into entregadores (id,nome_completo,status,cpf,reliability_score) values ('D1','Ana','ativo','111',40),('D2','Beto','ativo','222',70)`);
+await pg.query(`insert into profiles (id,full_name) values ('E1','A'),('D1','Ana')`);
+await pg.query(`insert into user_roles (user_id,role) values ('E1','empresa'),('D1','entregador')`);
+const base = { filters: [], order: [] } as any; const run = (c: any, r: any) => executeQuery({ ...base, ...r }, c);
+const E1 = { userId: "E1", role: "empresa" };
+const of = (await run(E1, { table: "ofertas", op: "insert", values: { titulo: "T", status: "open", quantidade_pacotes: 3, valor: 6 }, returning: true, single: "single" })).data.id;
+await run(E1, { table: "entregas_pacotes", op: "insert", values: [{ oferta_id: of, numero_pacote: 1, status: "pending" }] });
+let fail = 0; const ok = (n: string, c: boolean, x?: any) => { if (!c) fail++; console.log(c ? "PASS" : "FAIL", n, c ? "" : JSON.stringify(x)); };
+const cnt = async (t: string) => Number(((await pg.query(`select count(*)::int n from "${t}"`)).rows[0] as any).n);
+
+let pv = await previaLimpeza();
+ok("prévia conta ofertas e pacotes", pv.contagens.ofertas === 1 && pv.contagens.entregas_pacotes === 1 && pv.usuarios.length === 5, pv);
+let r: any = await executarLimpeza("operacional", [], "A1");
+ok("operacional limpa ofertas e pacotes", (await cnt("ofertas")) === 0 && (await cnt("entregas_pacotes")) === 0, r);
+ok("operacional mantém as contas", (await cnt("user")) === 5 && (await cnt("empresas")) === 2 && (await cnt("entregadores")) === 2);
+ok("score volta a 100", ((await pg.query(`select min(reliability_score) m from entregadores`)).rows[0] as any).m === 100);
+r = await executarLimpeza("contas", ["E1", "D1"], "A1");
+const ids = (await pg.query(`select id from "user" order by id`)).rows.map((x: any) => x.id);
+ok("contas: ficam admin e as escolhidas", JSON.stringify(ids) === JSON.stringify(["A1", "D1", "E1"]), ids);
+ok("contas: remove empresa/entregador não mantidos", (await cnt("empresas")) === 1 && (await cnt("entregadores")) === 1, r);
+ok("contas: perfis e papéis das escolhidas continuam", (await cnt("profiles")) === 2 && (await cnt("user_roles")) === 2);
+ok("registra no log do admin", (await cnt("admin_logs")) === 2);
+process.exit(fail ? 1 : 0);

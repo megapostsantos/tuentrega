@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, Users, Package, DollarSign, Bell, Settings,
-  ExternalLink, LogOut,
+  ExternalLink, LogOut, Trash2,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -21,6 +21,7 @@ const items = [
   { title: "Financeiro", url: "/admin/financial", icon: DollarSign },
   { title: "Notificações", url: "/admin/notifications", icon: Bell },
   { title: "Configurações", url: "/admin/settings", icon: Settings },
+  { title: "Limpar testes", url: "/admin/limpeza", icon: Trash2 },
 ];
 
 export function AdminSidebar({ unreadCount = 0 }: { unreadCount?: number }) {
