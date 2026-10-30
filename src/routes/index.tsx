@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Plataforma de gestão de last mile: empresas organizam operação, rotas, parceiros e pagamentos; entregadores encontram ofertas de rota todos os dias.",
+          "Plataforma de gestão de last mile para qualquer operação: empresas organizam rotas, parceiros e pagamentos; entregadores encontram ofertas de rota todos os dias.",
       },
       { property: "og:title", content: "TuEntrega — Gestão de last mile" },
       {
@@ -52,7 +52,7 @@ const PASSOS = [
 
 const FAQ = [
   { q: "Para quem é o TuEntrega?", a: "Para empresas e operadores de last mile que precisam organizar rotas, parceiros e pagamentos, e para entregadores que querem encontrar ofertas de rota com regras claras." },
-  { q: "Serve para operações do Mercado Livre?", a: "Sim. O fluxo foi pensado para a rotina de last mile de marketplaces: lista de zonas, pacotes por rota, insucessos, devoluções e conferência. A TuEntrega é uma plataforma independente." },
+  { q: "Serve para qual tipo de operação?", a: "Para qualquer empresa que entrega: marketplaces como Mercado Livre, Shopee e Shein, e-commerce próprio, lojas, distribuidoras e transportadoras. O fluxo é o mesmo: pacotes em zonas, rotas, insucessos, devoluções e pagamento." },
   { q: "O entregador precisa instalar algo?", a: "Pode usar direto no navegador ou instalar como aplicativo. A empresa também pode cadastrar um parceiro sem app e operar a rota por ele." },
   { q: "Como é feito o pagamento?", a: "A plataforma registra o valor de cada rota concluída e o que está a pagar. O PIX é feito entre empresa e entregador, e a antecipação quinzenal é opcional, definida pela empresa." },
   { q: "Quanto custa?", a: "Fale com a gente pelo WhatsApp e montamos uma proposta para o tamanho da sua operação." },
@@ -82,7 +82,7 @@ function Landing() {
             <a href="#empresas" className="hover:text-white">Para empresas</a>
             <a href="#entregadores" className="hover:text-white">Para entregadores</a>
             <a href="#recursos" className="hover:text-white">Recursos</a>
-            <a href="#ponto" className="hover:text-white">Mercado Livre</a>
+            <a href="#operacoes" className="hover:text-white">Operações</a>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/auth" className="hidden items-center rounded-full border-2 border-white/30 px-4 py-2 text-sm text-white hover:border-white sm:inline-flex" style={heading}>Entrar</Link>
@@ -192,31 +192,33 @@ function Landing() {
         </div>
       </section>
 
-      {/* MERCADO LIVRE / PONTO */}
-      <section id="ponto" className="scroll-mt-16 mx-auto max-w-7xl px-5 py-16 sm:py-24">
+      {/* QUALQUER OPERAÇÃO */}
+      <section id="operacoes" className="scroll-mt-16 mx-auto max-w-7xl px-5 py-16 sm:py-24">
         <div className="grid items-center gap-8 lg:grid-cols-2">
           <div className="space-y-4">
-            <span className="inline-block rounded-full px-3 py-1 text-xs uppercase tracking-widest" style={{ background: `${YELLOW}30`, ...heading }}>Experiência de campo</span>
-            <h2 className="text-3xl uppercase sm:text-5xl" style={heading}>Feito por quem opera last mile e Ponto Mercado Livre</h2>
+            <span className="inline-block rounded-full px-3 py-1 text-xs uppercase tracking-widest" style={{ background: `${YELLOW}30`, ...heading }}>Para qualquer operação</span>
+            <h2 className="text-3xl uppercase sm:text-5xl" style={heading}>Mercado Livre, Shopee, Shein ou a sua própria loja</h2>
             <p className="text-[#0D1B2A]/70">
-              A TuEntrega nasceu na rotina real de entregas. Retirada, devolução, envio, insucesso e conferência são partes do
-              nosso dia a dia, e o sistema foi desenhado para resolver exatamente isso para quem opera rotas de marketplaces como o Mercado Livre.
+              Não importa de onde vêm os pacotes. Se a sua empresa entrega, o TuEntrega organiza as rotas, os parceiros e o
+              pagamento. Marketplaces, e-commerce próprio, lojas, distribuidoras e transportadoras usam o mesmo fluxo.
             </p>
             <ul className="space-y-2 text-sm">
-              {["Zonas e pacotes do dia organizados em rotas", "Insucesso com foto, devolução conferida e extravio com regra", "Parceiros com histórico e nível de confiabilidade"].map((i) => (
+              {["Pacotes do dia organizados em zonas e rotas", "Insucesso com foto, devolução conferida e extravio com regra", "Parceiros com histórico e nível de confiabilidade"].map((i) => (
                 <li key={i} className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />{i}</li>
               ))}
             </ul>
           </div>
           <div className="rounded-3xl p-7 text-white" style={{ background: NAVY }}>
-            <span className="inline-block rounded-full px-3 py-1 text-xs uppercase tracking-widest" style={{ background: `${YELLOW}22`, color: YELLOW, ...heading }}>Ponto Oficial Mercado Livre</span>
-            <h3 className="mt-3 text-2xl uppercase" style={heading}>Tudo do <span style={{ color: YELLOW }}>Mercado Livre</span> você resolve aqui</h3>
-            <p className="mt-2 text-white/70">Retirada, devolução e envio, com atendimento direto pelo WhatsApp.</p>
-            <div className="mt-5 space-y-3 text-sm">
-              <a href={CONTATO_TEL} className="flex items-center gap-3 text-white/90 hover:text-white"><Phone className="h-5 w-5" style={{ color: YELLOW }} />{CONTATO_TELEFONE}</a>
+            <h3 className="text-xl uppercase" style={heading}>Funciona com a sua <span style={{ color: YELLOW }}>operação</span></h3>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {["Mercado Livre", "Shopee", "Shein", "Amazon", "E-commerce próprio", "Lojas e varejo", "Distribuidoras", "Transportadoras", "Farmácias", "Restaurantes e delivery"].map((t) => (
+                <span key={t} className="rounded-full border border-white/20 px-3 py-1.5 text-sm text-white/90">{t}</span>
+              ))}
             </div>
+            <p className="mt-5 text-sm text-white/65">Tem outro tipo de entrega? Conte como funciona e montamos junto.</p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <CTA href={wa("Olá! Quero falar sobre o ponto Mercado Livre.")}><MessageCircle className="h-4 w-4" /> WhatsApp</CTA>
+              <CTA href={wa("Olá! Quero saber se a TuEntrega serve para a minha operação.")}><MessageCircle className="h-4 w-4" /> Falar no WhatsApp</CTA>
+              <a href={CONTATO_TEL} className="inline-flex items-center gap-2 px-3 py-3 text-sm text-white/80 hover:text-white"><Phone className="h-4 w-4" style={{ color: YELLOW }} />{CONTATO_TELEFONE}</a>
             </div>
           </div>
         </div>
@@ -263,7 +265,7 @@ function Landing() {
           </div>
         </div>
         <p className="mx-auto mt-6 max-w-3xl text-center text-[11px] leading-relaxed text-white/40">
-          © {new Date().getFullYear()} TuEntrega. Mercado Livre é marca de seus respectivos titulares; a TuEntrega é uma plataforma independente de gestão.
+          © {new Date().getFullYear()} TuEntrega. Mercado Livre, Shopee, Shein e Amazon são marcas de seus respectivos titulares; a TuEntrega é uma plataforma independente de gestão, sem vínculo com essas empresas.
         </p>
       </footer>
     </div>
