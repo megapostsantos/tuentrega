@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Truck, Package, RotateCcw, MessageCircle, MapPin, Phone, Instagram, ArrowRight, ShieldCheck, Zap,
+  RotateCcw, MessageCircle, Phone, ArrowRight, ShieldCheck, Zap,
   Building2, Bike, ClipboardList, Users, Map as MapIcon, Camera, Wallet, Star, CalendarDays, Smartphone, CheckCircle2,
 } from "lucide-react";
 import { CONTATO_TELEFONE, CONTATO_TEL, whatsappLink } from "@/lib/contato";
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Plataforma de gestão de last mile: empresas organizam operação, rotas, parceiros e pagamentos; entregadores encontram ofertas de rota todos os dias. Ponto Mercado Livre em Santos/SP.",
+          "Plataforma de gestão de last mile: empresas organizam operação, rotas, parceiros e pagamentos; entregadores encontram ofertas de rota todos os dias.",
       },
       { property: "og:title", content: "TuEntrega — Gestão de last mile" },
       {
@@ -26,7 +26,6 @@ export const Route = createFileRoute("/")({
 
 const NAVY = "#0D1B2A";
 const YELLOW = "#FFB700";
-const MAPS = "https://www.google.com/maps/search/?api=1&query=Rua+Carvalho+de+Mendonça+71+Santos+SP";
 const heading = { fontFamily: "'Montserrat', system-ui, sans-serif", fontWeight: 900 };
 const body = { fontFamily: "'Montserrat', system-ui, sans-serif" };
 
@@ -83,7 +82,7 @@ function Landing() {
             <a href="#empresas" className="hover:text-white">Para empresas</a>
             <a href="#entregadores" className="hover:text-white">Para entregadores</a>
             <a href="#recursos" className="hover:text-white">Recursos</a>
-            <a href="#ponto" className="hover:text-white">Ponto Santos</a>
+            <a href="#ponto" className="hover:text-white">Mercado Livre</a>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/auth" className="hidden items-center rounded-full border-2 border-white/30 px-4 py-2 text-sm text-white hover:border-white sm:inline-flex" style={heading}>Entrar</Link>
@@ -200,7 +199,7 @@ function Landing() {
             <span className="inline-block rounded-full px-3 py-1 text-xs uppercase tracking-widest" style={{ background: `${YELLOW}30`, ...heading }}>Experiência de campo</span>
             <h2 className="text-3xl uppercase sm:text-5xl" style={heading}>Feito por quem opera last mile e Ponto Mercado Livre</h2>
             <p className="text-[#0D1B2A]/70">
-              A TuEntrega nasceu na rotina real de entregas em Santos/SP. Retirada, devolução, envio, insucesso e conferência são partes do
+              A TuEntrega nasceu na rotina real de entregas. Retirada, devolução, envio, insucesso e conferência são partes do
               nosso dia a dia, e o sistema foi desenhado para resolver exatamente isso para quem opera rotas de marketplaces como o Mercado Livre.
             </p>
             <ul className="space-y-2 text-sm">
@@ -212,17 +211,12 @@ function Landing() {
           <div className="rounded-3xl p-7 text-white" style={{ background: NAVY }}>
             <span className="inline-block rounded-full px-3 py-1 text-xs uppercase tracking-widest" style={{ background: `${YELLOW}22`, color: YELLOW, ...heading }}>Ponto Oficial Mercado Livre</span>
             <h3 className="mt-3 text-2xl uppercase" style={heading}>Tudo do <span style={{ color: YELLOW }}>Mercado Livre</span> você resolve aqui</h3>
-            <p className="mt-2 text-white/70">Retirada, devolução e envio com atendimento direto em Santos.</p>
+            <p className="mt-2 text-white/70">Retirada, devolução e envio, com atendimento direto pelo WhatsApp.</p>
             <div className="mt-5 space-y-3 text-sm">
-              <a href={MAPS} target="_blank" rel="noreferrer" className="flex items-start gap-3 text-white/90 hover:text-white">
-                <MapPin className="mt-0.5 h-5 w-5 shrink-0" style={{ color: YELLOW }} />
-                <span>Rua Carvalho de Mendonça, 71<br />Santos — SP</span>
-              </a>
               <a href={CONTATO_TEL} className="flex items-center gap-3 text-white/90 hover:text-white"><Phone className="h-5 w-5" style={{ color: YELLOW }} />{CONTATO_TELEFONE}</a>
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <CTA href={wa("Olá! Quero falar sobre o ponto Mercado Livre.")}><MessageCircle className="h-4 w-4" /> WhatsApp</CTA>
-              <CTA href={MAPS} variant="outline"><MapPin className="h-4 w-4" /> Como chegar</CTA>
             </div>
           </div>
         </div>
@@ -265,12 +259,11 @@ function Landing() {
           </div>
           <p className="text-center text-xs uppercase tracking-[0.25em]" style={{ color: YELLOW, ...heading }}>Gestão de last mile</p>
           <div className="flex items-center justify-center gap-4 text-sm text-white/70 md:justify-end">
-            <a href="https://instagram.com/tuentrega" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-white"><Instagram className="h-4 w-4" />@tuentrega</a>
             <Link to="/privacidade" className="hover:text-white">Privacidade</Link>
           </div>
         </div>
         <p className="mx-auto mt-6 max-w-3xl text-center text-[11px] leading-relaxed text-white/40">
-          © {new Date().getFullYear()} TuEntrega · Santos/SP. Mercado Livre é marca de seus respectivos titulares; a TuEntrega é uma plataforma independente de gestão.
+          © {new Date().getFullYear()} TuEntrega. Mercado Livre é marca de seus respectivos titulares; a TuEntrega é uma plataforma independente de gestão.
         </p>
       </footer>
     </div>

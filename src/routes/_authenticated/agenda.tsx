@@ -509,7 +509,7 @@ function NewEventDialog({
           </div>
           <div>
             <Label>Título</Label>
-            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Coleta ML - Santos" />
+            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Coleta ML - Zona Norte" />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
