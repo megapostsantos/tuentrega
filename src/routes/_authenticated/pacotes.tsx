@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/lib/contato";
 import { AjusteRotas, EliminarRotaDialog, type RotaAjuste } from "@/components/pacotes/AjusteRotas";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
@@ -1963,7 +1964,7 @@ function SharePublishedOffers({
   onDone: () => void;
 }) {
   const { isOperador } = useAuth();
-  const base = typeof window !== "undefined" ? window.location.origin : "https://tuentrega.lovable.app";
+  const base = SITE_URL;
   const brl = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 
   const buildMessage = () => {

@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/lib/contato";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -1427,7 +1428,7 @@ function EditOfertaDialog({
 }
 
 function ShareOfertaDialog({ o, onClose }: { o: Oferta; onClose: () => void }) {
-  const base = typeof window !== "undefined" ? window.location.origin : "https://tuentrega.lovable.app";
+  const base = SITE_URL;
   const brl = (n: number | null | undefined) =>
     `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 

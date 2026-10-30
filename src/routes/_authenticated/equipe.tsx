@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { whatsappLink } from "@/lib/contato";
+import { whatsappLink, SITE_URL } from "@/lib/contato";
 
 export const Route = createFileRoute("/_authenticated/equipe")({ component: EquipePage });
 
@@ -26,13 +26,15 @@ function EquipePage() {
   const [novo, setNovo] = useState(false);
   const [f, setF] = useState({ nome: "", email: "", whatsapp: "" });
   const [criando, setCriando] = useState(false);
+  const [empresaNome, setEmpresaNome] = useState("");
   const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string }>(null);
 
   async function load() {
     const { data } = await sb.from("equipe_empresa").select("user_id, nome, email, ativo, codigo_convite").order("criado_em", { ascending: false });
     setMembros((data as Membro[]) ?? []);
-    const { data: e } = await sb.from("empresas").select("tms_valor_padrao_pacote").eq("id", user?.id).maybeSingle();
+    const { data: e } = await sb.from("empresas").select("tms_valor_padrao_pacote, nome_fantasia, razao_social").eq("id", user?.id).maybeSingle();
     if (e?.tms_valor_padrao_pacote != null) setVp(String(e.tms_valor_padrao_pacote));
+    setEmpresaNome(e?.nome_fantasia || e?.razao_social || "");
   }
   useEffect(() => { if (user?.id && role === "empresa" && !isOperador) load(); /* eslint-disable-next-line */ }, [user?.id, role, isOperador]);
 
@@ -68,7 +70,7 @@ function EquipePage() {
 
   function whats() {
     if (!feito) return;
-    const msg = `Olá ${feito.nome}! Você foi cadastrado(a) na equipe da empresa no TuEntrega. Para criar sua senha, abra ${window.location.origin}/auth, toque em "Convite" e use o e-mail ${feito.email} e o código ${feito.codigo}.`;
+    const msg = `Olá ${feito.nome}! ${empresaNome ? `A empresa ${empresaNome} convidou você` : "Você foi convidado(a)"} para a equipe no TuEntrega. Para criar sua senha, abra ${SITE_URL}/auth, toque em "Convite" e use o e-mail ${feito.email} e o código ${feito.codigo}.`;
     const fone = feito.whatsapp.replace(/\D/g, "");
     window.open(fone ? `https://wa.me/${fone.length <= 11 ? "55" + fone : fone}?text=${encodeURIComponent(msg)}` : whatsappLink(msg).replace(/phone=\d+/, "phone="), "_blank");
   }
@@ -131,7 +133,7 @@ function EquipePage() {
                 <div>Código: <strong className="tracking-widest">{feito.codigo}</strong></div>
               </div>
               <Button onClick={whats}><Share2 className="mr-2 h-4 w-4" />Enviar pelo WhatsApp</Button>
-              <Button variant="outline" onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/auth — aba Convite — e-mail ${feito.email}, código ${feito.codigo}`); toast.success("Copiado"); }}>
+              <Button variant="outline" onClick={() => { navigator.clipboard?.writeText(`${SITE_URL}/auth — aba Convite — e-mail ${feito.email}, código ${feito.codigo}`); toast.success("Copiado"); }}>
                 <Copy className="mr-2 h-4 w-4" />Copiar dados
               </Button>
               <DialogFooter><Button onClick={fechar}>Fechar</Button></DialogFooter>

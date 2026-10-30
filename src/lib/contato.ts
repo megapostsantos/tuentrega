@@ -9,3 +9,6 @@ export function whatsappLink(texto?: string): string {
   return texto ? `${base}&text=${encodeURIComponent(texto)}` : base;
 }
 export const CONTATO_WHATSAPP = whatsappLink();
+
+/** Endereço oficial do app, usado em tudo que é enviado a outras pessoas (convites, ofertas, guias). */
+export const SITE_URL = "https://tuentrega.com.br";

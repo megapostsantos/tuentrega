@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { PhoneDemo } from "@/components/ajuda/PhoneDemo";
 import { FluxoAnimado, type Etapa } from "@/components/ajuda/FluxoAnimado";
 import { GUIAS, type Guia, type Perfil } from "@/lib/ajuda-conteudo";
-import { whatsappLink } from "@/lib/contato";
+import { whatsappLink, SITE_URL } from "@/lib/contato";
 
 export const Route = createFileRoute("/_authenticated/ajuda")({
   validateSearch: (s: Record<string, unknown>): { guia?: string } => (typeof s.guia === "string" ? { guia: s.guia } : {}),
@@ -54,7 +54,7 @@ function AjudaPage() {
   const ehEntregador = role === "entregador";
 
   function compartilhar(x: Guia) {
-    const url = `${window.location.origin}/ajuda?guia=${x.id}`;
+    const url = `${SITE_URL}/ajuda?guia=${x.id}`;
     window.open(whatsappLink(`Guia TuEntrega — ${x.titulo}: ${url}`).replace(/phone=\d+&/, ""), "_blank");
   }
 

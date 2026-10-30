@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, UserPlus, FileCheck2, Share2, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { SITE_URL } from "@/lib/contato";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +35,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
   const [docTipo, setDocTipo] = useState("documento_identidade");
   const [aceite, setAceite] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string | null }>(null);
+  const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string | null; empresa: string }>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
 
   function fechar() {
@@ -69,7 +70,8 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
       if (resid) await enviar(user.id, id, "comprovante_residencia", resid);
       if (doc) await enviar(user.id, id, docTipo, doc);
       onCreated?.();
-      setFeito({ nome: f.nome.trim(), email: f.email.trim().toLowerCase(), whatsapp: f.whatsapp, codigo: data.codigo ?? null });
+      const { data: emp } = await (supabase as any).from("empresas").select("nome_fantasia, razao_social").eq("id", user.id).maybeSingle();
+      setFeito({ nome: f.nome.trim(), email: f.email.trim().toLowerCase(), whatsapp: f.whatsapp, codigo: data.codigo ?? null, empresa: emp?.nome_fantasia || emp?.razao_social || "" });
     } catch (e: any) {
       toast.error(e?.message || "Falha ao cadastrar.");
     } finally { setSaving(false); }
@@ -77,8 +79,8 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
 
   function whats() {
     if (!feito) return;
-    const link = `${window.location.origin}/auth`;
-    const msg = `Olá ${feito.nome}! Te cadastrei na TuEntrega. Para criar sua senha, abra ${link}, toque na aba "Convite" e use o e-mail ${feito.email} e o código ${feito.codigo}.`;
+    const link = `${SITE_URL}/auth`;
+    const msg = `Olá ${feito.nome}! ${feito.empresa ? `A empresa ${feito.empresa} cadastrou` : "Te cadastrei"} você como parceiro(a) no TuEntrega. Para criar sua senha, abra ${link}, toque na aba "Convite" e use o e-mail ${feito.email} e o código ${feito.codigo}.`;
     const fone = feito.whatsapp.replace(/\D/g, "");
     window.open(`https://wa.me/${fone ? (fone.length <= 11 ? "55" + fone : fone) : ""}?text=${encodeURIComponent(msg)}`, "_blank");
   }
@@ -98,7 +100,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
                 <div>Código: <strong className="tracking-widest">{feito.codigo}</strong></div>
               </div>
               <Button className="w-full" onClick={whats}><Share2 className="mr-2 h-4 w-4" />Enviar convite pelo WhatsApp</Button>
-              <Button variant="outline" className="w-full" onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/auth — e-mail ${feito.email}, código ${feito.codigo}`); toast.success("Copiado"); }}>
+              <Button variant="outline" className="w-full" onClick={() => { navigator.clipboard?.writeText(`${SITE_URL}/auth — e-mail ${feito.email}, código ${feito.codigo}`); toast.success("Copiado"); }}>
                 <Copy className="mr-2 h-4 w-4" />Copiar dados
               </Button>
             </div>

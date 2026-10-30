@@ -58,6 +58,8 @@ class PollingChannel {
   }
 }
 
+const operadorEmpresa = new Map<string, string>();
+
 function objectUrl(bucket: string, path: string) {
   const enc = path.split("/").map(encodeURIComponent).join("/");
   return `${typeof window !== "undefined" ? window.location.origin : ""}/api/storage/object/${bucket}/${enc}`;
@@ -140,7 +142,19 @@ export const supabase: any = {
     },
     getUser: async () => {
       const { data } = await authClient.getSession();
-      return { data: { user: mapUser(data?.user) }, error: null };
+      const u: any = mapUser(data?.user);
+      // funcionário da empresa age em nome da empresa: o "usuário" que os fluxos enxergam é o id da empresa
+      if (u && (data?.user as any)?.role === "operador") {
+        if (!operadorEmpresa.has(u.id)) {
+          try {
+            const j = await (await fetch("/api/db/equipe-me", { credentials: "same-origin" })).json();
+            if (j?.empresaId) operadorEmpresa.set(u.id, j.empresaId);
+          } catch { /* ignore */ }
+        }
+        const emp = operadorEmpresa.get(u.id);
+        if (emp) return { data: { user: { ...u, id: emp } }, error: null };
+      }
+      return { data: { user: u }, error: null };
     },
     onAuthStateChange: (_cb: unknown) => ({ data: { subscription: { unsubscribe: () => {} } } }),
     signInWithPassword: async ({ email, password }: { email: string; password: string }) => {

@@ -1,9 +1,10 @@
+import { SITE_URL } from "@/lib/contato";
 import { supabase } from "@/integrations/supabase/client";
 
 export type WhatsAppTipo = "alocacao" | "distribuicao" | "confirmacao" | "recusa" | "publicacao";
 export type DestinatarioTipo = "dispatcher" | "entregador" | "empresa";
 
-const APP_BASE = typeof window !== "undefined" ? window.location.origin : "https://tuentrega.lovable.app";
+const APP_BASE = SITE_URL;
 
 const brl = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 
