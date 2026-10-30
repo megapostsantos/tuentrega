@@ -63,9 +63,9 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.012 264);
 
-  /* Amber primary #FFB700 on navy #0D1B2A */
+  /* Amber primary #FFB700 on navy #0B0B0D */
   --primary: #FFB700;
-  --primary-foreground: #0D1B2A;
+  --primary-foreground: #0B0B0D;
   --primary-glow: #E5A400;
 
   /* Surface (#F8F9FA) used as secondary surface */
@@ -77,7 +77,7 @@
   --muted-foreground: oklch(0.5 0.01 264);   /* #6B7280 */
 
   --accent: #FFF4D6;
-  --accent-foreground: #0D1B2A;
+  --accent-foreground: #0B0B0D;
 
   --destructive: oklch(0.63 0.22 27);        /* #EF4444 */
   --destructive-foreground: oklch(1 0 0);
@@ -93,13 +93,13 @@
   --ring: #FFB700;
 
   /* Sidebar: navy background with amber accents */
-  --sidebar: #0D1B2A;
+  --sidebar: #0B0B0D;
   --sidebar-foreground: #FFFFFF;
   --sidebar-primary: #FFB700;
-  --sidebar-primary-foreground: #0D1B2A;
-  --sidebar-accent: #17293D;
+  --sidebar-primary-foreground: #0B0B0D;
+  --sidebar-accent: #1D1D22;
   --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #1B2E44;
+  --sidebar-border: #2B2B31;
   --sidebar-ring: #FFB700;
 
   --gradient-primary: linear-gradient(135deg, #FFB700, #E5A400);
@@ -118,7 +118,7 @@
   --popover: oklch(0.18 0.005 264);
   --popover-foreground: oklch(0.97 0 0);
   --primary: #FFB700;
-  --primary-foreground: #0D1B2A;
+  --primary-foreground: #0B0B0D;
   --secondary: oklch(0.22 0.01 264);
   --secondary-foreground: oklch(0.97 0 0);
   --muted: oklch(0.22 0.01 264);

@@ -100,10 +100,10 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
   const initials = displayName.split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase() || "BE";
 
   return (
-    <Sidebar collapsible="icon" className="bg-[#0D1B2A] text-white border-r-0 [&_[data-sidebar=sidebar]]:bg-[#0D1B2A]">
-      <SidebarHeader className="border-b border-white/10 bg-[#0D1B2A]">
+    <Sidebar collapsible="icon" className="bg-[#0B0B0D] text-white border-r-0 [&_[data-sidebar=sidebar]]:bg-[#0B0B0D]">
+      <SidebarHeader className="border-b border-white/10 bg-[#0B0B0D]">
         <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FFB700] text-[#0D1B2A] font-black text-sm">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FFB700] text-[#0B0B0D] font-black text-sm">
             TE
           </div>
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
@@ -113,7 +113,7 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="bg-[#0D1B2A]">
+      <SidebarContent className="bg-[#0B0B0D]">
         <RoleSwitcher />
         {GROUPS.map((group) => {
           const visibleItems = group.items.filter((i) => itemVisible(i, role));
@@ -133,7 +133,7 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
                           asChild
                           className={
                             active
-                              ? "bg-[#FFB700] text-[#0D1B2A] font-semibold hover:bg-[#FFB700] hover:text-[#0D1B2A] data-[active=true]:bg-[#FFB700] data-[active=true]:text-[#0D1B2A]"
+                              ? "bg-[#FFB700] text-[#0B0B0D] font-semibold hover:bg-[#FFB700] hover:text-[#0B0B0D] data-[active=true]:bg-[#FFB700] data-[active=true]:text-[#0B0B0D]"
                               : "text-white/80 hover:bg-[#FFB700]/10 hover:text-white"
                           }
                           isActive={active}
@@ -153,9 +153,9 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
         })}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-white/10 bg-[#0D1B2A]">
+      <SidebarFooter className="border-t border-white/10 bg-[#0B0B0D]">
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFB700] text-[#0D1B2A] text-xs font-bold">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFB700] text-[#0B0B0D] text-xs font-bold">
             {initials}
           </div>
           <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">

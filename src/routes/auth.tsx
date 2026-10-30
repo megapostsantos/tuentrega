@@ -310,8 +310,8 @@ function BigRoleCard({
           className={cn(
             "grid h-14 w-14 shrink-0 place-content-center rounded-xl",
             variant === "yellow"
-              ? "bg-[#FFB700] text-[#0D1B2A]"
-              : "bg-[#0D1B2A] text-[#FFB700] border-2 border-[#FFB700]",
+              ? "bg-[#FFB700] text-[#0B0B0D]"
+              : "bg-[#0B0B0D] text-[#FFB700] border-2 border-[#FFB700]",
           )}
         >
           <Icon className="h-7 w-7" strokeWidth={2.5} />
@@ -321,7 +321,7 @@ function BigRoleCard({
           <p className="mt-1 text-sm text-muted-foreground leading-snug">{desc}</p>
         </div>
         {active && (
-          <div className="absolute right-4 top-4 grid h-6 w-6 place-content-center rounded-full bg-[#FFB700] text-[#0D1B2A]">
+          <div className="absolute right-4 top-4 grid h-6 w-6 place-content-center rounded-full bg-[#FFB700] text-[#0B0B0D]">
             <Check className="h-4 w-4" strokeWidth={3} />
           </div>
         )}

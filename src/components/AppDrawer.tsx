@@ -89,14 +89,14 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
       {/* Drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-[#0D1B2A] text-white shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-[#0B0B0D] text-white shadow-2xl transition-transform duration-300",
           open ? "translate-x-0" : "-translate-x-full",
         )}
         aria-hidden={!open}
       >
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FFB700] text-[#0D1B2A] font-black text-sm">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FFB700] text-[#0B0B0D] font-black text-sm">
             TE
           </div>
           <div className="flex flex-1 flex-col leading-tight min-w-0">
@@ -135,7 +135,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
                           className={cn(
                             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                             active
-                              ? "bg-[#FFB700] font-semibold text-[#0D1B2A]"
+                              ? "bg-[#FFB700] font-semibold text-[#0B0B0D]"
                               : "text-white/80 hover:bg-[#FFB700]/10 hover:text-white",
                           )}
                         >
