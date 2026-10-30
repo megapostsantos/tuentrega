@@ -176,3 +176,10 @@
 
 /* mapas Leaflet não podem ficar por cima de menus/diálogos */
 .leaflet-container { z-index: 0; isolation: isolate; }
+
+/* Central de ajuda: animações dos guias */
+@keyframes ajuda-entra { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+@keyframes ajuda-pulso { 0%,100% { box-shadow: 0 0 0 0 rgba(255,183,0,.55) } 50% { box-shadow: 0 0 0 6px rgba(255,183,0,0) } }
+@keyframes ajuda-toque { 0%,100% { transform: translate(0,0) } 50% { transform: translate(-3px,-5px) scale(.92) } }
+@keyframes ajuda-rastro { 0% { stroke-dashoffset: 300 } 70%,100% { stroke-dashoffset: 0 } }
+@media (prefers-reduced-motion: reduce) { [class*="ajuda-"] { animation: none !important } }

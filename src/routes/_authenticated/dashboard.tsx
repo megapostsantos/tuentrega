@@ -11,6 +11,7 @@ import { StatCard } from "@/components/StatCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { PendingAllocationBanner } from "@/components/PendingAllocationBanner";
+import { ChecklistInicio } from "@/components/ajuda/ChecklistInicio";
 import { EmpresaPainel } from "@/components/dashboard/EmpresaPainel";
 import { DashboardOverview } from "@/components/summaries/DashboardOverview";
 
@@ -545,6 +546,7 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
 
   return (
     <div className="space-y-5 p-4">
+      <ChecklistInicio userId={userId} tipo="entregador" />
       {/* Rota de hoje */}
       {active && (
         <div className="rounded-2xl border border-border bg-card p-5 elev-2">

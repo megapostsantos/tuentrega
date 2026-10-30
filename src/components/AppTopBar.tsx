@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, Check, CheckCheck, Menu } from "lucide-react";
+import { Bell, Check, CheckCheck, HelpCircle, Menu } from "lucide-react";
+import { GUIA_DA_TELA } from "@/lib/ajuda-conteudo";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,6 +104,15 @@ export function AppTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
             <span className="text-base font-black tracking-tight text-foreground sm:text-lg">TuEntrega</span>
           </Link>
         </div>
+
+        <button
+          onClick={() => navigate({ to: "/ajuda", search: { guia: GUIA_DA_TELA[window.location.pathname] } as never })}
+          aria-label="Ajuda"
+          title="Ajuda sobre esta tela"
+          className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-muted press-scale"
+        >
+          <HelpCircle className="h-5 w-5 text-foreground" />
+        </button>
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>

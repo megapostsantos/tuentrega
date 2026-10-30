@@ -2,6 +2,7 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Package, Map, Zap, ArrowRightFromLine, History,
   Bike, Building2, CalendarDays, BarChart2, Wallet, Settings, Users, LogOut,
+  HelpCircle,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -68,6 +69,7 @@ const GROUPS: Group[] = [
     label: "Sistema",
     items: [
       { title: "Configurações", url: "/configuracoes", icon: Settings, roles: ALL },
+      { title: "Ajuda", url: "/ajuda", icon: HelpCircle, roles: ALL },
       { title: "Equipe", url: "/equipe", icon: Users, roles: ["empresa"] },
     { title: "Funcionários", url: "/funcionarios", icon: Users, roles: ADMIN_ONLY },
     ],
@@ -75,7 +77,7 @@ const GROUPS: Group[] = [
 ];
 
 // Entregador restrictions: only Dashboard, Ofertas, Agenda, Configurações
-const ENTREGADOR_URLS = new Set(["/dashboard", "/ofertas", "/agenda", "/configuracoes"]);
+const ENTREGADOR_URLS = new Set(["/dashboard", "/ofertas", "/agenda", "/configuracoes", "/ajuda"]);
 
 const SO_DONO = new Set(["/financeiro", "/pagamentos", "/equipe"]);
 

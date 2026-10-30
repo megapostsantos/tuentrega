@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { ChecklistInicio } from "@/components/ajuda/ChecklistInicio";
 
 type Oferta = {
   id: string; titulo: string; status: string; entregador_id: string | null; quantidade_pacotes: number | null;
@@ -101,6 +102,8 @@ export function EmpresaPainel({ userId }: { userId?: string }) {
           <Plus className="h-4 w-4" /> Nova operação
         </Link>
       </div>
+
+      <ChecklistInicio userId={userId} tipo="empresa" />
 
       <Link to="/rotas" className="block rounded-2xl border border-border bg-card p-5 elev-1 press-scale">
         <div className="flex items-end justify-between">

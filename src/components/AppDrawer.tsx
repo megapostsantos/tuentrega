@@ -3,6 +3,7 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Package, Map, Zap, ArrowRightFromLine, History,
   Bike, Building2, CalendarDays, BarChart2, Wallet, Settings, Users, LogOut, X,
+  HelpCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { signOut } from "@/lib/auth-client";
@@ -44,12 +45,13 @@ const GROUPS: Group[] = [
   ]},
   { label: "Sistema", items: [
     { title: "Configurações", url: "/configuracoes", icon: Settings, roles: ALL },
+    { title: "Ajuda", url: "/ajuda", icon: HelpCircle, roles: ALL },
     { title: "Equipe", url: "/equipe", icon: Users, roles: ["empresa"] },
     { title: "Funcionários", url: "/funcionarios", icon: Users, roles: ADMIN_ONLY },
   ]},
 ];
 
-const ENTREGADOR_URLS = new Set(["/dashboard", "/ofertas", "/agenda", "/configuracoes"]);
+const ENTREGADOR_URLS = new Set(["/dashboard", "/ofertas", "/agenda", "/configuracoes", "/ajuda"]);
 
 const SO_DONO = new Set(["/financeiro", "/pagamentos", "/equipe"]);
 
