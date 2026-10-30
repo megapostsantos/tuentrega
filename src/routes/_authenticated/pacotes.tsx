@@ -313,7 +313,8 @@ function CreateOperation({
   // Step 2
   const [divisionMode, setDivisionMode] = useState<DivisionMode>("auto");
   const [listaTexto, setListaTexto] = useState("");
-  const zonasLista = useMemo(() => parseZonas(listaTexto), [listaTexto]);
+  const [listaFormato, setListaFormato] = useState<"ml" | "simples">("ml");
+  const zonasLista = useMemo(() => parseZonas(listaTexto, listaFormato), [listaTexto, listaFormato]);
   const listaSomaP = zonasLista.reduce((s, z) => s + z.pacotes, 0);
   const listaSomaS = zonasLista.reduce((s, z) => s + z.paradas, 0);
   const [numRotas, setNumRotas] = useState<number>(3);
@@ -775,17 +776,27 @@ function CreateOperation({
 
             {divisionMode === "lista" && (
               <div className="space-y-3 rounded-md border p-3">
-                <Label className="text-sm">Uma zona por linha: nome e quantidade de pacotes</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant={listaFormato === "ml" ? "default" : "outline"} onClick={() => setListaFormato("ml")}>Colar da tela do marketplace</Button>
+                  <Button type="button" size="sm" variant={listaFormato === "simples" ? "default" : "outline"} onClick={() => setListaFormato("simples")}>Nome e pacotes</Button>
+                </div>
+                <Label className="text-sm">
+                  {listaFormato === "ml"
+                    ? "Copie a lista da tela \"Distribuição por zonas\" (zona, paradas, pacotes) e cole aqui"
+                    : "Uma zona por linha: nome e quantidade de pacotes"}
+                </Label>
                 <Textarea
                   rows={10}
                   value={listaTexto}
                   onChange={(e) => setListaTexto(e.target.value)}
-                  placeholder={"Zona Norte 120\nZona Sul 85\nCentro 60\n\nOu com paradas (opcional): Zona Leste;90;40"}
+                  placeholder={listaFormato === "ml" ? "Mega 16 135\nVila 63 118\nMarape 39 53\nGonzaga 1 54 101" : "Zona Norte 120\nZona Sul 85\nZona Leste;90;40"}
                 />
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span><strong>{zonasLista.length}</strong> zonas · <strong>{listaSomaP}</strong> / {totalPacotes} pacotes{listaSomaS > 0 ? ` · ${listaSomaS} paradas` : ""}</span>
-                  {listaSomaP !== totalPacotes && listaSomaP > 0 && (
-                    <Button size="sm" variant="outline" onClick={() => setTotalPacotes(listaSomaP)}>Usar {listaSomaP} como total de pacotes</Button>
+                  {(listaSomaP !== totalPacotes || (listaSomaS > 0 && listaSomaS !== totalParadas)) && listaSomaP > 0 && (
+                    <Button size="sm" variant="outline" onClick={() => { setTotalPacotes(listaSomaP); if (listaSomaS > 0) setTotalParadas(listaSomaS); }}>
+                      Usar os totais da lista ({listaSomaP} pacotes{listaSomaS > 0 ? `, ${listaSomaS} paradas` : ""})
+                    </Button>
                   )}
                 </div>
                 {zonasLista.length > 0 && listaSomaP !== totalPacotes && (
