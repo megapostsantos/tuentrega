@@ -2235,3 +2235,7 @@ CREATE TABLE IF NOT EXISTS "senhas_provisorias" ("user_id" text PRIMARY KEY NOT 
 CREATE INDEX IF NOT EXISTS "idx_gerenciados_empresa" ON "entregadores_gerenciados" ("empresa_id");
 -- @@
 CREATE INDEX IF NOT EXISTS "idx_documentos_entregador" ON "entregador_documentos" ("entregador_id");
+-- @@
+CREATE TABLE IF NOT EXISTS "fechamentos_gestor" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "oferta_id" text NOT NULL, "empresa_id" text NOT NULL, "entregador_id" text, "entregues" integer DEFAULT 0 NOT NULL, "insucessos" integer DEFAULT 0 NOT NULL, "pendentes" integer DEFAULT 0 NOT NULL, "observacao" text, "status" text DEFAULT 'a_conferir' NOT NULL, "nota" text, "criado_em" timestamp DEFAULT now() NOT NULL, "conferido_em" timestamp);
+-- @@
+CREATE INDEX IF NOT EXISTS "idx_fechamentos_oferta" ON "fechamentos_gestor" ("oferta_id");

@@ -297,6 +297,12 @@ export const POLICIES: Record<string, Policy> = {
     force: { empresa: { empresa_id: "uid" } },
   },
 
+  fechamentos_gestor: {
+    read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
+    update: { empresa: eq("empresa_id") },
+    updateCols: { empresa: ["status", "nota", "conferido_em"] },
+  },
+
   alocacoes: {
     read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
     update: { empresa: eq("empresa_id") },

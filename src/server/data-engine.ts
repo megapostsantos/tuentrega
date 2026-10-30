@@ -568,6 +568,20 @@ const DDL_LAZY: string[] = [
 	"nome_arquivo" text,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );`,
+  `CREATE TABLE IF NOT EXISTS "fechamentos_gestor" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"oferta_id" text NOT NULL,
+	"empresa_id" text NOT NULL,
+	"entregador_id" text,
+	"entregues" integer DEFAULT 0 NOT NULL,
+	"insucessos" integer DEFAULT 0 NOT NULL,
+	"pendentes" integer DEFAULT 0 NOT NULL,
+	"observacao" text,
+	"status" text DEFAULT 'a_conferir' NOT NULL,
+	"nota" text,
+	"criado_em" timestamp DEFAULT now() NOT NULL,
+	"conferido_em" timestamp
+);`,
   `CREATE TABLE IF NOT EXISTS "senhas_provisorias" ("user_id" text PRIMARY KEY NOT NULL, "criada_em" timestamp DEFAULT now() NOT NULL);`,
 ];
 let tabelasGarantidas = false;
@@ -675,6 +689,50 @@ async function finalizarRota(uid: string | null, args: Record<string, unknown>):
   }
   const r = await completarRota(ofertaId);
   return { data: { concluida: true, entregues: r.entregues, nao: r.nao }, error: null, count: null };
+}
+
+/** Gestor encerra a rota pelo motorista (fim do dia): informa entregues/insucessos; o resto fica pendente para conferir no dia seguinte. */
+async function fecharRotaGestor(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  const ofertaId = String(args._oferta_id ?? "");
+  const rows = await query(`select "id", "empresa_id", "entregador_id", "status" from "ofertas" where "id"::text = $1`, [ofertaId]);
+  const o = rows[0];
+  if (!o) throw new Error("Rota não encontrada");
+  if (uid !== null && String(o.empresa_id) !== uid) throw Object.assign(new Error("Sem permissão"), { code: "403" });
+  if (!["in_progress", "accepted"].includes(String(o.status))) throw new Error("A rota precisa estar aceita ou em andamento");
+  const num = (v: unknown) => Math.max(0, Math.floor(Number(v ?? 0)) || 0);
+  const entregues = num(args._entregues), insucessos = num(args._insucessos);
+  const obs = args._observacao == null || String(args._observacao).trim() === "" ? null : String(args._observacao).trim().slice(0, 500);
+  const cur = await query(
+    `select count(*) filter (where "status" = 'delivered')::int as d, count(*) filter (where "status" = 'not_delivered')::int as n,
+            count(*) filter (where "status" = 'pending')::int as p from "entregas_pacotes" where "oferta_id"::text = $1`, [ofertaId]);
+  const d0 = Number(cur[0]?.d ?? 0), n0 = Number(cur[0]?.n ?? 0), p0 = Number(cur[0]?.p ?? 0);
+  if (entregues < d0 || insucessos < n0) throw new Error(`Já existem ${d0} entregues e ${n0} insucessos registrados; os números não podem ser menores`);
+  const addD = entregues - d0, addN = insucessos - n0;
+  if (addD + addN > p0) throw new Error(`Só há ${p0} pacotes sem baixa; entregues + insucessos passam do total da rota`);
+  const pendentes = p0 - addD - addN;
+  const lote = (n: number, status: string, motivo: string | null) => ({
+    text: `update "entregas_pacotes" set "status" = $2, "motivo_nao_entrega" = $3, "updated_at" = now()
+            where "id" in (select "id" from "entregas_pacotes" where "oferta_id"::text = $1 and "status" = 'pending' order by "numero_pacote" limit $4)`,
+    params: [ofertaId, status, motivo, n],
+  });
+  const stmts: { text: string; params: unknown[] }[] = [];
+  if (addD > 0) stmts.push(lote(addD, "delivered", null));
+  if (addN > 0) stmts.push(lote(addN, "not_delivered", "Insucesso informado pelo gestor"));
+  if (pendentes > 0) stmts.push(lote(pendentes, "not_delivered", "Sem baixa — encerrado pelo gestor"));
+  stmts.push({
+    text: `insert into "fechamentos_gestor" ("oferta_id","empresa_id","entregador_id","entregues","insucessos","pendentes","observacao") values ($1,$2,$3,$4,$5,$6,$7)`,
+    params: [ofertaId, String(o.empresa_id), o.entregador_id ? String(o.entregador_id) : null, entregues, insucessos, pendentes, obs],
+  });
+  await runTransaction(stmts);
+  const nao = insucessos + pendentes;
+  if (nao > 0) {
+    await query(
+      `update "ofertas" set "status" = 'awaiting_return', "pacotes_entregues" = $2, "pacotes_nao_entregues" = $3, "updated_at" = now() where "id"::text = $1`,
+      [ofertaId, entregues, nao]);
+    return { data: { concluida: false, entregues, insucessos, pendentes }, error: null, count: null };
+  }
+  const r = await completarRota(ofertaId);
+  return { data: { concluida: true, entregues: r.entregues, insucessos: 0, pendentes: 0 }, error: null, count: null };
 }
 
 async function receberDevolucao(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
@@ -791,6 +849,7 @@ async function publicarRotas(uid: string | null, args: Record<string, unknown>):
 async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   const { fn, args } = req.rpc!;
   if (fn === "publicar_rotas") return await publicarRotas(uid, args);
+  if (fn === "fechar_rota_gestor") return await fecharRotaGestor(uid, args);
   if (fn === "finalizar_rota") return await finalizarRota(uid, args);
   if (fn === "receber_devolucao") return await receberDevolucao(uid, args);
   if (fn === "cadastrar_entregador_gerenciado") return await cadastrarEntregadorGerenciado(uid, args);
@@ -845,7 +904,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
         } else if (fn === "recusar_rota" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "fechar_rota_gestor" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }

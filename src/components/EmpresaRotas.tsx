@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DevolucoesPendentes, OcorrenciasLista } from "@/components/rotas/DevolucoesPendentes";
+import { FecharRotaGestorDialog } from "@/components/rotas/FecharRotaGestorDialog";
 import { EntregadorRotas } from "@/components/rotas/EntregadorRotas";
 
 type RotaOferta = {
@@ -60,6 +61,7 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
   const [gerenciados, setGerenciados] = useState<Set<string>>(new Set());
   const [operar, setOperar] = useState<RotaOferta | null>(null);
   const [ocorr, setOcorr] = useState<RotaOferta | null>(null);
+  const [fechar, setFechar] = useState<RotaOferta | null>(null);
 
   async function load(showSpinner = false) {
     if (showSpinner) setLoading(true);
@@ -288,6 +290,9 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
                       {gerenciado && o.entregador_id && (
                         <Button size="sm" onClick={() => setOperar(o)}>Operar rota</Button>
                       )}
+                      {(o.status === "in_progress" || o.status === "accepted") && (
+                        <Button size="sm" variant="outline" onClick={() => setFechar(o)}>Encerrar pelo gestor</Button>
+                      )}
                       {c.problemas > 0 && (
                         <Button size="sm" variant="outline" onClick={() => setOcorr(o)}>Ocorrências ({c.problemas})</Button>
                       )}
@@ -370,6 +375,14 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
           {operar?.entregador_id && <EntregadorRotas actingFor={{ ofertaId: operar.id, entregadorId: operar.entregador_id }} />}
         </DialogContent>
       </Dialog>
+      <FecharRotaGestorDialog
+        rota={fechar ? { id: fechar.id, titulo: fechar.titulo, entregadorNome: fechar.entregadores?.nome_completo } : null}
+        total={fechar ? (contagem[fechar.id]?.total ?? fechar.quantidade_pacotes ?? 0) : 0}
+        entreguesAtuais={fechar ? (contagem[fechar.id]?.entregues ?? 0) : 0}
+        insucessosAtuais={fechar ? (contagem[fechar.id]?.problemas ?? 0) : 0}
+        onClose={() => setFechar(null)}
+        onDone={() => load()}
+      />
       <Dialog open={!!ocorr} onOpenChange={(v) => !v && setOcorr(null)}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader><DialogTitle>Ocorrências — {ocorr?.titulo}</DialogTitle></DialogHeader>

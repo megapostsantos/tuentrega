@@ -12,6 +12,7 @@ type Ocorrencia = {
   sub_motivo: string | null; fotos_urls: string[] | null; created_at: string;
 };
 type Pacote = { id: string; oferta_id: string; numero_pacote: number; codigo_pacote: string | null; motivo_nao_entrega: string | null };
+type Fech = { oferta_id: string; entregues: number; insucessos: number; pendentes: number; observacao: string | null; status: string; criado_em: string };
 type Rota = { id: string; titulo: string; entregadores?: { nome_completo?: string | null } | null };
 
 const fotoUrl = (path: string) => supabase.storage.from("entregas-fotos").getPublicUrl(path).data.publicUrl as string;
@@ -76,6 +77,7 @@ export function DevolucoesPendentes({
   const [rotas, setRotas] = useState<Rota[]>([]);
   const [pacotes, setPacotes] = useState<Pacote[]>([]);
   const [ocs, setOcs] = useState<Ocorrencia[]>([]);
+  const [fechs, setFechs] = useState<Fech[]>([]);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [foto, setFoto] = useState<string | null>(null);
@@ -96,10 +98,21 @@ export function DevolucoesPendentes({
       const { data: oc } = await supabase.from("entregas_ocorrencias")
         .select("id, oferta_id, numero_pacote, package_id, motivo, sub_motivo, fotos_urls, created_at").in("oferta_id", ids);
       setOcs((oc as any[]) ?? []);
-    } else { setPacotes([]); setOcs([]); }
+      const { data: fe } = await (supabase as any).from("fechamentos_gestor")
+        .select("oferta_id, entregues, insucessos, pendentes, observacao, status, criado_em").in("oferta_id", ids).order("criado_em", { ascending: false });
+      setFechs((fe as Fech[]) ?? []);
+    } else { setPacotes([]); setOcs([]); setFechs([]); }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [empresaId, ofertaId]);
+
+  async function conferido(ofertaId: string) {
+    const { error } = await (supabase as any).from("fechamentos_gestor")
+      .update({ status: "conferido", conferido_em: new Date().toISOString() }).eq("oferta_id", ofertaId);
+    if (error) return toast.error(error.message);
+    toast.success("Marcado como conferido com o motorista.");
+    load();
+  }
 
   async function receber(rotaId: string, opts: { ids?: string[]; extraviar?: boolean }) {
     setBusy(rotaId);
@@ -138,6 +151,22 @@ export function DevolucoesPendentes({
                 <div className="font-semibold">{r.titulo}</div>
                 <div className="text-xs text-muted-foreground">{r.entregadores?.nome_completo ?? "Entregador"} · {pks.length} pacote(s) a receber</div>
               </div>
+              {(() => {
+                const f = fechs.find((x) => x.oferta_id === r.id);
+                if (!f) return null;
+                return (
+                  <div className={`rounded-md border p-2 text-xs ${f.status === "a_conferir" ? "border-amber-300 bg-amber-50 text-amber-900" : "border-green-300 bg-green-50 text-green-900"}`}>
+                    <div className="font-medium">Encerrada pelo gestor · {f.entregues} entregues, {f.insucessos} insucessos, {f.pendentes} sem baixa</div>
+                    {f.observacao && <div>Obs.: {f.observacao}</div>}
+                    {f.status === "a_conferir" ? (
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <span>Conferir com o motorista no dia seguinte.</span>
+                        <Button size="sm" variant="outline" onClick={() => conferido(r.id)}>Conferido</Button>
+                      </div>
+                    ) : <div>Conferido com o motorista.</div>}
+                  </div>
+                );
+              })()}
               <div className="space-y-2">
                 {pks.map((p) => {
                   const o = ocs.find((x: any) => x.oferta_id === r.id && (x.package_id === p.codigo_pacote || x.numero_pacote === p.numero_pacote));
