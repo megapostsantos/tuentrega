@@ -63,10 +63,10 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.012 264);
 
-  /* Amber primary #7C5CFF on navy #14121F */
-  --primary: #7C5CFF;
-  --primary-foreground: #FFFFFF;
-  --primary-glow: #6A49F0;
+  /* Amber primary #FFB700 on navy #0D1B2A */
+  --primary: #FFB700;
+  --primary-foreground: #0D1B2A;
+  --primary-glow: #E5A400;
 
   /* Surface (#F8F9FA) used as secondary surface */
   --secondary: oklch(0.978 0.002 264);
@@ -76,8 +76,8 @@
   --muted: oklch(0.96 0.003 264);
   --muted-foreground: oklch(0.5 0.01 264);   /* #6B7280 */
 
-  --accent: #F1EEFF;
-  --accent-foreground: #14121F;
+  --accent: #FFF4D6;
+  --accent-foreground: #0D1B2A;
 
   --destructive: oklch(0.63 0.22 27);        /* #EF4444 */
   --destructive-foreground: oklch(1 0 0);
@@ -90,19 +90,19 @@
 
   --border: oklch(0.92 0.004 264);           /* #E5E7EB */
   --input: oklch(0.92 0.004 264);
-  --ring: #7C5CFF;
+  --ring: #FFB700;
 
   /* Sidebar: navy background with amber accents */
-  --sidebar: #14121F;
+  --sidebar: #0D1B2A;
   --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #7C5CFF;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #1F1B33;
+  --sidebar-primary: #FFB700;
+  --sidebar-primary-foreground: #0D1B2A;
+  --sidebar-accent: #17293D;
   --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #2A2542;
-  --sidebar-ring: #7C5CFF;
+  --sidebar-border: #1B2E44;
+  --sidebar-ring: #FFB700;
 
-  --gradient-primary: linear-gradient(135deg, #7C5CFF, #6A49F0);
+  --gradient-primary: linear-gradient(135deg, #FFB700, #E5A400);
   --shadow-glow: 0 8px 24px -6px color-mix(in oklab, var(--primary) 35%, transparent);
   --elev-1: 0 1px 3px rgba(0,0,0,0.08);
   --elev-2: 0 2px 8px rgba(0,0,0,0.10);
@@ -117,8 +117,8 @@
   --card-foreground: oklch(0.97 0 0);
   --popover: oklch(0.18 0.005 264);
   --popover-foreground: oklch(0.97 0 0);
-  --primary: #7C5CFF;
-  --primary-foreground: #FFFFFF;
+  --primary: #FFB700;
+  --primary-foreground: #0D1B2A;
   --secondary: oklch(0.22 0.01 264);
   --secondary-foreground: oklch(0.97 0 0);
   --muted: oklch(0.22 0.01 264);
@@ -127,7 +127,7 @@
   --accent-foreground: oklch(0.97 0 0);
   --border: oklch(0.26 0.01 264);
   --input: oklch(0.26 0.01 264);
-  --ring: #7C5CFF;
+  --ring: #FFB700;
 }
 
 @layer base {

@@ -24,8 +24,8 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-const NAVY = "#14121F";
-const YELLOW = "#7C5CFF";
+const NAVY = "#0D1B2A";
+const YELLOW = "#FFB700";
 const heading = { fontFamily: "'Montserrat', system-ui, sans-serif", fontWeight: 900 };
 const body = { fontFamily: "'Montserrat', system-ui, sans-serif" };
 
@@ -60,7 +60,7 @@ const FAQ = [
 
 function CTA({ href, children, variant = "solid" }: { href: string; children: React.ReactNode; variant?: "solid" | "outline" }) {
   const cls = "inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-sm sm:text-base uppercase tracking-wide transition-transform hover:scale-[1.03]";
-  const st = variant === "solid" ? { background: YELLOW, color: "#fff", ...heading } : { border: "2px solid rgba(255,255,255,.35)", color: "white", ...heading };
+  const st = variant === "solid" ? { background: YELLOW, color: NAVY, ...heading } : { border: "2px solid rgba(255,255,255,.35)", color: "white", ...heading };
   return href.startsWith("/") ? (
     <Link to={href} className={cls} style={st}>{children}</Link>
   ) : (
@@ -70,12 +70,12 @@ function CTA({ href, children, variant = "solid" }: { href: string; children: Re
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-white text-[#14121F]" style={body}>
+    <div className="min-h-screen bg-white text-[#0D1B2A]" style={body}>
       {/* NAV */}
       <nav className="fixed inset-x-0 top-0 z-50 border-b border-white/10" style={{ background: NAVY }}>
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-5">
           <a href="#top" className="flex items-center gap-2 text-white">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-black" style={{ backgroundColor: YELLOW, color: "#fff" }}>TE</div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-black" style={{ backgroundColor: YELLOW, color: NAVY }}>TE</div>
             <span className="text-sm tracking-tight sm:text-base" style={heading}>Tu<span style={{ color: YELLOW }}>Entrega</span></span>
           </a>
           <div className="hidden items-center gap-6 text-sm text-white/80 md:flex">
@@ -86,7 +86,7 @@ function Landing() {
           </div>
           <div className="flex items-center gap-2">
             <Link to="/auth" className="hidden items-center rounded-full border-2 border-white/30 px-4 py-2 text-sm text-white hover:border-white sm:inline-flex" style={heading}>Entrar</Link>
-            <Link to="/auth" className="inline-flex items-center rounded-full px-4 py-2 text-sm" style={{ background: YELLOW, color: "#fff", ...heading }}>Criar conta</Link>
+            <Link to="/auth" className="inline-flex items-center rounded-full px-4 py-2 text-sm" style={{ background: YELLOW, color: NAVY, ...heading }}>Criar conta</Link>
           </div>
         </div>
       </nav>
@@ -129,7 +129,7 @@ function Landing() {
           <div id="empresas" className="scroll-mt-20 rounded-3xl border-2 p-7" style={{ borderColor: `${NAVY}15` }}>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: `${YELLOW}30` }}><Building2 className="h-6 w-6" /></div>
             <h2 className="mt-4 text-2xl uppercase sm:text-3xl" style={heading}>Para empresas de last mile</h2>
-            <p className="mt-2 text-[#14121F]/70">Quem recebe pacotes todo dia e precisa de controle: transportadoras, estações, pontos e operadores logísticos.</p>
+            <p className="mt-2 text-[#0D1B2A]/70">Quem recebe pacotes todo dia e precisa de controle: transportadoras, estações, pontos e operadores logísticos.</p>
             <ul className="mt-5 space-y-2.5 text-sm">
               {["Monte a operação do dia (ou do dia seguinte) e divida em zonas", "Aloque parceiros ou publique ofertas para o mercado", "Acompanhe rotas ao vivo, insucessos com foto e devoluções", "Controle pagamentos, antecipação e a confiabilidade da equipe"].map((i) => (
                 <li key={i} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "#16a34a" }} />{i}</li>
@@ -161,14 +161,14 @@ function Landing() {
       {/* RECURSOS */}
       <section id="recursos" className="scroll-mt-16 bg-[#F6F7F9] py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-5">
-          <span className="text-sm uppercase tracking-widest text-[#14121F]/60" style={heading}>O que o sistema faz</span>
+          <span className="text-sm uppercase tracking-widest text-[#0D1B2A]/60" style={heading}>O que o sistema faz</span>
           <h2 className="mt-2 max-w-3xl text-3xl uppercase sm:text-5xl" style={heading}>Tudo que a operação precisa, <span className="underline decoration-4 underline-offset-4" style={{ textDecorationColor: YELLOW }}>sem planilha.</span></h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {RECURSOS.map((r) => (
-              <div key={r.t} className="rounded-3xl border border-[#14121F]/10 bg-white p-6 transition-all hover:-translate-y-1 hover:shadow-lg">
+              <div key={r.t} className="rounded-3xl border border-[#0D1B2A]/10 bg-white p-6 transition-all hover:-translate-y-1 hover:shadow-lg">
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: `${YELLOW}30` }}><r.icon className="h-5 w-5" /></div>
                 <h3 className="text-base uppercase" style={heading}>{r.t}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-[#14121F]/65">{r.d}</p>
+                <p className="mt-1.5 text-sm leading-relaxed text-[#0D1B2A]/65">{r.d}</p>
               </div>
             ))}
           </div>
@@ -198,7 +198,7 @@ function Landing() {
           <div className="space-y-4">
             <span className="inline-block rounded-full px-3 py-1 text-xs uppercase tracking-widest" style={{ background: `${YELLOW}30`, ...heading }}>Para qualquer operação</span>
             <h2 className="text-3xl uppercase sm:text-5xl" style={heading}>Mercado Livre, Shopee, Shein ou a sua própria loja</h2>
-            <p className="text-[#14121F]/70">
+            <p className="text-[#0D1B2A]/70">
               Não importa de onde vêm os pacotes. Se a sua empresa entrega, o TuEntrega organiza as rotas, os parceiros e o
               pagamento. Marketplaces, e-commerce próprio, lojas, distribuidoras e transportadoras usam o mesmo fluxo.
             </p>
@@ -230,9 +230,9 @@ function Landing() {
           <h2 className="text-3xl uppercase sm:text-4xl" style={heading}>Perguntas frequentes</h2>
           <div className="mt-6 space-y-3">
             {FAQ.map((f) => (
-              <details key={f.q} className="group rounded-2xl border border-[#14121F]/10 bg-white p-5">
+              <details key={f.q} className="group rounded-2xl border border-[#0D1B2A]/10 bg-white p-5">
                 <summary className="cursor-pointer list-none text-base font-semibold">{f.q}</summary>
-                <p className="mt-2 text-sm leading-relaxed text-[#14121F]/70">{f.a}</p>
+                <p className="mt-2 text-sm leading-relaxed text-[#0D1B2A]/70">{f.a}</p>
               </details>
             ))}
           </div>
@@ -256,7 +256,7 @@ function Landing() {
       <footer className="px-5 py-10" style={{ background: "#08121d" }}>
         <div className="mx-auto grid max-w-7xl items-center gap-6 md:grid-cols-3">
           <div className="flex items-center justify-center gap-2 md:justify-start">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black" style={{ backgroundColor: YELLOW, color: "#fff" }}>TE</div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black" style={{ backgroundColor: YELLOW, color: NAVY }}>TE</div>
             <span className="text-sm text-white" style={heading}>Tu<span style={{ color: YELLOW }}>Entrega</span></span>
           </div>
           <p className="text-center text-xs uppercase tracking-[0.25em]" style={{ color: YELLOW, ...heading }}>Gestão de last mile</p>

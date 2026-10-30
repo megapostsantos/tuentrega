@@ -34,11 +34,11 @@ function OfertaPublicPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#14121F] text-white">
+    <div className="min-h-screen bg-[#0D1B2A] text-white">
       <header className="border-b border-white/10">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link to="/"><Logo /></Link>
-          <Link to="/auth"><Button size="sm" className="bg-[#7C5CFF] text-white hover:bg-[#7C5CFF]/90">Entrar</Button></Link>
+          <Link to="/auth"><Button size="sm" className="bg-[#FFB700] text-[#0D1B2A] hover:bg-[#FFB700]/90">Entrar</Button></Link>
         </div>
       </header>
 
@@ -58,7 +58,7 @@ function OfertaPublicPage() {
             <CardContent className="p-6 space-y-5">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge className="bg-[#7C5CFF] text-white hover:bg-[#7C5CFF]">Oferta de entrega</Badge>
+                  <Badge className="bg-[#FFB700] text-[#0D1B2A] hover:bg-[#FFB700]">Oferta de entrega</Badge>
                   {data.exige_nota_fiscal && <Badge variant="outline">Exige NF</Badge>}
                 </div>
                 <h1 className="text-2xl font-bold">{data.titulo}</h1>
@@ -78,9 +78,9 @@ function OfertaPublicPage() {
                 )}
               </div>
 
-              <div className="rounded-lg bg-[#14121F]/5 border p-4">
+              <div className="rounded-lg bg-[#0D1B2A]/5 border p-4">
                 <div className="text-sm text-muted-foreground">Valor total</div>
-                <div className="text-3xl font-bold text-[#14121F]">{brl(Number(data.valor))}</div>
+                <div className="text-3xl font-bold text-[#0D1B2A]">{brl(Number(data.valor))}</div>
                 {data.valor_por_pacote ? (
                   <div className="text-sm text-muted-foreground mt-1">{brl(Number(data.valor_por_pacote))} por pacote</div>
                 ) : null}
@@ -95,7 +95,7 @@ function OfertaPublicPage() {
 
               <div className="pt-2 border-t space-y-2">
                 <Link to="/auth" className="block">
-                  <Button className="w-full bg-[#7C5CFF] text-white hover:bg-[#7C5CFF]/90">Entrar para aceitar</Button>
+                  <Button className="w-full bg-[#FFB700] text-[#0D1B2A] hover:bg-[#FFB700]/90">Entrar para aceitar</Button>
                 </Link>
                 <Link to="/auth" className="block">
                   <Button variant="outline" className="w-full">Cadastrar-se como entregador</Button>
@@ -112,7 +112,7 @@ function OfertaPublicPage() {
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
     <div className="flex items-start gap-2 rounded-md border p-3">
-      <Icon className="h-4 w-4 text-[#14121F] mt-0.5" />
+      <Icon className="h-4 w-4 text-[#0D1B2A] mt-0.5" />
       <div>
         <div className="text-xs text-muted-foreground">{label}</div>
         <div className="text-sm font-medium">{value}</div>

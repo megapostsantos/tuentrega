@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
 <title>Setup do banco</title><body style="font-family:system-ui;padding:24px;max-width:640px;margin:auto">
 <h2>Entre como administrador</h2>
 <p>Este navegador não está logado como <strong>admin</strong>. Entre com a conta de administrador e abra este endereço de novo.</p>
-<p><a href="/auth" style="display:inline-block;padding:12px 20px;background:#7C5CFF;color:#ffffff;border-radius:8px;text-decoration:none;font-weight:600">Ir para o login</a></p>
+<p><a href="/auth" style="display:inline-block;padding:12px 20px;background:#FFB700;color:#0D1B2A;border-radius:8px;text-decoration:none;font-weight:600">Ir para o login</a></p>
 </body>`;
       return new Response(page, { status: 403, headers: { "content-type": "text/html; charset=utf-8" } });
     }

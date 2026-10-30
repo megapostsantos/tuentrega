@@ -22,9 +22,9 @@ export async function sendEmail(p: { to: string; subject: string; html: string }
 
 export function emailRedefinirSenha(nome: string, url: string): string {
   return `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px">
-  <h2 style="color:#14121F">Redefinir sua senha</h2>
+  <h2 style="color:#0D1B2A">Redefinir sua senha</h2>
   <p>Olá, ${nome.replace(/[<>&]/g, "")}. Recebemos um pedido para redefinir a senha da sua conta TuEntrega.</p>
-  <p><a href="${url}" style="display:inline-block;background:#7C5CFF;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Criar nova senha</a></p>
+  <p><a href="${url}" style="display:inline-block;background:#FFB700;color:#0D1B2A;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Criar nova senha</a></p>
   <p style="color:#555;font-size:13px">O link vale por 1 hora. Se não foi você, ignore este e-mail: sua senha continua a mesma.</p>
 </div>`;
 }

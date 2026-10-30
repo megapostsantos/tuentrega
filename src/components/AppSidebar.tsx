@@ -100,27 +100,27 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
   const initials = displayName.split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase() || "BE";
 
   return (
-    <Sidebar collapsible="icon" className="bg-[#14121F] text-white border-r-0 [&_[data-sidebar=sidebar]]:bg-[#14121F]">
-      <SidebarHeader className="border-b border-white/10 bg-[#14121F]">
+    <Sidebar collapsible="icon" className="bg-[#0D1B2A] text-white border-r-0 [&_[data-sidebar=sidebar]]:bg-[#0D1B2A]">
+      <SidebarHeader className="border-b border-white/10 bg-[#0D1B2A]">
         <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#7C5CFF] text-white font-black text-sm">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FFB700] text-[#0D1B2A] font-black text-sm">
             TE
           </div>
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-bold tracking-tight text-white">TuEntrega</span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-[#7C5CFF]">last mile delivery</span>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[#FFB700]">last mile delivery</span>
           </div>
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="bg-[#14121F]">
+      <SidebarContent className="bg-[#0D1B2A]">
         <RoleSwitcher />
         {GROUPS.map((group) => {
           const visibleItems = group.items.filter((i) => itemVisible(i, role));
           if (visibleItems.length === 0) return null;
           return (
             <SidebarGroup key={group.label}>
-              <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-widest text-[#7C5CFF]/40">
+              <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-widest text-[#FFB700]/40">
                 {group.label}
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -133,8 +133,8 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
                           asChild
                           className={
                             active
-                              ? "bg-[#7C5CFF] text-white font-semibold hover:bg-[#7C5CFF] hover:text-white data-[active=true]:bg-[#7C5CFF] data-[active=true]:text-white"
-                              : "text-white/80 hover:bg-[#7C5CFF]/10 hover:text-white"
+                              ? "bg-[#FFB700] text-[#0D1B2A] font-semibold hover:bg-[#FFB700] hover:text-[#0D1B2A] data-[active=true]:bg-[#FFB700] data-[active=true]:text-[#0D1B2A]"
+                              : "text-white/80 hover:bg-[#FFB700]/10 hover:text-white"
                           }
                           isActive={active}
                         >
@@ -153,9 +153,9 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
         })}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-white/10 bg-[#14121F]">
+      <SidebarFooter className="border-t border-white/10 bg-[#0D1B2A]">
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7C5CFF] text-white text-xs font-bold">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFB700] text-[#0D1B2A] text-xs font-bold">
             {initials}
           </div>
           <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
@@ -164,7 +164,7 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
           </div>
           <button
             onClick={handleLogout}
-            className="rounded-md p-1.5 text-white/70 hover:bg-[#7C5CFF]/10 hover:text-[#7C5CFF] group-data-[collapsible=icon]:hidden"
+            className="rounded-md p-1.5 text-white/70 hover:bg-[#FFB700]/10 hover:text-[#FFB700] group-data-[collapsible=icon]:hidden"
             aria-label="Sair"
             title="Sair"
           >
@@ -173,7 +173,7 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
         </div>
         <SidebarMenu className="group-data-[collapsible=icon]:block hidden">
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} className="text-white/80 hover:bg-[#7C5CFF]/10 hover:text-white">
+            <SidebarMenuButton onClick={handleLogout} className="text-white/80 hover:bg-[#FFB700]/10 hover:text-white">
               <LogOut />
               <span>Sair</span>
             </SidebarMenuButton>
