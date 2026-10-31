@@ -21,16 +21,16 @@ const FERRAMENTA = {
           required: ["nome", "paradas", "pacotes"],
         },
       },
-      total_paradas: { type: ["integer", "null"], description: "Total de paradas do cabeçalho (ex.: '1055 paradas, 1982 pacotes'), se visível" },
-      total_pacotes: { type: ["integer", "null"], description: "Total de pacotes do cabeçalho, se visível" },
+      total_paradas: { type: "integer", description: "Total de paradas do cabeçalho (ex.: '1055 paradas, 1982 pacotes'). Omita se não estiver visível." },
+      total_pacotes: { type: "integer", description: "Total de pacotes do cabeçalho. Omita se não estiver visível." },
     },
     required: ["zonas"],
   },
 } as const;
 
 const PROMPT =
-  "Esta imagem é a tela 'Distribuição por zonas' de um marketplace de logística. Cada linha tem o nome da zona, " +
-  "um número com ícone de pino (paradas) e um número com ícone de caixa (pacotes). Leia TODAS as linhas visíveis, sem pular nenhuma " +
+  "Estas imagens são partes da tela 'Distribuição por zonas' de um marketplace de logística. Cada linha tem o nome da zona, " +
+  "um número com ícone de pino (paradas) e um número com ícone de caixa (pacotes). As imagens podem se sobrepor (a mesma zona aparecendo em mais de uma): liste cada zona UMA única vez. Leia TODAS as linhas visíveis, sem pular nenhuma " +
   "e sem inventar valores. Se houver cabeçalho com totais (paradas e pacotes), informe-os. Responda chamando a ferramenta registrar_zonas.";
 
 /** Interpreta a resposta da API (tool_use) e valida os números. */
@@ -42,10 +42,17 @@ export function interpretarResposta(resp: any): ResultadoZonas {
     .map((z: any) => ({ nome: String(z?.nome ?? "").trim(), paradas: Math.max(0, Math.floor(Number(z?.paradas) || 0)), pacotes: Math.max(0, Math.floor(Number(z?.pacotes) || 0)) }))
     .filter((z: ZonaLida) => z.nome && z.pacotes > 0);
   const n = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : null);
-  return { zonas, totalPacotes: n(inp.total_pacotes), totalParadas: n(inp.total_paradas) };
+  const vistos = new Set<string>();
+  const unicas = zonas.filter((z) => {
+    const k = `${z.nome.toLowerCase()}|${z.paradas}|${z.pacotes}`;
+    if (vistos.has(k)) return false;
+    vistos.add(k);
+    return true;
+  });
+  return { zonas: unicas, totalPacotes: n(inp.total_pacotes), totalParadas: n(inp.total_paradas) };
 }
 
-export async function lerZonasDaImagem(base64: string, mediaType: string, apiKey: string): Promise<ResultadoZonas> {
+export async function lerZonasDaImagem(imagens: { data: string; mediaType: string }[], apiKey: string): Promise<ResultadoZonas> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -54,13 +61,16 @@ export async function lerZonasDaImagem(base64: string, mediaType: string, apiKey
       max_tokens: 4000,
       tools: [FERRAMENTA],
       tool_choice: { type: "tool", name: "registrar_zonas" },
-      messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data: base64 } }, { type: "text", text: PROMPT }] }],
+      messages: [{ role: "user", content: [...imagens.map((i) => ({ type: "image", source: { type: "base64", media_type: i.mediaType, data: i.data } })), { type: "text", text: PROMPT }] }],
     }),
   });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
     console.error("[ler-zonas] Anthropic respondeu", res.status, t.slice(0, 300));
-    throw new Error(res.status === 401 ? "A chave da leitura por imagem está inválida." : "A leitura por imagem não respondeu. Tente de novo em instantes.");
+    let detalhe = "";
+    try { detalhe = JSON.parse(t)?.error?.message ?? ""; } catch { detalhe = t.slice(0, 160); }
+    const base = res.status === 401 ? "A chave da leitura por imagem está inválida." : res.status === 429 ? "Limite de uso da leitura por imagem atingido. Tente em alguns minutos." : "A leitura por imagem falhou.";
+    throw new Error(`${base} (${res.status}${detalhe ? `: ${detalhe}` : ""})`);
   }
   return interpretarResposta(await res.json());
 }

@@ -22,13 +22,14 @@ export default defineEventHandler(async (event) => {
   usos.set(user.id, [...lista, agora]);
 
   const body: any = await req.json().catch(() => null);
-  const data = String(body?.image ?? "");
-  const mediaType = String(body?.mediaType ?? "image/jpeg");
-  if (!data || data.length > 7_000_000 || !/^image\/(jpeg|png|webp)$/.test(mediaType)) return Response.json({ error: "Imagem inválida ou grande demais." }, { status: 400 });
+  const brutas: { image?: string; mediaType?: string }[] = Array.isArray(body?.images) ? body.images : body?.image ? [{ image: body.image, mediaType: body.mediaType }] : [];
+  const imagens = brutas.slice(0, 4).map((i) => ({ data: String(i?.image ?? ""), mediaType: String(i?.mediaType ?? "image/jpeg") }));
+  if (!imagens.length || imagens.some((i) => !i.data || i.data.length > 5_000_000 || !/^image\/(jpeg|png|webp)$/.test(i.mediaType)))
+    return Response.json({ error: "Imagem inválida ou grande demais." }, { status: 400 });
 
   try {
     const { lerZonasDaImagem } = await import("./server/ler-zonas");
-    return Response.json(await lerZonasDaImagem(data, mediaType, key));
+    return Response.json(await lerZonasDaImagem(imagens, key));
   } catch (e: any) {
     return Response.json({ error: e?.message ?? "Falha na leitura" }, { status: 502 });
   }

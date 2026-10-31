@@ -321,15 +321,20 @@ function CreateOperation({
   const [lendo, setLendo] = useState(false);
   const [leitura, setLeitura] = useState<string | null>(null);
 
-  async function lerImagem(file: File) {
+  async function reduzir(file: File): Promise<string> {
+    const img = await new Promise<HTMLImageElement>((ok, err) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => err(new Error("Imagem inválida")); i.src = URL.createObjectURL(file); });
+    const max = 1600, esc = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement("canvas"); c.width = Math.round(img.width * esc); c.height = Math.round(img.height * esc);
+    c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.82).split(",")[1];
+  }
+
+  async function lerImagem(files: File[]) {
     setLendo(true); setLeitura(null);
     try {
-      const img = await new Promise<HTMLImageElement>((ok, err) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => err(new Error("Imagem inválida")); i.src = URL.createObjectURL(file); });
-      const max = 1800, esc = Math.min(1, max / Math.max(img.width, img.height));
-      const c = document.createElement("canvas"); c.width = Math.round(img.width * esc); c.height = Math.round(img.height * esc);
-      c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-      const b64 = c.toDataURL("image/jpeg", 0.85).split(",")[1];
-      const r = await fetch("/api/ai/ler-zonas", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: b64, mediaType: "image/jpeg" }) });
+      const imagens: { image: string; mediaType: string }[] = [];
+      for (const f of files.slice(0, 4)) imagens.push({ image: await reduzir(f), mediaType: "image/jpeg" });
+      const r = await fetch("/api/ai/ler-zonas", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images: imagens }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j?.error ?? "Não foi possível ler a imagem");
       if (!j.zonas?.length) throw new Error("Não encontrei zonas na imagem. Mostre a lista inteira, com boa luz.");
@@ -817,11 +822,11 @@ function CreateOperation({
                   <Button type="button" size="sm" variant={listaFormato === "simples" ? "default" : "outline"} onClick={() => setListaFormato("simples")}>Nome e pacotes</Button>
                 </div>
                 <div>
-                  <input id="ler-zonas-foto" type="file" accept="image/*" className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) lerImagem(f); }} />
+                  <input id="ler-zonas-foto" type="file" accept="image/*" multiple className="hidden"
+                    onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; if (fs.length) lerImagem(fs); }} />
                   <Button type="button" variant="outline" size="sm" disabled={lendo} onClick={() => document.getElementById("ler-zonas-foto")?.click()}>
                     {lendo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
-                    {lendo ? "Lendo a imagem…" : "Ler de uma foto ou print da tela"}
+                    {lendo ? "Lendo as imagens…" : "Ler de fotos ou prints da tela (até 4)"}
                   </Button>
                   {leitura && <p className="mt-2 text-xs text-muted-foreground">{leitura}</p>}
                 </div>

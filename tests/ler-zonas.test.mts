@@ -9,11 +9,16 @@ let err = ""; try { interpretarResposta({ content: [{ type: "text", text: "não 
 ok("sem ferramenta = erro amigável", /nítida/.test(err), err);
 let enviado: any = null;
 (globalThis as any).fetch = async (url: string, init: any) => { enviado = { url, init }; return { ok: true, json: async () => resp }; };
-const lido = await lerZonasDaImagem("AAAA", "image/jpeg", "sk-teste");
+const lido = await lerZonasDaImagem([{ data: "AAAA", mediaType: "image/jpeg" }, { data: "BBBB", mediaType: "image/jpeg" }], "sk-teste");
 const corpo = JSON.parse(enviado.init.body);
-ok("chama a API com imagem e ferramenta forçada", enviado.url.includes("anthropic.com") && corpo.tool_choice.name === "registrar_zonas" && corpo.messages[0].content[0].type === "image" && enviado.init.headers["x-api-key"] === "sk-teste", corpo.tool_choice);
+ok("chama a API com imagem e ferramenta forçada", enviado.url.includes("anthropic.com") && corpo.tool_choice.name === "registrar_zonas" && corpo.messages[0].content.filter((c: any) => c.type === "image").length === 2 && enviado.init.headers["x-api-key"] === "sk-teste", corpo.tool_choice);
 ok("devolve as zonas", lido.zonas.length === 2);
 (globalThis as any).fetch = async () => ({ ok: false, status: 401, text: async () => "x" });
-let e2 = ""; try { await lerZonasDaImagem("A", "image/jpeg", "k"); } catch (e: any) { e2 = e.message; }
+let e2 = ""; try { await lerZonasDaImagem([{ data: "A", mediaType: "image/jpeg" }], "k"); } catch (e: any) { e2 = e.message; }
 ok("chave inválida tem mensagem clara", /chave/.test(e2), e2);
+(globalThis as any).fetch = async () => ({ ok: false, status: 400, text: async () => JSON.stringify({ error: { message: "model not found" } }) });
+let e3 = ""; try { await lerZonasDaImagem([{ data: "A", mediaType: "image/jpeg" }], "k"); } catch (e: any) { e3 = e.message; }
+ok("erro da API mostra status e motivo", /400/.test(e3) && /model not found/.test(e3), e3);
+const dup = interpretarResposta({ content: [{ type: "tool_use", name: "registrar_zonas", input: { zonas: [{ nome: "Mega", paradas: 16, pacotes: 135 }, { nome: "mega", paradas: 16, pacotes: 135 }, { nome: "Vila", paradas: 63, pacotes: 118 }] } }] });
+ok("zonas repetidas entre as fotos viram uma só", dup.zonas.length === 2, dup);
 process.exit(fail ? 1 : 0);
