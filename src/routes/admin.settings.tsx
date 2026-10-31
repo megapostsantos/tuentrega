@@ -68,6 +68,7 @@ function SettingsPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader title="Configurações" description="Perfil do admin, templates e ajustes da plataforma" />
+      <EmailTeste />
 
       <section className="rounded-xl border bg-card p-5">
         <h3 className="font-semibold">Perfil do Admin</h3>
@@ -137,6 +138,40 @@ function SettingsPage() {
         {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
         Salvar todas as configurações
       </Button>
+    </div>
+  );
+}
+
+
+function EmailTeste() {
+  const [to, setTo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState<null | { chave: boolean; remetente: string; ok: boolean; status: number | null; resposta: string }>(null);
+  async function enviar() {
+    setBusy(true); setRes(null);
+    const r = await fetch("/api/admin/email-test", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to }) });
+    const j = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return toast.error(j?.error ?? "Falha no teste");
+    setRes(j);
+  }
+  return (
+    <div className="space-y-3 rounded-xl border p-4">
+      <div>
+        <h2 className="font-semibold">Teste de e-mail (Resend)</h2>
+        <p className="text-xs text-muted-foreground">Envia um e-mail de teste e mostra exatamente o que o Resend respondeu. Use para descobrir por que as mensagens não chegam.</p>
+      </div>
+      <div className="flex max-w-md gap-2">
+        <Input type="email" placeholder="seu@email.com" value={to} onChange={(e) => setTo(e.target.value)} />
+        <Button onClick={enviar} disabled={busy || !to}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar teste"}</Button>
+      </div>
+      {res && (
+        <div className={`rounded-lg border p-3 text-sm ${res.ok ? "border-green-300 bg-green-50 text-green-900" : "border-red-300 bg-red-50 text-red-900"}`}>
+          <div className="font-semibold">{res.ok ? "Enviado! Confira a caixa de entrada (e o spam)." : "Não foi enviado."}</div>
+          <div className="mt-1 text-xs">Chave configurada: {res.chave ? "sim" : "NÃO"} · Remetente usado: {res.remetente} · Status: {res.status ?? "—"}</div>
+          <pre className="mt-2 whitespace-pre-wrap break-words text-xs">{res.resposta}</pre>
+        </div>
+      )}
     </div>
   );
 }

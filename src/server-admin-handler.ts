@@ -57,6 +57,14 @@ export default defineEventHandler(async (event) => {
     return Response.json({ senha, nome: existe[0].name, email: existe[0].email });
   }
 
+  if (url.pathname === "/api/admin/email-test" && req.method === "POST") {
+    const body: any = await req.json().catch(() => null);
+    const to = String(body?.to ?? "").trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return Response.json({ error: "Informe um e-mail válido" }, { status: 400 });
+    const { testarEmail } = await import("./server/email");
+    return Response.json(await testarEmail(to));
+  }
+
   if (url.pathname === "/api/admin/limpeza" && req.method === "GET") {
     const { previaLimpeza } = await import("./server/limpeza");
     return Response.json(await previaLimpeza());
