@@ -318,6 +318,36 @@ function CreateOperation({
   const [divisionMode, setDivisionMode] = useState<DivisionMode>("auto");
   const [listaTexto, setListaTexto] = useState("");
   const [listaFormato, setListaFormato] = useState<"ml" | "simples">("ml");
+  const [lendo, setLendo] = useState(false);
+  const [leitura, setLeitura] = useState<string | null>(null);
+
+  async function lerImagem(file: File) {
+    setLendo(true); setLeitura(null);
+    try {
+      const img = await new Promise<HTMLImageElement>((ok, err) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => err(new Error("Imagem inválida")); i.src = URL.createObjectURL(file); });
+      const max = 1800, esc = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = Math.round(img.width * esc); c.height = Math.round(img.height * esc);
+      c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+      const b64 = c.toDataURL("image/jpeg", 0.85).split(",")[1];
+      const r = await fetch("/api/ai/ler-zonas", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: b64, mediaType: "image/jpeg" }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j?.error ?? "Não foi possível ler a imagem");
+      if (!j.zonas?.length) throw new Error("Não encontrei zonas na imagem. Mostre a lista inteira, com boa luz.");
+      setListaFormato("ml");
+      setListaTexto(j.zonas.map((z: any) => `${z.nome} ${z.paradas} ${z.pacotes}`).join("\n"));
+      if (j.totalPacotes) setTotalPacotes(j.totalPacotes);
+      if (j.totalParadas) setTotalParadas(j.totalParadas);
+      const soma = j.zonas.reduce((a: number, z: any) => a + z.pacotes, 0);
+      setLeitura(
+        j.totalPacotes
+          ? soma === j.totalPacotes
+            ? `Li ${j.zonas.length} zonas e a soma bate com o total da tela (${soma} pacotes). Confira os nomes.`
+            : `Li ${j.zonas.length} zonas somando ${soma} pacotes, mas a tela mostra ${j.totalPacotes}. Falta ou sobra alguma linha: confira abaixo.`
+          : `Li ${j.zonas.length} zonas (${soma} pacotes). Confira antes de continuar.`,
+      );
+    } catch (e: any) { toast.error(e?.message ?? "Falha ao ler a imagem"); }
+    finally { setLendo(false); }
+  }
   const zonasLista = useMemo(() => parseZonas(listaTexto, listaFormato), [listaTexto, listaFormato]);
   const listaSomaP = zonasLista.reduce((s, z) => s + z.pacotes, 0);
   const listaSomaS = zonasLista.reduce((s, z) => s + z.paradas, 0);
@@ -785,6 +815,15 @@ function CreateOperation({
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" size="sm" variant={listaFormato === "ml" ? "default" : "outline"} onClick={() => setListaFormato("ml")}>Colar da tela do marketplace</Button>
                   <Button type="button" size="sm" variant={listaFormato === "simples" ? "default" : "outline"} onClick={() => setListaFormato("simples")}>Nome e pacotes</Button>
+                </div>
+                <div>
+                  <input id="ler-zonas-foto" type="file" accept="image/*" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) lerImagem(f); }} />
+                  <Button type="button" variant="outline" size="sm" disabled={lendo} onClick={() => document.getElementById("ler-zonas-foto")?.click()}>
+                    {lendo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
+                    {lendo ? "Lendo a imagem…" : "Ler de uma foto ou print da tela"}
+                  </Button>
+                  {leitura && <p className="mt-2 text-xs text-muted-foreground">{leitura}</p>}
                 </div>
                 <Label className="text-sm">
                   {listaFormato === "ml"
