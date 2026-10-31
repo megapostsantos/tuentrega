@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, MapPin, Bike, CheckCircle2, AlertTriangle, Radio, RefreshCw, UserX, Undo2, Timer, PauseCircle, Navigation } from "lucide-react";
+import { ChevronDown, Loader2, MapPin, Bike, CheckCircle2, AlertTriangle, Radio, RefreshCw, UserX, Undo2, Timer, PauseCircle, Navigation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyModule } from "@/components/EmptyModule";
@@ -62,6 +62,7 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
   const [operar, setOperar] = useState<RotaOferta | null>(null);
   const [ocorr, setOcorr] = useState<RotaOferta | null>(null);
   const [fechar, setFechar] = useState<RotaOferta | null>(null);
+  const [abertas, setAbertas] = useState<Set<string>>(new Set());
 
   async function load(showSpinner = false) {
     if (showSpinner) setLoading(true);
@@ -233,21 +234,26 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
             const cor = seg == null ? "text-red-600" : seg < 120 ? "text-green-600" : seg < 600 ? "text-amber-600" : "text-red-600";
             return (
               <Card key={o.id}>
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold">{o.titulo}</div>
-                      <div className="mt-0.5 flex items-center gap-1 text-sm text-muted-foreground">
-                        <Bike className="h-4 w-4" />
-                        {o.entregadores?.nome_completo ?? "Entregador não identificado"}
+                <CardContent className="space-y-3 p-3 sm:p-4">
+                  <button type="button" className="flex w-full items-center gap-3 text-left"
+                    onClick={() => setAbertas((x) => { const n = new Set(x); n.has(o.id) ? n.delete(o.id) : n.add(o.id); return n; })}>
+                    <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${abertas.has(o.id) ? "" : "-rotate-90"}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold">{o.titulo.includes("·") ? o.titulo.split("·").slice(1).join("·").trim() : o.titulo}</div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Bike className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{o.entregadores?.nome_completo ?? "Entregador não identificado"}</span>
+                        <span className="shrink-0">· {feitos}/{c.total}</span>
                       </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-green-500 transition-all" style={{ width: `${pct}%` }} /></div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
+                    <div className="flex shrink-0 flex-col items-end gap-1">
                       <Badge variant="outline">{o.status === "in_progress" ? "Em andamento" : "Aceita"}</Badge>
-                      {gerenciado && <Badge variant="secondary">Sem app (gerenciado)</Badge>}
+                      {gerenciado && <Badge variant="secondary">Sem app</Badge>}
                     </div>
-                  </div>
+                  </button>
 
+                  {abertas.has(o.id) && (<>
                   <div>
                     <div className="mb-1 flex justify-between text-xs text-muted-foreground">
                       <span>{c.entregues} entregues · {c.problemas} com problema</span>
@@ -304,6 +310,7 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
                       </Button>
                     </div>
                   </div>
+                  </>)}
                 </CardContent>
               </Card>
             );

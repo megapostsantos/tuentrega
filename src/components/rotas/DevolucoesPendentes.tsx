@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Camera, CheckCircle2, Loader2, PackageX, PackageCheck } from "lucide-react";
+import { Camera, CheckCircle2, ChevronDown, Loader2, PackageX, PackageCheck, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -82,6 +82,9 @@ export function DevolucoesPendentes({
   const [busy, setBusy] = useState<string | null>(null);
   const [foto, setFoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [abertas, setAbertas] = useState<Set<string>>(new Set());
+  const [busca, setBusca] = useState<Record<string, string>>({});
+  const [mostrar, setMostrar] = useState<Record<string, number>>({});
 
   async function load() {
     let q = supabase.from("ofertas").select("id, titulo, entregadores(nome_completo)").eq("status", "awaiting_return");
@@ -144,13 +147,33 @@ export function DevolucoesPendentes({
       {rotas.map((r) => {
         const pks = pacotes.filter((p) => p.oferta_id === r.id);
         const selecionados = pks.filter((p) => sel.has(p.id)).map((p) => p.id);
+        const aberta = !!ofertaId || abertas.has(r.id);
+        const fe = fechs.find((x) => x.oferta_id === r.id);
+        const q = (busca[r.id] ?? "").trim().toLowerCase();
+        const filtrados = q ? pks.filter((p) => `${p.codigo_pacote ?? ""} ${p.numero_pacote} ${p.motivo_nao_entrega ?? ""}`.toLowerCase().includes(q)) : pks;
+        const limite = mostrar[r.id] ?? 20;
         return (
           <Card key={r.id}>
-            <CardContent className="space-y-3 p-4">
-              <div>
-                <div className="font-semibold">{r.titulo}</div>
-                <div className="text-xs text-muted-foreground">{r.entregadores?.nome_completo ?? "Entregador"} · {pks.length} pacote(s) a receber</div>
+            <CardContent className="space-y-3 p-3 sm:p-4">
+              <div className="flex items-center gap-2">
+                <button type="button" disabled={!!ofertaId} onClick={() => setAbertas((s) => { const n = new Set(s); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })}
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                  <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${aberta ? "" : "-rotate-90"}`} />
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold">{r.titulo.includes("·") ? r.titulo.split("·").slice(1).join("·").trim() : r.titulo}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {r.entregadores?.nome_completo ?? "Entregador"} · {pks.length} pacote(s) a receber
+                      {fe?.status === "a_conferir" ? " · conferir com o motorista" : ""}
+                    </div>
+                  </div>
+                </button>
+                {!aberta && (
+                  <Button size="sm" disabled={busy === r.id} onClick={() => receber(r.id, {})}>
+                    {busy === r.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <PackageCheck className="mr-1 h-4 w-4" />}Recebi todos
+                  </Button>
+                )}
               </div>
+              {aberta && (<>
               {(() => {
                 const f = fechs.find((x) => x.oferta_id === r.id);
                 if (!f) return null;
@@ -167,8 +190,15 @@ export function DevolucoesPendentes({
                   </div>
                 );
               })()}
+              {pks.length > 8 && (
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <input value={busca[r.id] ?? ""} onChange={(e) => setBusca((b) => ({ ...b, [r.id]: e.target.value }))} placeholder="Buscar pelo ID do pacote…"
+                    className="h-9 w-full rounded-md border bg-background pl-8 pr-2 text-sm" />
+                </div>
+              )}
               <div className="space-y-2">
-                {pks.map((p) => {
+                {filtrados.slice(0, limite).map((p) => {
                   const o = ocs.find((x: any) => x.oferta_id === r.id && (x.package_id === p.codigo_pacote || x.numero_pacote === p.numero_pacote));
                   return (
                     <label key={p.id} className="flex items-center gap-3 rounded-md border p-2 text-sm">
@@ -187,6 +217,12 @@ export function DevolucoesPendentes({
                     </label>
                   );
                 })}
+                {filtrados.length > limite && (
+                  <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => setMostrar((m) => ({ ...m, [r.id]: limite + 30 }))}>
+                    Mostrar mais ({filtrados.length - limite} restantes)
+                  </Button>
+                )}
+                {filtrados.length === 0 && <p className="py-2 text-center text-xs text-muted-foreground">Nenhum pacote encontrado.</p>}
               </div>
               <div className="flex flex-wrap justify-end gap-2">
                 <Button size="sm" variant="ghost" className="text-red-600" disabled={busy === r.id}
@@ -200,6 +236,7 @@ export function DevolucoesPendentes({
                   {busy === r.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <PackageCheck className="mr-1 h-4 w-4" />}Recebi todos
                 </Button>
               </div>
+              </>)}
             </CardContent>
           </Card>
         );
