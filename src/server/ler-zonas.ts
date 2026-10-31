@@ -31,13 +31,19 @@ const FERRAMENTA = {
 const PROMPT =
   "Estas imagens são partes da tela 'Distribuição por zonas' de um marketplace de logística. Cada linha tem o nome da zona, " +
   "um número com ícone de pino (paradas) e um número com ícone de caixa (pacotes). As imagens podem se sobrepor (a mesma zona aparecendo em mais de uma): liste cada zona UMA única vez. Leia TODAS as linhas visíveis, sem pular nenhuma " +
-  "e sem inventar valores. Se houver cabeçalho com totais (paradas e pacotes), informe-os. Responda chamando a ferramenta registrar_zonas.";
+  "e sem inventar valores. Se houver cabeçalho com totais (paradas e pacotes), informe-os. Responda chamando a ferramenta registrar_zonas (sem texto antes ou depois).";
 
 /** Interpreta a resposta da API (tool_use) e valida os números. */
 export function interpretarResposta(resp: any): ResultadoZonas {
   const bloco = (resp?.content ?? []).find((b: any) => b?.type === "tool_use" && b?.name === "registrar_zonas");
-  if (!bloco) throw new Error("Não consegui ler a imagem. Tente uma foto mais nítida, mostrando a lista inteira.");
-  const inp = bloco.input ?? {};
+  let inp: any = bloco?.input;
+  if (!inp) {
+    // alguns modelos respondem em texto: aceita um JSON com {"zonas": [...]}
+    const texto = (resp?.content ?? []).filter((b: any) => b?.type === "text").map((b: any) => String(b.text)).join("\n");
+    const m = texto.match(/\{[\s\S]*\}/);
+    try { inp = m ? JSON.parse(m[0]) : null; } catch { inp = null; }
+  }
+  if (!inp || !Array.isArray(inp.zonas)) throw new Error("Não consegui ler a imagem. Tente uma foto mais nítida, mostrando a lista inteira.");
   const zonas: ZonaLida[] = (Array.isArray(inp.zonas) ? inp.zonas : [])
     .map((z: any) => ({ nome: String(z?.nome ?? "").trim(), paradas: Math.max(0, Math.floor(Number(z?.paradas) || 0)), pacotes: Math.max(0, Math.floor(Number(z?.pacotes) || 0)) }))
     .filter((z: ZonaLida) => z.nome && z.pacotes > 0);
@@ -60,7 +66,6 @@ export async function lerZonasDaImagem(imagens: { data: string; mediaType: strin
       model: "claude-sonnet-5-5",
       max_tokens: 4000,
       tools: [FERRAMENTA],
-      tool_choice: { type: "tool", name: "registrar_zonas" },
       messages: [{ role: "user", content: [...imagens.map((i) => ({ type: "image", source: { type: "base64", media_type: i.mediaType, data: i.data } })), { type: "text", text: PROMPT }] }],
     }),
   });
