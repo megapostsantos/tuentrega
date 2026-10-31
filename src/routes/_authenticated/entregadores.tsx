@@ -62,6 +62,7 @@ function ListaEntregadores() {
   const [dispatcherIds, setDispatcherIds] = useState<Set<string>>(new Set());
   const [convites, setConvites] = useState<Map<string, string>>(new Map());
   const [empresaNome, setEmpresaNome] = useState("");
+  const [vinculados, setVinculados] = useState<Set<string>>(new Set());
 
   async function fetchList() {
     setLoad(true);
@@ -74,6 +75,8 @@ function ListaEntregadores() {
       setDispatcherIds(new Set((dispData ?? []).map((d: any) => d.entregador_id)));
       const { data: ger } = await (supabase as any).from("entregadores_gerenciados").select("entregador_id, codigo_convite");
       setConvites(new Map(((ger as any[]) ?? []).filter((g) => g.codigo_convite).map((g) => [g.entregador_id, g.codigo_convite])));
+      const { data: vin } = await (supabase as any).from("vinculos_empresa").select("entregador_id");
+      setVinculados(new Set(((vin as any[]) ?? []).map((v) => v.entregador_id)));
       const { data: emp } = await (supabase as any).from("empresas").select("nome_fantasia, razao_social").eq("id", user.id).maybeSingle();
       setEmpresaNome(emp?.nome_fantasia || emp?.razao_social || "");
     }
@@ -88,6 +91,14 @@ function ListaEntregadores() {
     const msg = `Olá ${e.nome_completo}! ${empresaNome ? `A empresa ${empresaNome} cadastrou` : "Você foi cadastrado(a)"} você como parceiro(a) no TuEntrega. Para criar sua senha, abra ${SITE_URL}/auth, toque na aba "Convite" e use o e-mail ${email} e o código ${codigo}.`;
     const fone = String((e as any).whatsapp ?? "").replace(/\D/g, "");
     window.open(fone ? `https://wa.me/${fone.length <= 11 ? "55" + fone : fone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  }
+
+  async function desvincular(e: Ent) {
+    if (!confirm(`Desvincular ${e.nome_completo}? Ele passa a ver as ofertas de todas as empresas e pode trabalhar para outras.`)) return;
+    const { error } = await (supabase as any).from("vinculos_empresa").delete().eq("entregador_id", e.id);
+    if (error) return toast.error(error.message);
+    toast.success("Entregador desvinculado.");
+    fetchList();
   }
 
   async function suspendManually(id: string) {
@@ -177,6 +188,12 @@ function ListaEntregadores() {
                           )}
                         </TableCell>
                         <TableCell className="text-right" onClick={(ev) => ev.stopPropagation()}>
+                          {vinculados.has(e.id) && (
+                            <>
+                              <Badge className="mr-1 bg-primary/15 text-foreground hover:bg-primary/15">Vinculado</Badge>
+                              <Button variant="outline" size="sm" className="mr-1" onClick={() => desvincular(e)}>Desvincular</Button>
+                            </>
+                          )}
                           {convites.has(e.id) && (
                             <Button variant="outline" size="sm" className="mr-1" onClick={() => reenviarConvite(e)}>
                               <Send className="h-3.5 w-3.5 mr-1" /> Enviar convite

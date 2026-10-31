@@ -47,12 +47,15 @@ const operacaoDaEmpresa: Pred = (a, p, u) =>
 
 const naoRecusada: Pred = (a, p, u) =>
   `not exists (select 1 from "ofertas_recusas" rc where rc."oferta_id"::text = ${col(a, "id")}::text and rc."entregador_id"::text = ${p(u)} and rc."origem" <> 'sistema')`;
+/** Entregador vinculado a uma empresa (entrou por convite dela) só enxerga o que é dessa empresa. */
+const livreParaEmpresa: Pred = (a, p, u) =>
+  `not exists (select 1 from "vinculos_empresa" v where v."entregador_id"::text = ${p(u)} and v."empresa_id"::text <> ${col(a, "empresa_id")}::text)`;
 const marketplace: Pred = (a, p, u) =>
   `(${col(a, "status")} = 'open' and coalesce(${col(a, "tipo")}, 'normal') <> 'private' and ${naoRecusada(a, p, u)})`;
 const convidado: Pred = (a, p, u) =>
   `exists (select 1 from "ofertas_privadas_config" c where c."oferta_id"::text = ${col(a, "id")}::text and c."entregador_id"::text = ${p(u)})`;
 const dispatcherDono: Pred = (a, p, u) => `${col(a, "dispatcher_id")}::text in ${meDispatcherIds(u, p)}`;
-const ofertaVisivelEntregador: Pred = or(eq("entregador_id"), marketplace, convidado, dispatcherDono);
+const ofertaVisivelEntregador: Pred = or(eq("entregador_id"), and(livreParaEmpresa, or(marketplace, convidado)), dispatcherDono);
 const ofertaAceitavel: Pred = (a, p, u) =>
   `(${col(a, "entregador_id")} is null and ${col(a, "status")} = 'open' and (coalesce(${col(a, "tipo")}, 'normal') <> 'private' or ${convidado(a, p, u)}) and ${naoRecusada(a, p, u)})`;
 
@@ -71,6 +74,9 @@ const gerenciadoPorMim: Pred = (a, p, u) =>
   `exists (select 1 from "entregadores_gerenciados" g where g."entregador_id"::text = ${col(a, "id")}::text and g."empresa_id"::text = ${p(u)})`;
 const naoGerenciadoPorOutra: Pred = (a, p, u) =>
   `not exists (select 1 from "entregadores_gerenciados" g where g."entregador_id"::text = ${col(a, "id")}::text and g."empresa_id"::text <> ${p(u)})`;
+
+const naoVinculadoPorOutra: Pred = (a, p, u) =>
+  `not exists (select 1 from "vinculos_empresa" v where v."entregador_id"::text = ${col(a, "id")}::text and v."empresa_id"::text <> ${p(u)})`;
 
 const dispatcherMeu = (c: string): Pred => (a, p, u) => `${col(a, c)}::text in ${meDispatcherIds(u, p)}`;
 
@@ -106,7 +112,7 @@ export const POLICIES: Record<string, Policy> = {
       empresa: [
         "razao_social", "cnpj", "nome_fantasia", "segmento", "cep", "rua", "numero", "complemento", "bairro",
         "cidade", "estado", "whatsapp", "responsavel", "tms_metodo_padrao", "tms_mostrar_margem",
-        "tms_pacotes_por_rota", "tms_valor_padrao_pacote", "updated_at",
+        "tms_pacotes_por_rota", "tms_valor_padrao_pacote", "aprovar_candidatos", "updated_at",
       ],
     },
     insert: { empresa: ownCol("id") },
@@ -116,7 +122,7 @@ export const POLICIES: Record<string, Policy> = {
 
   entregadores: {
     read: {
-      empresa: or(eq("id"), and((a) => `${col(a, "status")} = 'ativo'`, naoGerenciadoPorOutra), entregadorTrabalhaParaEmpresa),
+      empresa: or(eq("id"), and((a) => `${col(a, "status")} = 'ativo'`, naoGerenciadoPorOutra, naoVinculadoPorOutra), entregadorTrabalhaParaEmpresa),
       entregador: eq("id"),
       dispatcher: or(eq("id"), (a) => `${col(a, "status")} = 'ativo'`, entregadorDoMeuTime),
     },
@@ -186,7 +192,8 @@ export const POLICIES: Record<string, Policy> = {
 
   ofertas: {
     read: { empresa: eq("empresa_id"), entregador: ofertaVisivelEntregador },
-    update: { empresa: eq("empresa_id"), entregador: or(eq("entregador_id"), ofertaAceitavel) },
+    // aceitar uma rota aberta acontece só pela candidatura (candidatar_oferta), nunca por atualização direta
+    update: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
     updateCols: {
       entregador: [
         "status", "entregador_id", "pacotes_entregues", "pacotes_nao_entregues", "closed_at", "closing_notes", "iniciada_em", "updated_at",
@@ -297,6 +304,15 @@ export const POLICIES: Record<string, Policy> = {
     force: { empresa: { empresa_id: "uid" } },
   },
 
+  vinculos_empresa: {
+    read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
+    delete: { empresa: eq("empresa_id") },
+  },
+
+  candidaturas: {
+    read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
+  },
+
   equipe_empresa: {
     read: { empresa: eq("empresa_id") },
     update: { empresa: eq("empresa_id") },
@@ -344,7 +360,7 @@ export const POLICIES: Record<string, Policy> = {
     read: {
       empresa: eq("empresa_id"),
       entregador: or(
-        (a) => `(${col(a, "status")} = 'aberta' and ${col(a, "data_prevista")} >= current_date)`,
+        and(livreParaEmpresa, (a) => `(${col(a, "status")} = 'aberta' and ${col(a, "data_prevista")} >= current_date)`),
         (a, p, u) =>
           `exists (select 1 from "agenda_compromissos" c where c."previsao_id"::text = ${col(a, "id")}::text and c."entregador_id"::text = ${p(u)})`,
       ),

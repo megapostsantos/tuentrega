@@ -157,6 +157,7 @@ export const empresas = pgTable("empresas", {
   tmsMostrarMargem: boolean("tms_mostrar_margem").default(false),
   tmsPacotesPorRota: integer("tms_pacotes_por_rota"),
   tmsValorPadraoPacote: numeric("tms_valor_padrao_pacote"),
+  aprovarCandidatos: boolean("aprovar_candidatos").notNull().default(true),
 });
 
 export const entregadores = pgTable("entregadores", {
@@ -494,6 +495,23 @@ export const equipeEmpresa = pgTable("equipe_empresa", {
   ativo: boolean("ativo").notNull().default(true),
   codigoConvite: text("codigo_convite"),
   criadoEm: timestamp("criado_em").notNull().defaultNow(),
+});
+
+export const vinculosEmpresa = pgTable("vinculos_empresa", {
+  entregadorId: text("entregador_id").primaryKey(),
+  empresaId: text("empresa_id").notNull(),
+  empresaNome: text("empresa_nome"),
+  criadoEm: timestamp("criado_em").notNull().defaultNow(),
+});
+
+export const candidaturas = pgTable("candidaturas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ofertaId: text("oferta_id").notNull(),
+  entregadorId: text("entregador_id").notNull(),
+  empresaId: text("empresa_id").notNull(),
+  status: text("status").notNull().default("pendente"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  decididaEm: timestamp("decidida_em"),
 });
 
 export const fechamentosGestor = pgTable("fechamentos_gestor", {

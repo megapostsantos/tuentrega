@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { whatsappLink, SITE_URL } from "@/lib/contato";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RegisterEntregadorDialog } from "@/components/RegisterEntregadorDialog";
 
@@ -29,6 +30,7 @@ function EquipePage() {
   const [f, setF] = useState({ nome: "", email: "", whatsapp: "", entregador: false });
   const [criando, setCriando] = useState(false);
   const [empresaNome, setEmpresaNome] = useState("");
+  const [aprovar, setAprovar] = useState(true);
   const [parceiros, setParceiros] = useState<{ id: string; nome: string; email: string | null; whatsapp: string | null; codigo: string | null }[]>([]);
   const [novoParceiro, setNovoParceiro] = useState(false);
   const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string }>(null);
@@ -36,9 +38,10 @@ function EquipePage() {
   async function load() {
     const { data } = await sb.from("equipe_empresa").select("user_id, nome, email, ativo, codigo_convite, entregador").order("criado_em", { ascending: false });
     setMembros((data as Membro[]) ?? []);
-    const { data: e } = await sb.from("empresas").select("tms_valor_padrao_pacote, nome_fantasia, razao_social").eq("id", user?.id).maybeSingle();
+    const { data: e } = await sb.from("empresas").select("tms_valor_padrao_pacote, nome_fantasia, razao_social, aprovar_candidatos").eq("id", user?.id).maybeSingle();
     if (e?.tms_valor_padrao_pacote != null) setVp(String(e.tms_valor_padrao_pacote));
     setEmpresaNome(e?.nome_fantasia || e?.razao_social || "");
+    setAprovar(e?.aprovar_candidatos !== false);
     const { data: ger } = await sb.from("entregadores_gerenciados").select("entregador_id, codigo_convite");
     const ids = ((ger as any[]) ?? []).map((g) => g.entregador_id);
     if (ids.length) {
@@ -53,6 +56,13 @@ function EquipePage() {
 
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   if (role !== "empresa" || isOperador) return <div className="p-6 text-muted-foreground">Somente o dono da empresa acessa a equipe.</div>;
+
+  async function mudarAprovacao(v: boolean) {
+    setAprovar(v);
+    const { error } = await sb.from("empresas").update({ aprovar_candidatos: v }).eq("id", user!.id);
+    if (error) { setAprovar(!v); return toast.error(error.message); }
+    toast.success(v ? "Agora você aprova cada entregador antes de confirmar a rota." : "Agora a rota é do primeiro entregador que aceitar.");
+  }
 
   async function salvarVp() {
     const n = Number(vp.replace(",", "."));
@@ -183,6 +193,21 @@ function EquipePage() {
           ))}
         </TabsContent>
       </Tabs>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Quem faz as suas rotas</CardTitle></CardHeader>
+        <CardContent className="flex items-start justify-between gap-4">
+          <div className="text-sm">
+            <div className="font-semibold">Aprovar entregadores antes de confirmar a rota</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {aprovar
+                ? "Quando um entregador quer uma rota publicada, ele vira candidato e você escolhe quem faz (aprovar ou recusar)."
+                : "A rota fica com o primeiro entregador que aceitar, sem passar por você."}
+            </p>
+          </div>
+          <Switch checked={aprovar} onCheckedChange={mudarAprovacao} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle className="text-base">Valor padrão por pacote</CardTitle></CardHeader>

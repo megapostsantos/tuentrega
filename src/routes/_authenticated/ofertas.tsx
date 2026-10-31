@@ -1,6 +1,6 @@
 import { SITE_URL } from "@/lib/contato";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   Store, Plus, FileText, MapPin, Loader2, Clock, Package, Copy,
   Bike, Car, Truck, Footprints, Zap, Bike as Motorcycle, X, Pencil, Share2, Mail,
@@ -97,6 +97,9 @@ function rotuloData(k: string): string {
   const fmt = new Date(k + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
   return k === hoje ? `Hoje · ${fmt}` : k === amanha ? `Amanhã · ${fmt}` : fmt;
 }
+
+/** Candidaturas do entregador logado (oferta → pendente | recusada | aprovada), para mostrar o estado nas ofertas. */
+const CandidaturasCtx = createContext<Record<string, string>>({});
 
 function fmtMoney(n: number | null | undefined) {
   if (n == null) return "—";
@@ -658,6 +661,16 @@ function EntregadorView({
   const [selected, setSelected] = useState<Oferta | null>(null);
   const [closing, setClosing] = useState<Oferta | null>(null);
   const [myVehicle, setMyVehicle] = useState<string | null>(null);
+  const [cands, setCands] = useState<Record<string, string>>({});
+  const [vinculo, setVinculo] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    const sb = supabase as any;
+    sb.from("candidaturas").select("oferta_id, status").eq("entregador_id", user.id)
+      .then(({ data }: any) => setCands(Object.fromEntries(((data as any[]) ?? []).map((c) => [c.oferta_id, c.status]))));
+    sb.from("vinculos_empresa").select("empresa_nome").eq("entregador_id", user.id).maybeSingle()
+      .then(({ data }: any) => setVinculo(data ? (data.empresa_nome || "sua empresa") : null));
+  }, [user?.id, ofertas]);
   const search = useSearch({ from: "/_authenticated/ofertas" });
   const navigate = useNavigate();
 
@@ -680,6 +693,7 @@ function EntregadorView({
   const available = useMemo(() => {
     return ofertas.filter((o) => {
       if (o.status !== "open") return false;
+      if (cands[o.id] === "recusada") return false;
       if (o.expira_em && new Date(o.expira_em).getTime() < Date.now()) return false;
       if (vehicleFilter !== "all" && o.veiculo_necessario && o.veiculo_necessario !== vehicleFilter) return false;
       if (bairro && !(o.bairro ?? "").toLowerCase().includes(bairro.toLowerCase())) return false;
@@ -687,7 +701,7 @@ function EntregadorView({
       if (vmax && Number(o.valor) > Number(vmax)) return false;
       return true;
     });
-  }, [ofertas, vehicleFilter, bairro, vmin, vmax]);
+  }, [ofertas, vehicleFilter, bairro, vmin, vmax, cands]);
 
   const mine = useMemo(
     () => ofertas.filter((o) => o.entregador_id === user?.id && o.status !== "open"),
@@ -695,8 +709,14 @@ function EntregadorView({
   );
 
   return (
+    <CandidaturasCtx.Provider value={cands}>
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader title="Ofertas" description="Encontre fretes na sua região" />
+      {vinculo && (
+        <div className="rounded-xl border border-primary/40 bg-primary/10 p-3 text-xs">
+          Você está vinculado a <strong>{vinculo}</strong>: aparecem aqui as ofertas dessa empresa. Quando ela liberar o vínculo, você volta a ver as ofertas de todas as empresas.
+        </div>
+      )}
 
       <Tabs defaultValue="available">
         <TabsList>
@@ -758,7 +778,7 @@ function EntregadorView({
         </TabsContent>
       </Tabs>
 
-      {selected && <DetailsDialog o={selected} onClose={() => setSelected(null)} role="entregador" reload={reload} onCloseRoute={(o) => setClosing(o)} />}
+      {selected && <DetailsDialog o={selected} onClose={() => setSelected(null)} role="entregador" reload={reload} onCloseRoute={(o) => setClosing(o)} candidatura={cands[selected.id]} />}
       {closing && (
         <CloseRouteDialog
           oferta={closing as never}
@@ -767,6 +787,7 @@ function EntregadorView({
         />
       )}
     </div>
+    </CandidaturasCtx.Provider>
   );
 }
 
@@ -780,6 +801,7 @@ function OfertaCard({
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const cands = useContext(CandidaturasCtx);
 
   async function cancel() {
     if (!confirm("Cancelar esta oferta?")) return;
@@ -813,6 +835,7 @@ function OfertaCard({
       <CardContent className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge className={st.cls}>{st.label}</Badge>
+          {role === "entregador" && o.status === "open" && cands[o.id] === "pendente" && <Badge className="bg-amber-100 text-amber-800">Aguardando aprovação</Badge>}
           {VIcon && <Badge variant="outline" className="gap-1"><VIcon className="h-3 w-3" /> {VEHICLE_MAP[o.veiculo_necessario!].label}</Badge>}
           {o.bairro && <Badge variant="outline" className="gap-1"><MapPin className="h-3 w-3" /> {o.bairro}</Badge>}
           {o.quantidade_pacotes ? (
@@ -855,8 +878,8 @@ function OfertaCard({
 }
 
 function DetailsDialog({
-  o, onClose, role, reload, onCloseRoute,
-}: { o: Oferta; onClose: () => void; role: "empresa" | "entregador"; reload: () => void; onCloseRoute?: (o: Oferta) => void }) {
+  o, onClose, role, reload, onCloseRoute, candidatura,
+}: { o: Oferta; onClose: () => void; role: "empresa" | "entregador"; reload: () => void; onCloseRoute?: (o: Oferta) => void; candidatura?: string }) {
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -910,26 +933,31 @@ function DetailsDialog({
   async function accept() {
     setBusy(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { error } = await supabase
-        .from("ofertas")
-        .update({ status: "in_progress", entregador_id: user.id, iniciada_em: new Date().toISOString() } as any)
-        .eq("id", o.id)
-        .eq("status", "open");
+      const { data, error } = await (supabase as any).rpc("candidatar_oferta", { _oferta_id: o.id });
       if (error) throw error;
-
-      await ensurePackagesForOferta(o);
-
-      toast.success("🎉 Oferta aceita! Sua rota foi iniciada");
       onClose();
       reload();
-      navigate({ to: "/rotas" });
+      if (data?.modo === "aceita") {
+        toast.success("🎉 Rota aceita! Abra Rotas para iniciar.");
+        navigate({ to: "/rotas" });
+      } else {
+        toast.success("Candidatura enviada! A empresa vai aprovar e você será avisado.");
+      }
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao aceitar oferta.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function cancelarCandidatura() {
+    setBusy(true);
+    const { error } = await (supabase as any).rpc("cancelar_candidatura", { _oferta_id: o.id });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Candidatura cancelada.");
+    onClose();
+    reload();
   }
 
   async function changeStatus(status: string) {
@@ -1118,15 +1146,22 @@ function DetailsDialog({
           {/* ENTREGADOR: actions */}
           {role === "entregador" && (
             <div className="space-y-2">
-              {o.status === "open" && !expired && (
+              {o.status === "open" && !expired && candidatura === "pendente" && (
+                <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  <p className="font-semibold">Aguardando a aprovação da empresa</p>
+                  <p className="text-xs">Você se candidatou a esta rota. A empresa escolhe quem vai fazer, e você recebe um aviso.</p>
+                  <Button variant="outline" className="w-full" disabled={busy} onClick={cancelarCandidatura}>Cancelar candidatura</Button>
+                </div>
+              )}
+              {o.status === "open" && !expired && candidatura !== "pendente" && (
                 <>
                   {!confirming ? (
                     <Button className="w-full bg-primary text-primary-foreground hover:opacity-90" onClick={() => setConfirming(true)}>
-                      Aceitar oferta
+                      Quero fazer esta rota
                     </Button>
                   ) : (
                     <div className="space-y-2 rounded-lg border p-3">
-                      <p className="text-sm font-medium">Aceitar esta oferta?</p>
+                      <p className="text-sm font-medium">Quer fazer esta rota? A empresa pode precisar aprovar.</p>
                       <p className="text-xs text-muted-foreground">
                         {o.bairro} · {fmtMoney(o.valor)} {o.exige_nota_fiscal && "· exige NF"}
                       </p>

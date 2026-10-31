@@ -2241,3 +2241,11 @@ CREATE TABLE IF NOT EXISTS "fechamentos_gestor" ("id" uuid PRIMARY KEY DEFAULT g
 CREATE INDEX IF NOT EXISTS "idx_fechamentos_oferta" ON "fechamentos_gestor" ("oferta_id");
 -- @@
 CREATE TABLE IF NOT EXISTS "equipe_empresa" ("user_id" text PRIMARY KEY NOT NULL, "empresa_id" text NOT NULL, "nome" text, "email" text, "ativo" boolean DEFAULT true NOT NULL, "codigo_convite" text, "criado_em" timestamp DEFAULT now() NOT NULL);
+-- @@
+ALTER TABLE "empresas" ADD COLUMN IF NOT EXISTS "aprovar_candidatos" boolean DEFAULT true NOT NULL;
+-- @@
+CREATE TABLE IF NOT EXISTS "vinculos_empresa" ("entregador_id" text PRIMARY KEY NOT NULL, "empresa_id" text NOT NULL, "empresa_nome" text, "criado_em" timestamp DEFAULT now() NOT NULL);
+-- @@
+CREATE TABLE IF NOT EXISTS "candidaturas" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "oferta_id" text NOT NULL, "entregador_id" text NOT NULL, "empresa_id" text NOT NULL, "status" text DEFAULT 'pendente' NOT NULL, "created_at" timestamp DEFAULT now() NOT NULL, "decidida_em" timestamp);
+-- @@
+CREATE UNIQUE INDEX IF NOT EXISTS "candidaturas_oferta_entregador_unique" ON "candidaturas" ("oferta_id","entregador_id");

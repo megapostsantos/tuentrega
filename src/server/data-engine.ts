@@ -617,6 +617,23 @@ const DDL_LAZY: string[] = [
 	"criado_em" timestamp DEFAULT now() NOT NULL
 );`,
   `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "entregador" boolean DEFAULT false NOT NULL;`,
+  `ALTER TABLE "empresas" ADD COLUMN IF NOT EXISTS "aprovar_candidatos" boolean DEFAULT true NOT NULL;`,
+  `CREATE TABLE IF NOT EXISTS "vinculos_empresa" (
+	"entregador_id" text PRIMARY KEY NOT NULL,
+	"empresa_id" text NOT NULL,
+	"empresa_nome" text,
+	"criado_em" timestamp DEFAULT now() NOT NULL
+);`,
+  `CREATE TABLE IF NOT EXISTS "candidaturas" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"oferta_id" text NOT NULL,
+	"entregador_id" text NOT NULL,
+	"empresa_id" text NOT NULL,
+	"status" text DEFAULT 'pendente' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"decidida_em" timestamp
+);`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "candidaturas_oferta_entregador_unique" ON "candidaturas" ("oferta_id","entregador_id");`,
   `CREATE TABLE IF NOT EXISTS "senhas_provisorias" ("user_id" text PRIMARY KEY NOT NULL, "criada_em" timestamp DEFAULT now() NOT NULL);`,
 ];
 let tabelasGarantidas = false;
@@ -886,6 +903,115 @@ async function definirMembroEntregador(uid: string | null, args: Record<string, 
   return { data: { ok: true }, error: null, count: null };
 }
 
+/** Vínculo exclusivo: quem entrou por convite de uma empresa só vê as ofertas dela até ser desvinculado. */
+export async function criarVinculo(entregadorId: string, empresaId: string) {
+  const e = await query(`select coalesce("nome_fantasia","razao_social") as nome from "empresas" where "id" = $1`, [empresaId]);
+  await query(
+    `insert into "vinculos_empresa" ("entregador_id","empresa_id","empresa_nome") values ($1,$2,$3) on conflict ("entregador_id") do nothing`,
+    [entregadorId, empresaId, e[0]?.nome ?? null],
+  );
+}
+
+const notificar = (userId: string, titulo: string, corpo: string, link: string) => ({
+  text: `insert into "user_notifications" ("user_id","titulo","corpo","link") values ($1,$2,$3,$4)`,
+  params: [userId, titulo, corpo, link],
+});
+
+/** Atribui a rota a um entregador de forma atômica: se outro chegou antes, falha (ninguém fica com a rota duplicada). */
+async function atribuirOferta(ofertaId: string, entregadorId: string): Promise<{ empresa_id: string; titulo: string }> {
+  const r = await query(
+    `update "ofertas" set "entregador_id" = $2, "status" = 'accepted', "atribuida_em" = now(), "updated_at" = now()
+      where "id"::text = $1 and "entregador_id" is null and "status" = 'open'
+      returning "empresa_id", "titulo", "operacao_id", "rota_operacao_id", "quantidade_pacotes"`,
+    [ofertaId, entregadorId],
+  );
+  const o = r[0];
+  if (!o) throw new Error("Esta rota já foi atribuída a outro entregador.");
+  const stmts: { text: string; params: unknown[] }[] = [
+    { text: `update "candidaturas" set "status" = case when "entregador_id" = $2 then 'aprovada' else 'recusada' end, "decidida_em" = now() where "oferta_id" = $1 and "status" = 'pendente'`, params: [ofertaId, entregadorId] },
+    { text: `insert into "entregas_pacotes" ("oferta_id","operacao_id","numero_pacote","status") select $1, $2, g, 'pending' from generate_series(1, $3::int) g
+             where not exists (select 1 from "entregas_pacotes" where "oferta_id"::text = $4::text)`, params: [ofertaId, o.operacao_id ?? null, Number(o.quantidade_pacotes ?? 0), ofertaId] },
+  ];
+  if (o.rota_operacao_id && o.operacao_id)
+    stmts.push({
+      text: `insert into "alocacoes" ("operacao_id","rota_id","entregador_id","oferta_id","empresa_id","status")
+             select $1,$2,$3,$4,$5,'allocated' where not exists (select 1 from "alocacoes" where "rota_id"::text = $6::text and "status" not in ('recusada','removida'))`,
+      params: [o.operacao_id, o.rota_operacao_id, entregadorId, ofertaId, o.empresa_id, String(o.rota_operacao_id)],
+    });
+  await runTransaction(stmts);
+  return { empresa_id: String(o.empresa_id), titulo: String(o.titulo ?? "") };
+}
+
+/** Entregador quer fazer uma rota aberta. Com aprovação ligada (padrão) vira candidatura; sem ela, a rota é dele na hora. */
+async function candidatarOferta(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Não autenticado");
+  const ofertaId = String(args._oferta_id ?? "");
+  const rows = await query(
+    `select o."id", o."empresa_id", o."titulo", o."status", o."entregador_id", coalesce(o."tipo",'normal') as tipo, coalesce(e."aprovar_candidatos", true) as aprovar,
+            exists (select 1 from "ofertas_privadas_config" c where c."oferta_id"::text = o."id"::text and c."entregador_id"::text = $2) as convidado,
+            exists (select 1 from "ofertas_recusas" rc where rc."oferta_id"::text = o."id"::text and rc."entregador_id"::text = $2 and rc."origem" <> 'sistema') as recusada,
+            exists (select 1 from "vinculos_empresa" v where v."entregador_id"::text = $2 and v."empresa_id"::text <> o."empresa_id"::text) as de_outra_empresa
+       from "ofertas" o left join "empresas" e on e."id" = o."empresa_id" where o."id"::text = $1`,
+    [ofertaId, uid],
+  );
+  const o = rows[0] as any;
+  if (!o) throw new Error("Oferta não encontrada");
+  if (o.status !== "open" || o.entregador_id) throw new Error("Esta rota não está mais disponível.");
+  if (o.de_outra_empresa) throw new Error("Você está vinculado a outra empresa e só pode aceitar as ofertas dela.");
+  if (o.tipo === "private" && !o.convidado) throw new Error("Esta oferta é privada.");
+  if (o.recusada) throw new Error("Você já recusou esta rota.");
+  const me = await query(`select "nome_completo", "status", "suspended_at" from "entregadores" where "id" = $1`, [uid]);
+  if (!me[0]) throw new Error("Complete o seu cadastro de entregador.");
+  if (me[0].suspended_at || me[0].status === "suspenso") throw new Error("Seu cadastro está suspenso.");
+
+  if (!o.aprovar) {
+    const r = await atribuirOferta(ofertaId, uid);
+    await runTransaction([notificar(r.empresa_id, "Rota aceita", `${me[0].nome_completo} aceitou ${r.titulo}`, "/rotas")]);
+    return { data: { modo: "aceita" }, error: null, count: null };
+  }
+  const ja = await query(`select "status" from "candidaturas" where "oferta_id" = $1 and "entregador_id" = $2`, [ofertaId, uid]);
+  if (ja[0]?.status === "recusada") throw new Error("A empresa já recusou a sua candidatura para esta rota.");
+  if (ja[0]?.status === "pendente") return { data: { modo: "pendente" }, error: null, count: null };
+  await runTransaction([
+    {
+      text: `insert into "candidaturas" ("oferta_id","entregador_id","empresa_id") values ($1,$2,$3)
+             on conflict ("oferta_id","entregador_id") do update set "status" = 'pendente', "created_at" = now(), "decidida_em" = null`,
+      params: [ofertaId, uid, String(o.empresa_id)],
+    },
+    notificar(String(o.empresa_id), "Novo candidato", `${me[0].nome_completo} quer fazer ${o.titulo ?? "uma rota"}. Aprove ou recuse.`, "/rotas"),
+  ]);
+  return { data: { modo: "pendente" }, error: null, count: null };
+}
+
+async function cancelarCandidatura(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Não autenticado");
+  await query(`update "candidaturas" set "status" = 'cancelada', "decidida_em" = now() where "oferta_id" = $1 and "entregador_id" = $2 and "status" = 'pendente'`, [String(args._oferta_id ?? ""), uid]);
+  return { data: { ok: true }, error: null, count: null };
+}
+
+/** A empresa decide quem faz a rota: aprova um candidato (os outros são recusados) ou recusa. */
+async function decidirCandidatura(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  const id = String(args._candidatura_id ?? "");
+  const rows = await query(
+    `select c."id", c."oferta_id", c."entregador_id", c."status", c."empresa_id", o."titulo" from "candidaturas" c join "ofertas" o on o."id"::text = c."oferta_id"
+      where c."id"::text = $1 and ($2::text is null or c."empresa_id" = $2)`,
+    [id, uid],
+  );
+  const c = rows[0] as any;
+  if (!c) throw new Error("Candidatura não encontrada");
+  if (c.status !== "pendente") throw new Error("Esta candidatura já foi decidida.");
+  if (args._aprovar === true) {
+    await atribuirOferta(String(c.oferta_id), String(c.entregador_id));
+    await runTransaction([notificar(String(c.entregador_id), "Rota aprovada ✅", `Você foi escolhido para ${c.titulo ?? "a rota"}. Abra Rotas para iniciar.`, "/rotas")]);
+    return { data: { aprovada: true }, error: null, count: null };
+  }
+  await runTransaction([
+    { text: `update "candidaturas" set "status" = 'recusada', "decidida_em" = now() where "id"::text = $1`, params: [id] },
+    notificar(String(c.entregador_id), "Candidatura não aprovada", `A empresa escolheu outro entregador para ${c.titulo ?? "a rota"}.`, "/ofertas"),
+  ]);
+  return { data: { aprovada: false }, error: null, count: null };
+}
+
 /** Dono apaga o histórico (operações, rotas, ofertas, pacotes, ocorrências...) da própria empresa. Cadastros ficam. */
 async function limparMeusDados(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
   if (!uid) throw new Error("Informe a empresa");
@@ -941,6 +1067,9 @@ async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   if (fn === "publicar_rotas") return await publicarRotas(uid, args);
   if (fn === "cadastrar_membro_equipe") return await cadastrarMembroEquipe(uid, args);
   if (fn === "limpar_meus_dados") return await limparMeusDados(uid, args);
+  if (fn === "candidatar_oferta") return await candidatarOferta(uid, args);
+  if (fn === "cancelar_candidatura") return await cancelarCandidatura(uid, args);
+  if (fn === "decidir_candidatura") return await decidirCandidatura(uid, args);
   if (fn === "definir_membro_entregador") return await definirMembroEntregador(uid, args);
   if (fn === "fechar_rota_gestor") return await fecharRotaGestor(uid, args);
   if (fn === "finalizar_rota") return await finalizarRota(uid, args);
@@ -996,9 +1125,9 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           const a = req.rpc?.args ?? {};
           const pontos = Number(a._pontos ?? 0);
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
-        } else if (fn === "recusar_rota" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
+        } else if (fn === "recusar_rota" || fn === "candidatar_oferta" || fn === "cancelar_candidatura" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }
@@ -1349,6 +1478,7 @@ export async function resgatarConvite(email: string, codigo: string, senha: stri
           { text: `update "user" set "emailVerified" = true where "id" = $1`, params: [r.id] },
         ],
   );
+  if (r.tipo !== "equipe") await criarVinculo(String(r.id), String(r.empresa_id));
   tentativasConvite.delete(em);
   return { ok: true };
 }

@@ -94,6 +94,21 @@ export const GUIAS: Guia[] = [
     ],
   },
   {
+    id: "aprovar-entregadores",
+    titulo: "Aprovar quem faz as rotas",
+    resumo: "Você decide qual entregador fica com cada rota publicada.",
+    perfis: ["dono", "funcionario"],
+    tempo: "1 min",
+    tela: "/rotas",
+    passos: [
+      { titulo: "Entregadores se candidatam", texto: "Quando você publica uma rota, os entregadores tocam em “Quero fazer esta rota” e viram candidatos. Você recebe um aviso.", barra: "Rotas ao vivo", elementos: [{ t: "botoes", itens: [{ texto: "Todas" }, { texto: "Sem motorista (1)", ativo: true, destaque: true }] }, { t: "item", titulo: "Mega", sub: "135 pacotes · 2 candidatos", badge: "sem motorista", tom: "erro" }] },
+      { titulo: "Escolha quem faz", texto: "Veja o veículo e a nota de cada candidato e toque em Aprovar. Os outros candidatos são recusados e avisados. Se dois tentarem ao mesmo tempo, só um fica com a rota.", barra: "Rotas ao vivo", elementos: [{ t: "item", titulo: "Alcino", sub: "Moto · nota 100" }, { t: "botoes", itens: [{ texto: "Aprovar", ativo: true, destaque: true }, { texto: "Recusar" }] }, { t: "item", titulo: "Bia", sub: "Carro · nota 92" }] },
+      { titulo: "Prefere o primeiro que aceitar?", texto: "Em Equipe, desligue “Aprovar entregadores antes de confirmar a rota”. A rota passa a ser de quem aceitar primeiro.", barra: "Equipe", elementos: [{ t: "item", titulo: "Aprovar entregadores antes de confirmar a rota", badge: "ligado", tom: "ok", destaque: true }] },
+      { titulo: "Parceiro vinculado", texto: "Quem entra pelo seu convite fica vinculado à sua empresa: só vê as suas ofertas. Em Entregadores, você pode desvincular quando quiser.", barra: "Entregadores", elementos: [{ t: "item", titulo: "Alcino", badge: "Vinculado", tom: "ok" }, { t: "botao", texto: "Desvincular", claro: true, destaque: true }] },
+    ],
+    dicas: ["Quem se cadastra sozinho (sem convite) não fica vinculado a nenhuma empresa e vê as ofertas de todas."],
+  },
+  {
     id: "equipe",
     titulo: "Equipe: funcionários sem valores",
     resumo: "Dê acesso a quem opera o dia a dia sem mostrar dinheiro.",
@@ -132,8 +147,8 @@ export const GUIAS: Guia[] = [
     tela: "/ofertas",
     passos: [
       { titulo: "Abra Ofertas", texto: "As rotas aparecem agrupadas por dia: Hoje, Amanhã e as datas seguintes. Assim você já planeja o que pegar.", barra: "Ofertas", elementos: [{ t: "abas", itens: ["Disponíveis (8)", "Minhas (1)"], ativo: 0 }, { t: "titulo", texto: "Amanhã · segunda-feira" }, { t: "item", titulo: "Mega", sub: "135 pacotes", badge: "Aberta", tom: "alerta", destaque: true }] },
-      { titulo: "Toque na oferta para ver os detalhes", texto: "Confira zona, quantidade de pacotes, valor por pacote, horário e se exige nota fiscal.", barra: "Detalhes da oferta", elementos: [{ t: "item", titulo: "Mega · 135 pacotes", sub: "Valor por pacote e total" }, { t: "botao", texto: "Aceitar oferta", destaque: true }] },
-      { titulo: "Ela vai para “Minhas”", texto: "No dia, abra Rotas para iniciar. Se precisar desistir, avise a empresa com antecedência: desistir depois das 18h do dia anterior tira pontos.", barra: "Ofertas", elementos: [{ t: "abas", itens: ["Disponíveis (7)", "Minhas (2)"], ativo: 1 }, { t: "item", titulo: "Mega", sub: "Aceita · amanhã", badge: "Aceita", tom: "ok", destaque: true }] },
+      { titulo: "Toque na oferta para ver os detalhes", texto: "Confira zona, quantidade de pacotes, valor por pacote, horário e se exige nota fiscal.", barra: "Detalhes da oferta", elementos: [{ t: "item", titulo: "Mega · 135 pacotes", sub: "Valor por pacote e total" }, { t: "botao", texto: "Quero fazer esta rota", destaque: true }] },
+      { titulo: "A empresa aprova e você é avisado", texto: "Em geral a empresa escolhe quem faz cada rota: a oferta fica como “Aguardando aprovação” e você recebe um aviso quando for aprovado. Aprovada, ela vai para “Minhas”: no dia, abra Rotas para iniciar. Se precisar desistir, avise com antecedência: depois das 18h do dia anterior tira pontos.", barra: "Ofertas", elementos: [{ t: "item", titulo: "Mega", sub: "Você se candidatou", badge: "Aguardando aprovação", tom: "alerta", destaque: true }, { t: "item", titulo: "Vila", sub: "Aprovada · amanhã", badge: "Aprovada", tom: "ok" }] },
     ],
     dicas: ["Se a empresa atribuir uma rota para você, responda em até 2 horas; senão ela volta para o mercado."],
   },

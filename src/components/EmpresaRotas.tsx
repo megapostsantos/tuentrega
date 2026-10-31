@@ -66,6 +66,8 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
   const [fechar, setFechar] = useState<RotaOferta | null>(null);
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
   const [semMotorista, setSemMotorista] = useState<RotaOferta[]>([]);
+  const [candidatos, setCandidatos] = useState<Record<string, { id: string; nome: string; score: number | null; veiculo: string | null }[]>>({});
+  const [decidindo, setDecidindo] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<"todas" | "em_rota" | "aguardando" | "sem_motorista" | "concluidas">("todas");
 
   async function load(showSpinner = false) {
@@ -83,6 +85,19 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
     if (empresaId) qo = qo.eq("empresa_id", empresaId);
     const { data: abertasSem } = await qo.order("updated_at", { ascending: false });
     setSemMotorista((abertasSem as RotaOferta[]) ?? []);
+    const idsAbertas = ((abertasSem as RotaOferta[]) ?? []).map((x) => x.id);
+    if (idsAbertas.length) {
+      const sbx = supabase as any;
+      const { data: cs } = await sbx.from("candidaturas").select("id, oferta_id, entregador_id").in("oferta_id", idsAbertas).eq("status", "pendente").order("created_at");
+      const entIds = [...new Set(((cs as any[]) ?? []).map((c) => c.entregador_id))];
+      const { data: ents } = entIds.length ? await sbx.from("entregadores").select("id, nome_completo, reliability_score, tipo_veiculo").in("id", entIds) : { data: [] };
+      const m: Record<string, { id: string; nome: string; score: number | null; veiculo: string | null }[]> = {};
+      for (const c of (cs as any[]) ?? []) {
+        const e = ((ents as any[]) ?? []).find((x) => x.id === c.entregador_id);
+        (m[c.oferta_id] ??= []).push({ id: c.id, nome: e?.nome_completo ?? "Entregador", score: e?.reliability_score ?? null, veiculo: e?.tipo_veiculo ?? null });
+      }
+      setCandidatos(m);
+    } else setCandidatos({});
 
     const a = (ativas as RotaOferta[]) ?? [];
     const c = (fim as RotaOferta[]) ?? [];
@@ -132,6 +147,15 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
     const { data: rec } = await qr.order("created_at", { ascending: false }).limit(20);
     setRecusas((rec as Recusa[]) ?? []);
     setLoading(false);
+  }
+
+  async function decidir(id: string, aprovar: boolean) {
+    setDecidindo(id);
+    const { error } = await (supabase as any).rpc("decidir_candidatura", { _candidatura_id: id, _aprovar: aprovar });
+    setDecidindo(null);
+    if (error) toast.error(error.message);
+    else toast.success(aprovar ? "Entregador aprovado. A rota é dele." : "Candidatura recusada.");
+    load();
   }
 
   async function reofertar(o: RotaOferta) {
@@ -249,8 +273,25 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
                   <div className="truncate font-semibold">{o.titulo.includes("·") ? o.titulo.split("·").slice(1).join("·").trim() : o.titulo}</div>
                   <div className="text-xs text-muted-foreground">{o.quantidade_pacotes ?? 0} pacotes · aguardando um entregador aceitar</div>
                 </div>
-                <Button asChild size="sm" variant="outline"><Link to="/pacotes">Atribuir</Link></Button>
+                {!(candidatos[o.id]?.length) && <Button asChild size="sm" variant="outline"><Link to="/pacotes">Atribuir</Link></Button>}
               </CardContent>
+              {(candidatos[o.id]?.length ?? 0) > 0 && (
+                <div className="space-y-2 border-t bg-amber-50/60 p-3">
+                  <div className="text-xs font-semibold text-amber-900">{candidatos[o.id].length} candidato(s) querendo esta rota — você decide quem faz</div>
+                  {candidatos[o.id].map((c) => (
+                    <div key={c.id} className="flex items-center justify-between gap-2 rounded-lg border bg-white p-2 text-sm">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{c.nome}</div>
+                        <div className="text-xs text-muted-foreground">{c.veiculo ?? "—"} · nota {c.score ?? 100}</div>
+                      </div>
+                      <div className="flex shrink-0 gap-1.5">
+                        <Button size="sm" disabled={decidindo === c.id} onClick={() => decidir(c.id, true)}>Aprovar</Button>
+                        <Button size="sm" variant="outline" disabled={decidindo === c.id} onClick={() => decidir(c.id, false)}>Recusar</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
           ))}
         </div>
