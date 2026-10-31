@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { useImpersonation } from "@/lib/impersonation";
+import { useModo, setModo, type Modo } from "@/lib/modo";
 
 export type AppRole = "admin" | "empresa" | "dispatcher" | "entregador";
 
@@ -15,11 +16,15 @@ export interface AuthState {
   isImpersonating: boolean;
   /** funcionário da empresa: vê a empresa, mas sem valores e sem exclusões */
   isOperador: boolean;
+  /** funcionário que também é entregador pode alternar o modo (Gestão ⇄ Entregador) */
+  podeAlternarModo: boolean;
+  modo: Modo;
+  alternarModo: () => void;
   realUserId: string | null;
   realRole: AppRole | null;
 }
 
-type EquipeInfo = { empresaId: string | null; ativo: boolean };
+type EquipeInfo = { empresaId: string | null; ativo: boolean; entregador: boolean };
 const equipeCache = new Map<string, EquipeInfo>();
 
 function useEquipe(userId: string | undefined, enabled: boolean): { info: EquipeInfo | null; pending: boolean } {
@@ -31,11 +36,11 @@ function useEquipe(userId: string | undefined, enabled: boolean): { info: Equipe
     fetch("/api/db/equipe-me", { credentials: "same-origin" })
       .then((r) => r.json())
       .then((j) => {
-        const v = { empresaId: j?.empresaId ?? null, ativo: !!j?.ativo };
+        const v = { empresaId: j?.empresaId ?? null, ativo: !!j?.ativo, entregador: !!j?.entregador };
         equipeCache.set(userId, v);
         setInfo(v);
       })
-      .catch(() => setInfo({ empresaId: null, ativo: false }));
+      .catch(() => setInfo({ empresaId: null, ativo: false, entregador: false }));
   }, [enabled, userId]);
   return { info, pending: enabled && !info };
 }
@@ -45,6 +50,7 @@ export function useAuth(): AuthState {
   const imp = useImpersonation();
   const ehOperador = (sessionData?.user as any)?.role === "operador";
   const equipe = useEquipe(sessionData?.user?.id, ehOperador);
+  const modoSalvo = useModo();
 
   const user = sessionData?.user ?? null;
   const session = sessionData?.session ?? null;
@@ -61,6 +67,12 @@ export function useAuth(): AuthState {
   // Funcionário ativo: enxerga a empresa como "empresa" (id da empresa), marcado como operador.
   if (ehOperador && user) {
     const ok = !!equipe.info?.ativo && !!equipe.info.empresaId;
+    const podeAlternarModo = ok && !!equipe.info?.entregador;
+    const modo: Modo = podeAlternarModo ? modoSalvo : "gestao";
+    const alternarModo = () => setModo(modo === "gestao" ? "entregador" : "gestao");
+    if (modo === "entregador") {
+      return { user, session, role: "entregador", roles: ["entregador"], loading, isImpersonating: false, isOperador: false, podeAlternarModo, modo, alternarModo, realUserId: user.id, realRole: null };
+    }
     return {
       user: ok ? { ...user, id: equipe.info!.empresaId! } : user,
       session,
@@ -69,6 +81,9 @@ export function useAuth(): AuthState {
       loading,
       isImpersonating: false,
       isOperador: true,
+      podeAlternarModo,
+      modo,
+      alternarModo,
       realUserId: user.id,
       realRole: null,
     };
@@ -83,6 +98,9 @@ export function useAuth(): AuthState {
       loading,
       isImpersonating: true,
       isOperador: false,
+      podeAlternarModo: false,
+      modo: "gestao",
+      alternarModo: () => {},
       realUserId: user.id,
       realRole: "admin",
     };
@@ -96,6 +114,9 @@ export function useAuth(): AuthState {
     loading,
     isImpersonating: false,
     isOperador: false,
+    podeAlternarModo: false,
+    modo: "gestao",
+    alternarModo: () => {},
     realUserId: null,
     realRole: role,
   };

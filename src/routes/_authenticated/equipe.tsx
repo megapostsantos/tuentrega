@@ -17,7 +17,7 @@ import { RegisterEntregadorDialog } from "@/components/RegisterEntregadorDialog"
 
 export const Route = createFileRoute("/_authenticated/equipe")({ component: EquipePage });
 
-type Membro = { user_id: string; nome: string | null; email: string | null; ativo: boolean; codigo_convite: string | null };
+type Membro = { user_id: string; nome: string | null; email: string | null; ativo: boolean; codigo_convite: string | null; entregador: boolean };
 
 function EquipePage() {
   const { user, role, isOperador, loading } = useAuth();
@@ -26,7 +26,7 @@ function EquipePage() {
   const [vp, setVp] = useState("");
   const [salvandoVp, setSalvandoVp] = useState(false);
   const [novo, setNovo] = useState(false);
-  const [f, setF] = useState({ nome: "", email: "", whatsapp: "" });
+  const [f, setF] = useState({ nome: "", email: "", whatsapp: "", entregador: false });
   const [criando, setCriando] = useState(false);
   const [empresaNome, setEmpresaNome] = useState("");
   const [parceiros, setParceiros] = useState<{ id: string; nome: string; email: string | null; whatsapp: string | null; codigo: string | null }[]>([]);
@@ -34,7 +34,7 @@ function EquipePage() {
   const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string }>(null);
 
   async function load() {
-    const { data } = await sb.from("equipe_empresa").select("user_id, nome, email, ativo, codigo_convite").order("criado_em", { ascending: false });
+    const { data } = await sb.from("equipe_empresa").select("user_id, nome, email, ativo, codigo_convite, entregador").order("criado_em", { ascending: false });
     setMembros((data as Membro[]) ?? []);
     const { data: e } = await sb.from("empresas").select("tms_valor_padrao_pacote, nome_fantasia, razao_social").eq("id", user?.id).maybeSingle();
     if (e?.tms_valor_padrao_pacote != null) setVp(String(e.tms_valor_padrao_pacote));
@@ -67,7 +67,7 @@ function EquipePage() {
   async function criar() {
     if (!f.nome.trim() || !f.email.trim()) return toast.error("Informe nome e e-mail.");
     setCriando(true);
-    const { data, error } = await sb.rpc("cadastrar_membro_equipe", { nome_completo: f.nome, email: f.email, whatsapp: f.whatsapp });
+    const { data, error } = await sb.rpc("cadastrar_membro_equipe", { nome_completo: f.nome, email: f.email, whatsapp: f.whatsapp, tambem_entregador: f.entregador });
     setCriando(false);
     if (error) return toast.error(error.message);
     setFeito({ nome: f.nome.trim(), email: f.email.trim().toLowerCase(), whatsapp: f.whatsapp, codigo: data.codigo });
@@ -95,7 +95,14 @@ function EquipePage() {
     window.open(fone ? `https://wa.me/${fone.length <= 11 ? "55" + fone : fone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   }
 
-  function fechar() { setNovo(false); setFeito(null); setF({ nome: "", email: "", whatsapp: "" }); }
+  function fechar() { setNovo(false); setFeito(null); setF({ nome: "", email: "", whatsapp: "", entregador: false }); }
+
+  async function alternarEntregador(m: Membro) {
+    const { error } = await sb.rpc("definir_membro_entregador", { _user_id: m.user_id, _ativo: !m.entregador });
+    if (error) return toast.error(error.message);
+    toast.success(m.entregador ? "Perfil de entregador desligado." : "Agora ele também pode atuar como entregador.");
+    load();
+  }
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
@@ -146,6 +153,8 @@ function EquipePage() {
                 {m.codigo_convite
                   ? <Badge className="bg-amber-100 text-amber-800">Convite pendente · {m.codigo_convite}</Badge>
                   : <Badge variant={m.ativo ? "secondary" : "outline"}>{m.ativo ? "Ativo" : "Desativado"}</Badge>}
+                {m.entregador && <Badge variant="outline"><Bike className="mr-1 h-3 w-3" />Também entregador</Badge>}
+                <Button size="sm" variant="outline" onClick={() => alternarEntregador(m)}>{m.entregador ? "Desligar entregador" : "Habilitar entregador"}</Button>
                 {m.codigo_convite && <Button size="sm" variant="outline" onClick={() => reenviar(m.nome ?? "", m.email, m.codigo_convite, null, "equipe")}><Send className="mr-1 h-3.5 w-3.5" />Reenviar</Button>}
                 <Button size="sm" variant="outline" onClick={() => alternar(m)}>{m.ativo ? "Desativar" : "Reativar"}</Button>
               </div>
@@ -218,6 +227,10 @@ function EquipePage() {
                 <div className="space-y-1"><Label>Nome</Label><Input value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></div>
                 <div className="space-y-1"><Label>E-mail</Label><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
                 <div className="space-y-1"><Label>WhatsApp (opcional)</Label><Input value={f.whatsapp} onChange={(e) => setF({ ...f, whatsapp: e.target.value })} placeholder="(13) 99999-9999" /></div>
+                <label className="flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-xs">
+                  <input type="checkbox" className="mt-0.5" checked={f.entregador} onChange={(e) => setF({ ...f, entregador: e.target.checked })} />
+                  <span><strong>Também faz rotas como entregador.</strong> Ele ganha um botão para alternar entre <em>Gestão</em> e <em>Entregador</em> na mesma conta.</span>
+                </label>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={fechar}>Cancelar</Button>

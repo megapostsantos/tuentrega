@@ -616,6 +616,7 @@ const DDL_LAZY: string[] = [
 	"codigo_convite" text,
 	"criado_em" timestamp DEFAULT now() NOT NULL
 );`,
+  `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "entregador" boolean DEFAULT false NOT NULL;`,
   `CREATE TABLE IF NOT EXISTS "senhas_provisorias" ("user_id" text PRIMARY KEY NOT NULL, "criada_em" timestamp DEFAULT now() NOT NULL);`,
 ];
 let tabelasGarantidas = false;
@@ -852,12 +853,37 @@ async function cadastrarMembroEquipe(uid: string | null, args: Record<string, un
   const alfa = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const codigo = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => alfa[b % alfa.length]).join("");
   const fone = args.whatsapp == null || String(args.whatsapp).trim() === "" ? null : String(args.whatsapp).trim();
-  await runTransaction([
+  const tambemEntregador = args.tambem_entregador === true;
+  const stmts: { text: string; params: unknown[] }[] = [
     { text: `insert into "user" ("id","name","email","emailVerified","role") values ($1,$2,$3,false,'operador')`, params: [id, nome, email] },
     { text: `insert into "profiles" ("id","full_name","phone") values ($1,$2,$3) on conflict do nothing`, params: [id, nome, fone] },
-    { text: `insert into "equipe_empresa" ("user_id","empresa_id","nome","email","codigo_convite") values ($1,$2,$3,$4,$5)`, params: [id, uid, nome, email, codigo] },
-  ]);
+    { text: `insert into "equipe_empresa" ("user_id","empresa_id","nome","email","codigo_convite","entregador") values ($1,$2,$3,$4,$5,$6)`, params: [id, uid, nome, email, codigo, tambemEntregador] },
+  ];
+  if (tambemEntregador) stmts.push({ text: `insert into "entregadores" ("id","nome_completo","whatsapp","email","status") values ($1,$2,$3,$4,'ativo')`, params: [id, nome, fone, email] });
+  await runTransaction(stmts);
   return { data: { id, codigo }, error: null, count: null };
+}
+
+/** Dono liga/desliga o perfil de entregador de um funcionário (ele alterna entre Gestão e Entregador). */
+async function definirMembroEntregador(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Informe a empresa");
+  const userId = String(args._user_id ?? "");
+  const ligar = args._ativo === true;
+  const m = await query(`select "nome","email" from "equipe_empresa" where "user_id" = $1 and "empresa_id" = $2`, [userId, uid]);
+  if (!m[0]) throw new Error("Funcionário não encontrado");
+  const stmts: { text: string; params: unknown[] }[] = [
+    { text: `update "equipe_empresa" set "entregador" = $2 where "user_id" = $1`, params: [userId, ligar] },
+  ];
+  if (ligar) {
+    stmts.push({
+      text: `insert into "entregadores" ("id","nome_completo","email","status") values ($1,$2,$3,'ativo') on conflict ("id") do update set "status" = 'ativo'`,
+      params: [userId, m[0].nome, m[0].email],
+    });
+  } else {
+    stmts.push({ text: `update "entregadores" set "status" = 'inativo' where "id" = $1`, params: [userId] });
+  }
+  await runTransaction(stmts);
+  return { data: { ok: true }, error: null, count: null };
 }
 
 /** Dono apaga o histórico (operações, rotas, ofertas, pacotes, ocorrências...) da própria empresa. Cadastros ficam. */
@@ -915,6 +941,7 @@ async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   if (fn === "publicar_rotas") return await publicarRotas(uid, args);
   if (fn === "cadastrar_membro_equipe") return await cadastrarMembroEquipe(uid, args);
   if (fn === "limpar_meus_dados") return await limparMeusDados(uid, args);
+  if (fn === "definir_membro_entregador") return await definirMembroEntregador(uid, args);
   if (fn === "fechar_rota_gestor") return await fecharRotaGestor(uid, args);
   if (fn === "finalizar_rota") return await finalizarRota(uid, args);
   if (fn === "receber_devolucao") return await receberDevolucao(uid, args);
@@ -971,7 +998,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
         } else if (fn === "recusar_rota" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "limpar_meus_dados" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }
@@ -1327,9 +1354,19 @@ export async function resgatarConvite(email: string, codigo: string, senha: stri
 }
 
 
-/** Funcionário ativo → id da empresa onde trabalha (ou null). */
-export async function empresaDoOperador(userId: string): Promise<{ empresaId: string; nome: string | null } | null> {
+/** Funcionário ativo → id da empresa onde trabalha (ou null), e se ele também atua como entregador. */
+export async function empresaDoOperador(userId: string): Promise<{ empresaId: string; nome: string | null; entregador: boolean } | null> {
   await garantirTabelas();
-  const r = await query(`select "empresa_id", "nome" from "equipe_empresa" where "user_id" = $1 and "ativo"`, [userId]);
-  return r[0] ? { empresaId: String(r[0].empresa_id), nome: r[0].nome ?? null } : null;
+  const r = await query(`select "empresa_id", "nome", "entregador" from "equipe_empresa" where "user_id" = $1 and "ativo"`, [userId]);
+  return r[0] ? { empresaId: String(r[0].empresa_id), nome: r[0].nome ?? null, entregador: !!r[0].entregador } : null;
+}
+
+/** Contexto de acesso da sessão. Funcionário com perfil de entregador pode pedir o modo "entregador" (acesso só aos próprios dados). */
+export async function contextoDaSessao(user: { id: string; role?: string | null } | null | undefined, modo?: string | null): Promise<EngineCtx> {
+  if (!user) return { userId: null, role: null };
+  if (user.role !== "operador") return { userId: user.id, role: user.role ?? null };
+  const emp = await empresaDoOperador(user.id);
+  if (!emp) return { userId: user.id, role: "operador" };
+  if (modo === "entregador" && emp.entregador) return { userId: user.id, role: "entregador" };
+  return { userId: emp.empresaId, role: "empresa", operador: true };
 }

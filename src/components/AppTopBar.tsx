@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, Check, CheckCheck, HelpCircle, Menu } from "lucide-react";
+import { Bell, Check, CheckCheck, HelpCircle, Menu, Bike, Briefcase } from "lucide-react";
 import { GUIA_DA_TELA } from "@/lib/ajuda-conteudo";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,7 +32,7 @@ function timeAgo(iso: string) {
 }
 
 export function AppTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
-  const { user } = useAuth();
+  const { user, podeAlternarModo, modo, alternarModo } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notification[]>([]);
@@ -105,6 +105,17 @@ export function AppTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
           </Link>
         </div>
 
+        {podeAlternarModo && (
+          <button
+            type="button"
+            onClick={() => { alternarModo(); window.location.assign("/dashboard"); }}
+            title={modo === "gestao" ? "Você está na Gestão. Toque para atuar como entregador" : "Você está como Entregador. Toque para voltar à Gestão"}
+            className="flex h-9 items-center gap-1.5 rounded-full border border-primary/50 bg-primary/10 px-3 text-xs font-bold press-scale"
+          >
+            {modo === "gestao" ? <><Briefcase className="h-3.5 w-3.5" />Gestão</> : <><Bike className="h-3.5 w-3.5" />Entregador</>}
+            <span className="text-[10px] font-medium text-muted-foreground">⇄</span>
+          </button>
+        )}
         <button
           onClick={() => navigate({ to: "/ajuda", search: { guia: GUIA_DA_TELA[window.location.pathname] } as never })}
           aria-label="Ajuda"

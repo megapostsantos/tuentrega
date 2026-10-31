@@ -78,7 +78,7 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     if (user.role !== "operador") return Response.json({ operador: false });
     const { empresaDoOperador } = await import("./server/data-engine");
     const emp = await empresaDoOperador(user.id);
-    return Response.json({ operador: true, ativo: !!emp, empresaId: emp?.empresaId ?? null });
+    return Response.json({ operador: true, ativo: !!emp, empresaId: emp?.empresaId ?? null, entregador: !!emp?.entregador });
   }
 
   if (url.pathname === "/api/db/claim-invite" && req.method === "POST") {
@@ -116,12 +116,8 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     } catch {
       return Response.json({ data: null, error: { message: "JSON inválido" }, count: null }, { status: 400 });
     }
-    let ctx: { userId: string | null; role: string | null; operador?: boolean } = { userId: user?.id ?? null, role: user?.role ?? null };
-    if (user?.role === "operador") {
-      const { empresaDoOperador } = await import("./server/data-engine");
-      const emp = await empresaDoOperador(user.id);
-      ctx = emp ? { userId: emp.empresaId, role: "empresa", operador: true } : { userId: user.id, role: "operador" };
-    }
+    const { contextoDaSessao } = await import("./server/data-engine");
+    const ctx = await contextoDaSessao(user, req.headers.get("x-modo"));
     const resp = await executeQuery(body, ctx);
     return Response.json(resp, { headers: { "cache-control": "no-store" } });
   }

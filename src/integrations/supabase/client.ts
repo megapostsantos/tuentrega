@@ -1,6 +1,7 @@
 // Camada de compatibilidade: mantém a API do supabase-js, mas executa tudo via /api/db (Neon) e Better Auth.
 import { QueryBuilder, rpcBuilder, type QueryReq, type QueryResp } from "@/lib/query-builder";
 import { authClient } from "@/lib/auth-client";
+import { getModo } from "@/lib/modo";
 
 const exec = async (req: QueryReq): Promise<QueryResp> => {
   if (typeof window === "undefined") {
@@ -8,7 +9,7 @@ const exec = async (req: QueryReq): Promise<QueryResp> => {
   }
   const res = await fetch("/api/db/query", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-modo": getModo() },
     credentials: "same-origin",
     body: JSON.stringify(req),
   });
@@ -59,6 +60,7 @@ class PollingChannel {
 }
 
 const operadorEmpresa = new Map<string, string>();
+const operadorEntregador = new Map<string, boolean>();
 
 function objectUrl(bucket: string, path: string) {
   const enc = path.split("/").map(encodeURIComponent).join("/");
@@ -149,10 +151,11 @@ export const supabase: any = {
           try {
             const j = await (await fetch("/api/db/equipe-me", { credentials: "same-origin" })).json();
             if (j?.empresaId) operadorEmpresa.set(u.id, j.empresaId);
+            operadorEntregador.set(u.id, !!j?.entregador);
           } catch { /* ignore */ }
         }
         const emp = operadorEmpresa.get(u.id);
-        if (emp) return { data: { user: { ...u, id: emp } }, error: null };
+        if (emp && !(getModo() === "entregador" && operadorEntregador.get(u.id))) return { data: { user: { ...u, id: emp } }, error: null };
       }
       return { data: { user: u }, error: null };
     },
