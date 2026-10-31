@@ -26,6 +26,8 @@ type Previsao = {
   empresas?: { nome_fantasia?: string | null; razao_social?: string | null } | null;
 };
 
+type Zona = { id: string; previsao_id: string; nome: string; pacotes_estimados: number; entregador_id: string | null };
+
 type Compromisso = {
   id: string;
   previsao_id: string;
@@ -44,6 +46,25 @@ export function AgendaEntregador({ userId }: { userId: string }) {
   const [qtd, setQtd] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [zonas, setZonas] = useState<Zona[]>([]);
+  const [minhas, setMinhas] = useState<Record<string, string>>({});
+
+  async function postular(z: Zona) {
+    setBusy(z.id);
+    const { data, error } = await (supabase as any).rpc("postular_zona", { _zona_id: z.id });
+    setBusy(null);
+    if (error) return toast.error(error.message);
+    toast.success(data?.modo === "aceita" ? `A zona ${z.nome} é sua!` : "Pedido enviado. A empresa decide quem fica com a zona e você recebe um aviso.");
+    load();
+  }
+
+  async function cancelarZona(z: Zona) {
+    setBusy(z.id);
+    const { error } = await (supabase as any).rpc("cancelar_postulacao_zona", { _zona_id: z.id });
+    setBusy(null);
+    if (error) return toast.error(error.message);
+    load();
+  }
 
   async function load() {
     const hoje = new Date().toISOString().slice(0, 10);
@@ -52,6 +73,14 @@ export function AgendaEntregador({ userId }: { userId: string }) {
       .select("*, empresas(nome_fantasia, razao_social)")
       .gte("data_prevista", hoje).order("data_prevista", { ascending: true });
     setPrevisoes((pv as Previsao[]) ?? []);
+    const ids = ((pv as Previsao[]) ?? []).map((x) => x.id);
+    if (ids.length) {
+      const sbx = supabase as any;
+      const { data: zs } = await sbx.from("agenda_previsao_zonas").select("id, previsao_id, nome, pacotes_estimados, entregador_id").in("previsao_id", ids).order("nome");
+      setZonas((zs as Zona[]) ?? []);
+      const { data: cz } = await sbx.from("agenda_zona_candidaturas").select("zona_id, status").eq("entregador_id", userId);
+      setMinhas(Object.fromEntries(((cz as any[]) ?? []).map((c) => [c.zona_id, c.status])));
+    } else { setZonas([]); setMinhas({}); }
     const { data: cs } = await supabase
       .from("agenda_compromissos")
       .select("id, previsao_id, pacotes_comprometidos, pacotes_ajustados, status")
@@ -153,7 +182,32 @@ export function AgendaEntregador({ userId }: { userId: string }) {
                     </div>
                   )}
 
-                  {ativo ? (
+                  {zonas.some((z) => z.previsao_id === p.id) ? (
+                    <div className="space-y-2">
+                      <div className="text-xs font-semibold text-muted-foreground">Escolha a zona que você quer fazer. A empresa aprova quem fica com cada uma.</div>
+                      {zonas.filter((z) => z.previsao_id === p.id).map((z) => {
+                        const minha = z.entregador_id === userId;
+                        const st = minhas[z.id];
+                        return (
+                          <div key={z.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2.5 text-sm ${minha ? "border-green-500 bg-green-50" : ""}`}>
+                            <div className="min-w-0">
+                              <div className="truncate font-semibold">{z.nome}</div>
+                              <div className="text-xs text-muted-foreground">~{z.pacotes_estimados} pacotes</div>
+                            </div>
+                            {minha ? <Badge className="bg-green-600">✅ Sua zona</Badge>
+                              : z.entregador_id ? <Badge variant="secondary">Já tem entregador</Badge>
+                              : st === "pendente" ? (
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-amber-100 text-amber-800">Aguardando aprovação</Badge>
+                                  <Button size="sm" variant="ghost" disabled={busy === z.id} onClick={() => cancelarZona(z)}>Cancelar</Button>
+                                </div>
+                              ) : st === "recusada" ? <Badge variant="outline">Não aprovada</Badge>
+                              : <Button size="sm" disabled={busy === z.id} onClick={() => postular(z)}>{busy === z.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}Quero esta zona</Button>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : ativo ? (
                     <div className="space-y-2">
                       <div className="text-sm">
                         Você se comprometeu com <strong>{c.pacotes_comprometidos}</strong> pacotes

@@ -459,15 +459,41 @@ function CreateOperation({
   const manualSomaP = manualRotas.reduce((s, r) => s + r.quantidade_pacotes, 0);
   const manualSomaS = manualRotas.reduce((s, r) => s + r.quantidade_paradas, 0);
 
-  function confirmDivision() {
+  async function confirmDivision() {
     let r: Rota[] = [];
     if (divisionMode === "agenda") r = buildFromAgenda();
     else if (divisionMode === "auto") r = buildAuto(numRotas);
     else if (divisionMode === "single") r = buildSingle();
     else if (divisionMode === "lista") r = zonasLista.map((z) => ({ nome: z.nome, quantidade_pacotes: z.pacotes, quantidade_paradas: z.paradas, valor_total: z.pacotes * valorPorPacote }));
     else r = manualRotas.map((x) => ({ ...x, valor_total: x.quantidade_pacotes * valorPorPacote }));
+    r = await aplicarZonasAprovadas(r);
     setRotas(r);
     setStep(3);
+  }
+
+  /** Zonas já aprovadas na previsão do dia (a empresa decidiu quem leva): a rota com o mesmo nome já vem com o parceiro. */
+  async function aplicarZonasAprovadas(lista: Rota[]): Promise<Rota[]> {
+    try {
+      const sbx = supabase as any;
+      const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+      const { data: pvs } = await sbx.from("agenda_previsoes").select("id").eq("empresa_id", userId).eq("data_prevista", dataOperacao);
+      const ids = ((pvs as any[]) ?? []).map((x) => x.id);
+      if (!ids.length) return lista;
+      const { data: zs } = await sbx.from("agenda_previsao_zonas").select("nome, entregador_id").in("previsao_id", ids).not("entregador_id", "is", null);
+      const zonas = (zs as any[]) ?? [];
+      if (!zonas.length) return lista;
+      const { data: ents } = await sbx.from("entregadores").select("id, nome_completo").in("id", [...new Set(zonas.map((z) => z.entregador_id))]);
+      let n = 0;
+      const out = lista.map((r) => {
+        if (r.entregador_id) return r;
+        const z = zonas.find((x) => norm(x.nome) === norm(r.nome));
+        if (!z) return r;
+        n++;
+        return { ...r, entregador_id: z.entregador_id, entregador_nome: ((ents as any[]) ?? []).find((e) => e.id === z.entregador_id)?.nome_completo };
+      });
+      if (n) toast.success(`${n} rota(s) já vieram com o parceiro aprovado na previsão da zona.`);
+      return out;
+    } catch { return lista; }
   }
 
   // Step 3 — review (inline edit)

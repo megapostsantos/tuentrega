@@ -517,6 +517,37 @@ export const candidaturas = pgTable("candidaturas", {
   decididaEm: timestamp("decidida_em"),
 });
 
+export const zonasEmpresa = pgTable("zonas_empresa", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  empresaId: text("empresa_id").notNull(),
+  nome: text("nome").notNull(),
+  pacotesTipicos: integer("pacotes_tipicos").notNull().default(0),
+  ativa: boolean("ativa").notNull().default(true),
+  criadoEm: timestamp("criado_em").notNull().defaultNow(),
+});
+
+export const agendaPrevisaoZonas = pgTable("agenda_previsao_zonas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  previsaoId: text("previsao_id").notNull(),
+  empresaId: text("empresa_id").notNull(),
+  nome: text("nome").notNull(),
+  pacotesEstimados: integer("pacotes_estimados").notNull().default(0),
+  entregadorId: text("entregador_id"),
+  status: text("status").notNull().default("aberta"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const agendaZonaCandidaturas = pgTable("agenda_zona_candidaturas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  zonaId: text("zona_id").notNull(),
+  previsaoId: text("previsao_id").notNull(),
+  entregadorId: text("entregador_id").notNull(),
+  empresaId: text("empresa_id").notNull(),
+  status: text("status").notNull().default("pendente"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  decididaEm: timestamp("decidida_em"),
+});
+
 export const fechamentosGestor = pgTable("fechamentos_gestor", {
   id: uuid("id").primaryKey().defaultRandom(),
   ofertaId: text("oferta_id").notNull(),

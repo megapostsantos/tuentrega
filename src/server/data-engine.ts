@@ -637,6 +637,36 @@ const DDL_LAZY: string[] = [
   `ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "pacotes_sistema" integer;`,
   `ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "ajuste_motivo" text;`,
   `ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "conferida" boolean DEFAULT false NOT NULL;`,
+  `CREATE TABLE IF NOT EXISTS "zonas_empresa" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"empresa_id" text NOT NULL,
+	"nome" text NOT NULL,
+	"pacotes_tipicos" integer DEFAULT 0 NOT NULL,
+	"ativa" boolean DEFAULT true NOT NULL,
+	"criado_em" timestamp DEFAULT now() NOT NULL
+);`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "zonas_empresa_nome_unique" ON "zonas_empresa" ("empresa_id","nome");`,
+  `CREATE TABLE IF NOT EXISTS "agenda_previsao_zonas" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"previsao_id" text NOT NULL,
+	"empresa_id" text NOT NULL,
+	"nome" text NOT NULL,
+	"pacotes_estimados" integer DEFAULT 0 NOT NULL,
+	"entregador_id" text,
+	"status" text DEFAULT 'aberta' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);`,
+  `CREATE TABLE IF NOT EXISTS "agenda_zona_candidaturas" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"zona_id" text NOT NULL,
+	"previsao_id" text NOT NULL,
+	"entregador_id" text NOT NULL,
+	"empresa_id" text NOT NULL,
+	"status" text DEFAULT 'pendente' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"decidida_em" timestamp
+);`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "agenda_zona_cand_unique" ON "agenda_zona_candidaturas" ("zona_id","entregador_id");`,
   `CREATE TABLE IF NOT EXISTS "senhas_provisorias" ("user_id" text PRIMARY KEY NOT NULL, "criada_em" timestamp DEFAULT now() NOT NULL);`,
 ];
 let tabelasGarantidas = false;
@@ -1024,6 +1054,92 @@ async function limparMeusDados(uid: string | null, args: Record<string, unknown>
   return { data: r, error: null, count: null };
 }
 
+/** Zona de uma previsão: atribui de forma atômica a um entregador (e registra o compromisso na agenda). */
+async function atribuirZona(zonaId: string, entregadorId: string): Promise<{ empresa_id: string; nome: string }> {
+  const r = await query(
+    `update "agenda_previsao_zonas" set "entregador_id" = $2, "status" = 'atribuida' where "id"::text = $1 and "entregador_id" is null returning "empresa_id", "nome", "previsao_id", "pacotes_estimados"`,
+    [zonaId, entregadorId],
+  );
+  const z = r[0];
+  if (!z) throw new Error("Esta zona já foi atribuída a outro entregador.");
+  await runTransaction([
+    { text: `update "agenda_zona_candidaturas" set "status" = case when "entregador_id" = $2 then 'aprovada' else 'recusada' end, "decidida_em" = now() where "zona_id" = $1 and "status" = 'pendente'`, params: [zonaId, entregadorId] },
+    {
+      text: `insert into "agenda_compromissos" ("previsao_id","empresa_id","entregador_id","pacotes_comprometidos","status") select $1::uuid, $2, $3, $4::int, 'confirmado'
+             where not exists (select 1 from "agenda_compromissos" where "previsao_id"::text = $5::text and "entregador_id" = $3)`,
+      params: [z.previsao_id, z.empresa_id, entregadorId, Number(z.pacotes_estimados ?? 0), String(z.previsao_id)],
+    },
+  ]);
+  return { empresa_id: String(z.empresa_id), nome: String(z.nome) };
+}
+
+/** Entregador se postula a uma zona da previsão; a empresa decide (ou, com aprovação desligada, o primeiro leva). */
+async function postularZona(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Não autenticado");
+  const zonaId = String(args._zona_id ?? "");
+  const rows = await query(
+    `select z."id", z."empresa_id", z."nome", z."entregador_id", z."previsao_id", pv."status" as pstatus, pv."data_prevista" >= current_date as futura,
+            coalesce(e."aprovar_candidatos", true) as aprovar,
+            exists (select 1 from "vinculos_empresa" v where v."entregador_id"::text = $2 and v."empresa_id"::text <> z."empresa_id"::text) as de_outra
+       from "agenda_previsao_zonas" z join "agenda_previsoes" pv on pv."id"::text = z."previsao_id"::text left join "empresas" e on e."id" = z."empresa_id"
+      where z."id"::text = $1`, [zonaId, uid]);
+  const z = rows[0] as any;
+  if (!z) throw new Error("Zona não encontrada");
+  if (z.pstatus !== "aberta" || !z.futura) throw new Error("Esta previsão não está mais aberta.");
+  if (z.entregador_id) throw new Error("Esta zona já tem entregador.");
+  if (z.de_outra) throw new Error("Você está vinculado a outra empresa e só pode se postular às zonas dela.");
+  const me = await query(`select "nome_completo", "status", "suspended_at" from "entregadores" where "id" = $1`, [uid]);
+  if (!me[0]) throw new Error("Complete o seu cadastro de entregador.");
+  if (me[0].suspended_at || me[0].status === "suspenso") throw new Error("Seu cadastro está suspenso.");
+  const ja = await query(`select "status" from "agenda_zona_candidaturas" where "zona_id" = $1 and "entregador_id" = $2`, [zonaId, uid]);
+  if (ja[0]?.status === "recusada") throw new Error("A empresa já recusou a sua postulação para esta zona.");
+  if (!z.aprovar) {
+    await runTransaction([{
+      text: `insert into "agenda_zona_candidaturas" ("zona_id","previsao_id","entregador_id","empresa_id") values ($1,$2,$3,$4) on conflict ("zona_id","entregador_id") do update set "status" = 'pendente'`,
+      params: [zonaId, String(z.previsao_id), uid, String(z.empresa_id)],
+    }]);
+    const r = await atribuirZona(zonaId, uid);
+    await runTransaction([notificar(r.empresa_id, "Zona preenchida", `${me[0].nome_completo} ficou com a zona ${r.nome}`, "/agenda")]);
+    return { data: { modo: "aceita" }, error: null, count: null };
+  }
+  if (ja[0]?.status === "pendente") return { data: { modo: "pendente" }, error: null, count: null };
+  await runTransaction([
+    {
+      text: `insert into "agenda_zona_candidaturas" ("zona_id","previsao_id","entregador_id","empresa_id") values ($1,$2,$3,$4)
+             on conflict ("zona_id","entregador_id") do update set "status" = 'pendente', "created_at" = now(), "decidida_em" = null`,
+      params: [zonaId, String(z.previsao_id), uid, String(z.empresa_id)],
+    },
+    notificar(String(z.empresa_id), "Novo interessado em zona", `${me[0].nome_completo} quer a zona ${z.nome}. Aprove ou recuse.`, "/agenda"),
+  ]);
+  return { data: { modo: "pendente" }, error: null, count: null };
+}
+
+async function cancelarPostulacaoZona(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Não autenticado");
+  await query(`update "agenda_zona_candidaturas" set "status" = 'cancelada', "decidida_em" = now() where "zona_id" = $1 and "entregador_id" = $2 and "status" = 'pendente'`, [String(args._zona_id ?? ""), uid]);
+  return { data: { ok: true }, error: null, count: null };
+}
+
+async function decidirZona(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  const id = String(args._candidatura_id ?? "");
+  const rows = await query(
+    `select c."id", c."zona_id", c."entregador_id", c."status", z."nome" from "agenda_zona_candidaturas" c join "agenda_previsao_zonas" z on z."id"::text = c."zona_id"
+      where c."id"::text = $1 and ($2::text is null or c."empresa_id" = $2)`, [id, uid]);
+  const c = rows[0] as any;
+  if (!c) throw new Error("Postulação não encontrada");
+  if (c.status !== "pendente") throw new Error("Esta postulação já foi decidida.");
+  if (args._aprovar === true) {
+    await atribuirZona(String(c.zona_id), String(c.entregador_id));
+    await runTransaction([notificar(String(c.entregador_id), "Zona aprovada ✅", `Você ficou com a zona ${c.nome}.`, "/agenda")]);
+    return { data: { aprovada: true }, error: null, count: null };
+  }
+  await runTransaction([
+    { text: `update "agenda_zona_candidaturas" set "status" = 'recusada', "decidida_em" = now() where "id"::text = $1`, params: [id] },
+    notificar(String(c.entregador_id), "Postulação não aprovada", `A empresa escolheu outra pessoa para a zona ${c.nome}.`, "/agenda"),
+  ]);
+  return { data: { aprovada: false }, error: null, count: null };
+}
+
 /** Conferência final: ajusta a quantidade de pacotes de uma rota (o galpão não mandou, veio avariado...). Mantém o valor por pacote. */
 async function ajustarPacotesRota(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
   const rotaId = String(args._rota_id ?? "");
@@ -1114,6 +1230,9 @@ async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   if (fn === "cadastrar_membro_equipe") return await cadastrarMembroEquipe(uid, args);
   if (fn === "limpar_meus_dados") return await limparMeusDados(uid, args);
   if (fn === "candidatar_oferta") return await candidatarOferta(uid, args);
+  if (fn === "postular_zona") return await postularZona(uid, args);
+  if (fn === "cancelar_postulacao_zona") return await cancelarPostulacaoZona(uid, args);
+  if (fn === "decidir_zona") return await decidirZona(uid, args);
   if (fn === "cancelar_candidatura") return await cancelarCandidatura(uid, args);
   if (fn === "decidir_candidatura") return await decidirCandidatura(uid, args);
   if (fn === "definir_membro_entregador") return await definirMembroEntregador(uid, args);
@@ -1171,9 +1290,9 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           const a = req.rpc?.args ?? {};
           const pontos = Number(a._pontos ?? 0);
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
-        } else if (fn === "recusar_rota" || fn === "candidatar_oferta" || fn === "cancelar_candidatura" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
+        } else if (fn === "recusar_rota" || fn === "postular_zona" || fn === "cancelar_postulacao_zona" || fn === "candidatar_oferta" || fn === "cancelar_candidatura" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }

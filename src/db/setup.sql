@@ -2255,3 +2255,13 @@ ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "pacotes_sistema" integer;
 ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "ajuste_motivo" text;
 -- @@
 ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "conferida" boolean DEFAULT false NOT NULL;
+-- @@
+CREATE TABLE IF NOT EXISTS "zonas_empresa" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "empresa_id" text NOT NULL, "nome" text NOT NULL, "pacotes_tipicos" integer DEFAULT 0 NOT NULL, "ativa" boolean DEFAULT true NOT NULL, "criado_em" timestamp DEFAULT now() NOT NULL);
+-- @@
+CREATE UNIQUE INDEX IF NOT EXISTS "zonas_empresa_nome_unique" ON "zonas_empresa" ("empresa_id","nome");
+-- @@
+CREATE TABLE IF NOT EXISTS "agenda_previsao_zonas" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "previsao_id" text NOT NULL, "empresa_id" text NOT NULL, "nome" text NOT NULL, "pacotes_estimados" integer DEFAULT 0 NOT NULL, "entregador_id" text, "status" text DEFAULT 'aberta' NOT NULL, "created_at" timestamp DEFAULT now() NOT NULL);
+-- @@
+CREATE TABLE IF NOT EXISTS "agenda_zona_candidaturas" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "zona_id" text NOT NULL, "previsao_id" text NOT NULL, "entregador_id" text NOT NULL, "empresa_id" text NOT NULL, "status" text DEFAULT 'pendente' NOT NULL, "created_at" timestamp DEFAULT now() NOT NULL, "decidida_em" timestamp);
+-- @@
+CREATE UNIQUE INDEX IF NOT EXISTS "agenda_zona_cand_unique" ON "agenda_zona_candidaturas" ("zona_id","entregador_id");

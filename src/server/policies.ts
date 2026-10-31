@@ -304,6 +304,32 @@ export const POLICIES: Record<string, Policy> = {
     force: { empresa: { empresa_id: "uid" } },
   },
 
+  zonas_empresa: {
+    read: { empresa: eq("empresa_id") },
+    insert: { empresa: ownCol("empresa_id") },
+    update: { empresa: eq("empresa_id") },
+    delete: { empresa: eq("empresa_id") },
+    force: { empresa: { empresa_id: "uid" } },
+  },
+
+  agenda_previsao_zonas: {
+    read: {
+      empresa: eq("empresa_id"),
+      entregador: or(
+        eq("entregador_id"),
+        and(livreParaEmpresa, (a) => `exists (select 1 from "agenda_previsoes" pv where pv."id"::text = ${col(a, "previsao_id")}::text and pv."status" = 'aberta' and pv."data_prevista" >= current_date)`),
+      ),
+    },
+    insert: { empresa: ownCol("empresa_id") },
+    update: { empresa: eq("empresa_id") },
+    delete: { empresa: eq("empresa_id") },
+    force: { empresa: { empresa_id: "uid" } },
+  },
+
+  agenda_zona_candidaturas: {
+    read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
+  },
+
   vinculos_empresa: {
     read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
     delete: { empresa: eq("empresa_id") },
