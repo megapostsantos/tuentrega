@@ -202,6 +202,11 @@ function NovaPrevisao({
   const [porRota, setPorRota] = useState("50");
   const { isOperador } = useAuth();
   const [valor, setValor] = useState("1.80");
+  useEffect(() => {
+    if (!open || isOperador) return;
+    (supabase as any).from("empresas").select("tms_valor_padrao_pacote").eq("id", empresaId).maybeSingle()
+      .then(({ data }: any) => { if (data?.tms_valor_padrao_pacote != null) setValor(String(data.tms_valor_padrao_pacote)); });
+  }, [open, isOperador, empresaId]);
   const [veiculo, setVeiculo] = useState("");
   const [coleta, setColeta] = useState("");
   const [hora, setHora] = useState("07:00");

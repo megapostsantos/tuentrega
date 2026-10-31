@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  Plus, ChevronRight, UserX, Clock, Truck, RotateCcw, CheckCircle2, Wallet, Users, CalendarDays, Map as MapIcon,
+  Plus, ChevronRight, UserX, Clock, Truck, RotateCcw, CheckCircle2, Wallet, Users, UserCog, CalendarDays, Map as MapIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -187,6 +187,7 @@ export function EmpresaPainel({ userId }: { userId?: string }) {
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {[
+          ...(isOperador ? [] : [{ label: "Equipe (RH)", to: "/equipe", icon: UserCog }]),
           { label: "Entregadores", to: "/entregadores", icon: Users },
           { label: "Agenda", to: "/agenda", icon: CalendarDays },
           { label: "Rotas ao vivo", to: "/rotas", icon: MapIcon },

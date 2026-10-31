@@ -153,9 +153,31 @@ function AgendaContent({ userId, isAdmin }: { userId: string; isAdmin: boolean }
         .lt("data_pagamento", endIso);
       if (!isAdmin) pagamentosQ.eq("empresa_id", userId);
 
-      const [ev, of, pk, pg] = await Promise.all([eventosQ, ofertasQ, pacotesQ, pagamentosQ]);
+      const previsoesQ = sb
+        .from("agenda_previsoes")
+        .select("id, data_prevista, hora_abertura, pacotes_estimados, rotas_estimadas, status")
+        .gte("data_prevista", startDate)
+        .lt("data_prevista", endDate);
+      if (!isAdmin) previsoesQ.eq("empresa_id", userId);
+
+      const [ev, of, pk, pg, pv] = await Promise.all([eventosQ, ofertasQ, pacotesQ, pagamentosQ, previsoesQ]);
 
       const out: AgendaEvent[] = [];
+
+      for (const p of pv.data ?? []) {
+        const [y, m, d] = String(p.data_prevista).split("-").map(Number);
+        const [hh, mm] = String(p.hora_abertura ?? "08:00").split(":").map(Number);
+        out.push({
+          id: `pv-${p.id}`,
+          tipo: "disponibilidade",
+          titulo: `Previsão: ${p.pacotes_estimados} pacotes · ${p.rotas_estimadas} rota(s)`,
+          descricao: p.status === "aberta" || p.status === "open" ? "Aberta para os entregadores se comprometerem" : String(p.status ?? ""),
+          inicio: new Date(y, m - 1, d, hh || 8, mm || 0),
+          fim: null,
+          cor: TIPO_COR.disponibilidade,
+          source: "oferta",
+        });
+      }
 
       for (const e of ev.data ?? []) {
         out.push({

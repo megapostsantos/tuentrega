@@ -25,7 +25,7 @@ const GROUPS: Group[] = [
   ]},
   { label: "Distribuição", items: [
     { title: "Pacotes", url: "/pacotes", icon: Package, roles: NOT_ENTREGADOR },
-    { title: "Rotas", url: "/rotas", icon: Map, roles: NOT_ENTREGADOR },
+    { title: "Rotas", url: "/rotas", icon: Map, roles: ALL },
     { title: "Ofertas", url: "/ofertas", icon: Zap, roles: ALL },
   ]},
   { label: "NEX", items: [
@@ -34,6 +34,7 @@ const GROUPS: Group[] = [
   ]},
   { label: "Pessoas", items: [
     { title: "Entregadores", url: "/entregadores", icon: Bike, roles: NOT_ENTREGADOR },
+    { title: "Equipe (RH)", url: "/equipe", icon: Users, roles: ["empresa"] },
     { title: "Empresas", url: "/empresas", icon: Building2, roles: ADMIN_ONLY },
   ]},
   { label: "Agenda", items: [
@@ -42,16 +43,16 @@ const GROUPS: Group[] = [
   { label: "Financeiro", items: [
     { title: "Financeiro", url: "/financeiro", icon: BarChart2, roles: ADMIN_EMPRESA },
     { title: "Pagamentos", url: "/pagamentos", icon: Wallet, roles: ADMIN_EMPRESA },
+    { title: "Finanças", url: "/financas", icon: Wallet, roles: ["entregador"] },
   ]},
   { label: "Sistema", items: [
     { title: "Configurações", url: "/configuracoes", icon: Settings, roles: ALL },
     { title: "Ajuda", url: "/ajuda", icon: HelpCircle, roles: ALL },
-    { title: "Equipe", url: "/equipe", icon: Users, roles: ["empresa"] },
     { title: "Funcionários", url: "/funcionarios", icon: Users, roles: ADMIN_ONLY },
   ]},
 ];
 
-const ENTREGADOR_URLS = new Set(["/dashboard", "/ofertas", "/agenda", "/configuracoes", "/ajuda"]);
+const ENTREGADOR_URLS = new Set(["/dashboard", "/ofertas", "/agenda", "/configuracoes", "/ajuda", "/financas", "/rotas"]);
 
 const SO_DONO = new Set(["/financeiro", "/pagamentos", "/equipe"]);
 

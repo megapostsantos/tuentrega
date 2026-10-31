@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Home, Package, Store, Wallet, User, Map, CalendarDays, Building2, Users,
-  BarChart3, UserCog, TrendingUp, MoreHorizontal, Truck, FileText, ClipboardList,
+  BarChart3, UserCog, TrendingUp, MoreHorizontal, FileText, ClipboardList, HelpCircle,
 } from "lucide-react";
 import type { AppRole } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -13,15 +13,17 @@ type Item = { label: string; to: string; icon: typeof Home };
 const empresaMain: Item[] = [
   { label: "Home", to: "/dashboard", icon: Home },
   { label: "Pacotes", to: "/pacotes", icon: Package },
+  { label: "Rotas", to: "/rotas", icon: Map },
   { label: "Ofertas", to: "/ofertas", icon: Store },
-  { label: "NEX", to: "/nex/saidas", icon: Truck },
 ];
 
-const empresaMore: { label: string; to: string; icon: typeof Home; hint?: string }[] = [
-  { label: "Pagamentos PIX", to: "/pagamentos", icon: Wallet, hint: "Fechamento e repasses" },
-  { label: "Financeiro", to: "/financeiro", icon: TrendingUp, hint: "Receitas e despesas" },
+const empresaMore: { label: string; to: string; icon: typeof Home; hint?: string; soDono?: boolean }[] = [
+  { label: "Equipe (RH)", to: "/equipe", icon: UserCog, hint: "Funcionários e convites", soDono: true },
+  { label: "Entregadores", to: "/entregadores", icon: Users, hint: "Seus parceiros e convites" },
+  { label: "Pagamentos PIX", to: "/pagamentos", icon: Wallet, hint: "Fechamento e repasses", soDono: true },
+  { label: "Financeiro", to: "/financeiro", icon: TrendingUp, hint: "Receitas e despesas", soDono: true },
+  { label: "Ajuda", to: "/ajuda", icon: HelpCircle, hint: "Guias animados" },
   { label: "Notas fiscais", to: "/notas", icon: FileText, hint: "NFs emitidas" },
-  { label: "Entregadores", to: "/entregadores", icon: Users, hint: "Sua rede" },
   { label: "Agenda", to: "/agenda", icon: CalendarDays, hint: "Semana operacional" },
   { label: "Histórico NEX", to: "/nex/historico", icon: ClipboardList, hint: "Saídas anteriores" },
   { label: "Configurações", to: "/configuracoes", icon: User, hint: "Perfil e filiais" },
@@ -31,7 +33,7 @@ const entregador: Item[] = [
   { label: "Home", to: "/dashboard", icon: Home },
   { label: "Ofertas", to: "/ofertas", icon: Store },
   { label: "Rotas", to: "/rotas", icon: Map },
-  { label: "Agenda", to: "/agenda", icon: CalendarDays },
+  { label: "Finanças", to: "/financas", icon: Wallet },
   { label: "Perfil", to: "/configuracoes", icon: User },
 ];
 
@@ -51,7 +53,7 @@ const admin: Item[] = [
   { label: "Perfil", to: "/configuracoes", icon: User },
 ];
 
-export function BottomNav({ role }: { role: AppRole | null }) {
+export function BottomNav({ role, isOperador = false }: { role: AppRole | null; isOperador?: boolean }) {
   const current = useRouterState({ select: (r) => r.location.pathname });
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -59,9 +61,10 @@ export function BottomNav({ role }: { role: AppRole | null }) {
     current === to || (to !== "/dashboard" && current.startsWith(to));
 
   if (role === "empresa") {
-    const moreActive = empresaMore.some((i) => isActive(i.to));
+    const lista = empresaMore.filter((i) => !(isOperador && i.soDono));
+    const moreActive = lista.some((i) => isActive(i.to));
     return (
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background safe-bottom">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background safe-bottom md:hidden">
         <ul className="mx-auto grid h-16 max-w-2xl grid-cols-5">
           {empresaMain.map((it) => (
             <NavCell key={it.to} item={it} active={isActive(it.to)} />
@@ -89,7 +92,7 @@ export function BottomNav({ role }: { role: AppRole | null }) {
                   <SheetTitle>Mais opções</SheetTitle>
                 </SheetHeader>
                 <div className="grid grid-cols-2 gap-2 p-4">
-                  {empresaMore.map((it) => (
+                  {lista.map((it) => (
                     <Link
                       key={it.to}
                       to={it.to}
@@ -123,7 +126,7 @@ export function BottomNav({ role }: { role: AppRole | null }) {
     entregador;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background safe-bottom">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background safe-bottom md:hidden">
       <ul className="mx-auto grid h-16 max-w-2xl grid-cols-5">
         {items.map((it) => (
           <NavCell key={it.to} item={it} active={isActive(it.to)} />

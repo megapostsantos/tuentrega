@@ -8,6 +8,7 @@ import { ActiveRouteBanner } from "@/components/ActiveRouteBanner";
 import { AppTopBar } from "@/components/AppTopBar";
 import { AppDrawer } from "@/components/AppDrawer";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { BottomNav } from "@/components/BottomNav";
 import { ForcePasswordChange } from "@/components/ForcePasswordChange";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedLayout() {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, isOperador } = useAuth();
   const navigate = useNavigate();
   const [mustChange, setMustChange] = useState(false);
   useEffect(() => {
@@ -50,7 +51,7 @@ function AuthenticatedLayout() {
       <AppTopBar onOpenDrawer={() => setDrawerOpen(true)} />
       <AppDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} role={role} />
       <OfflineBanner />
-      <main className="flex-1 pb-6">
+      <main className="flex-1 pb-24 md:pb-6">
         <div className="mx-auto w-full max-w-6xl">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -65,6 +66,7 @@ function AuthenticatedLayout() {
           </AnimatePresence>
         </div>
       </main>
+      <BottomNav role={role} isOperador={isOperador} />
     </div>
   );
 }

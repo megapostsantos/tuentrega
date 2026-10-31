@@ -570,18 +570,18 @@ function EntregadorDashboard({ userId }: { userId?: string }) {
       )}
 
       {/* Earnings today */}
-      <div className="rounded-2xl border border-border bg-card p-5 elev-1">
+      <Link to="/financas" className="block rounded-2xl border border-border bg-card p-5 elev-1 press-scale">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">💰 Seus ganhos hoje</p>
         <p className="mt-2 text-[32px] font-bold leading-none text-primary">{brl(todayEarnings)}</p>
-        <p className="mt-2 text-xs text-muted-foreground">{stats.minhasHoje} oferta(s) trabalhada(s) hoje</p>
-      </div>
+        <p className="mt-2 text-xs text-muted-foreground">{stats.minhasHoje} oferta(s) trabalhada(s) hoje · toque para ver suas finanças</p>
+      </Link>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard icon={Store} label="Ofertas disponíveis" value={String(stats.disponiveis)} to="/ofertas" />
         <StatCard icon={Truck} label="Minhas entregas hoje" value={String(stats.minhasHoje)} to="/rotas" />
         <StatCard icon={CalendarDays} label="Em andamento" value={String(stats.emAndamento)} to="/rotas" />
-        <StatCard icon={Wallet} label="A receber" value={brl(stats.aReceber)} to="/pagamentos" />
+        <StatCard icon={Wallet} label="A receber" value={brl(stats.aReceber)} to="/financas" />
       </div>
 
       {/* Próximas paradas */}
