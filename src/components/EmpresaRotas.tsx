@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Loader2, MapPin, Bike, CheckCircle2, AlertTriangle, Radio, RefreshCw, UserX, Undo2, Timer, PauseCircle, Navigation } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, ChevronDown, Loader2, MapPin, Bike, CheckCircle2, AlertTriangle, Radio, RefreshCw, UserX, Undo2, Timer, PauseCircle, Navigation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyModule } from "@/components/EmptyModule";
@@ -63,6 +65,8 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
   const [ocorr, setOcorr] = useState<RotaOferta | null>(null);
   const [fechar, setFechar] = useState<RotaOferta | null>(null);
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
+  const [semMotorista, setSemMotorista] = useState<RotaOferta[]>([]);
+  const [filtro, setFiltro] = useState<"todas" | "em_rota" | "aguardando" | "sem_motorista" | "concluidas">("todas");
 
   async function load(showSpinner = false) {
     if (showSpinner) setLoading(true);
@@ -74,6 +78,11 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
     let qf = supabase.from("ofertas").select(sel).eq("status", "completed").gte("closed_at", hoje.toISOString());
     if (empresaId) qf = qf.eq("empresa_id", empresaId);
     const { data: fim } = await qf.order("closed_at", { ascending: false }).limit(30);
+
+    let qo = supabase.from("ofertas").select(sel).eq("status", "open");
+    if (empresaId) qo = qo.eq("empresa_id", empresaId);
+    const { data: abertasSem } = await qo.order("updated_at", { ascending: false });
+    setSemMotorista((abertasSem as RotaOferta[]) ?? []);
 
     const a = (ativas as RotaOferta[]) ?? [];
     const c = (fim as RotaOferta[]) ?? [];
@@ -215,15 +224,48 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
         </section>
       )}
 
-      {rotas.length === 0 ? (
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        {([
+          ["todas", "Todas", rotas.length + semMotorista.length + concluidas.length],
+          ["em_rota", "Em rota", rotas.filter((o) => o.status === "in_progress").length],
+          ["aguardando", "Aguardando início", rotas.filter((o) => o.status === "accepted").length],
+          ["sem_motorista", "Sem motorista", semMotorista.length],
+          ["concluidas", "Concluídas hoje", concluidas.length],
+        ] as const).map(([k, label, n]) => (
+          <button key={k} type="button" onClick={() => setFiltro(k)}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${filtro === k ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"} ${k === "sem_motorista" && n > 0 && filtro !== k ? "border-red-300 text-red-700" : ""}`}>
+            {label} ({n})
+          </button>
+        ))}
+      </div>
+
+      {["sem_motorista", "todas"].includes(filtro) && semMotorista.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-red-700">Sem motorista ({semMotorista.length})</h3>
+          {semMotorista.map((o) => (
+            <Card key={o.id} className="border-red-200">
+              <CardContent className="flex items-center justify-between gap-2 p-3 text-sm">
+                <div className="min-w-0">
+                  <div className="truncate font-semibold">{o.titulo.includes("·") ? o.titulo.split("·").slice(1).join("·").trim() : o.titulo}</div>
+                  <div className="text-xs text-muted-foreground">{o.quantidade_pacotes ?? 0} pacotes · aguardando um entregador aceitar</div>
+                </div>
+                <Button asChild size="sm" variant="outline"><Link to="/pacotes">Atribuir</Link></Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {["em_rota", "aguardando", "todas"].includes(filtro) && (rotas.length === 0 ? (
+        filtro === "todas" && semMotorista.length > 0 ? null : (
         <EmptyModule
           icon={MapPin}
           title="Nenhuma rota em andamento"
           description="Quando um entregador aceitar uma oferta sua e iniciar a rota, ela aparece aqui com o progresso e a localização."
-        />
+        />)
       ) : (
         <div className="space-y-3">
-          {rotas.map((o) => {
+          {rotas.filter((o) => filtro === "todas" || (filtro === "em_rota" ? o.status === "in_progress" : o.status === "accepted")).map((o) => {
             const c = contagem[o.id] ?? { total: o.quantidade_pacotes ?? 0, entregues: 0, problemas: 0 };
             const feitos = c.entregues + c.problemas;
             const pct = c.total ? (feitos / c.total) * 100 : 0;
@@ -292,22 +334,28 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
                         <Radio className="h-3.5 w-3.5" /> Localização {sinal}
                       </span>
                     )}
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {gerenciado && o.entregador_id && (
+                    <div className="flex items-center justify-end gap-2">
+                      {gerenciado && o.entregador_id ? (
                         <Button size="sm" onClick={() => setOperar(o)}>Operar rota</Button>
+                      ) : (
+                        <Button size="sm" disabled={!o.entregador_id} onClick={() => setTracking(o)}>
+                          <MapPin className="mr-1 h-4 w-4" /> Mapa ao vivo
+                        </Button>
                       )}
-                      {(o.status === "in_progress" || o.status === "accepted") && (
-                        <Button size="sm" variant="outline" onClick={() => setFechar(o)}>Encerrar pelo gestor</Button>
-                      )}
-                      {c.problemas > 0 && (
-                        <Button size="sm" variant="outline" onClick={() => setOcorr(o)}>Ocorrências ({c.problemas})</Button>
-                      )}
-                      <Button size="sm" variant="outline" className="text-red-600" disabled={!o.entregador_id || busyId === o.id} onClick={() => reofertar(o)}>
-                        <UserX className="mr-1 h-4 w-4" /> Reofertar
-                      </Button>
-                      <Button size="sm" variant={gerenciado ? "outline" : "default"} disabled={!o.entregador_id || gerenciado} onClick={() => setTracking(o)}>
-                        <MapPin className="mr-1 h-4 w-4" /> Mapa ao vivo
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="outline" aria-label="Mais ações"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {(o.status === "in_progress" || o.status === "accepted") && (
+                            <DropdownMenuItem onClick={() => setFechar(o)}>Encerrar pelo gestor</DropdownMenuItem>
+                          )}
+                          {c.problemas > 0 && <DropdownMenuItem onClick={() => setOcorr(o)}>Ocorrências ({c.problemas})</DropdownMenuItem>}
+                          <DropdownMenuItem disabled={!o.entregador_id || busyId === o.id} className="text-red-600" onClick={() => reofertar(o)}>
+                            Reofertar (tirar o entregador)
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                   </>)}
@@ -316,9 +364,9 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
             );
           })}
         </div>
-      )}
+      ))}
 
-      {recusas.length > 0 && (
+      {filtro === "todas" && recusas.length > 0 && (
         <div className="space-y-2">
           <h3 className="flex items-center gap-1 text-sm font-semibold text-muted-foreground"><Undo2 className="h-4 w-4" />Recusas e remoções (7 dias)</h3>
           {recusas.map((r) => (
@@ -338,7 +386,7 @@ export function EmpresaRotas({ empresaId }: { empresaId: string | null }) {
         </div>
       )}
 
-      {concluidas.length > 0 && (
+      {["concluidas", "todas"].includes(filtro) && concluidas.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-muted-foreground">Concluídas hoje</h3>
           {concluidas.map((o) => {

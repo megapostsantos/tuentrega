@@ -179,7 +179,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
         <DialogFooter>
           <Button variant="outline" onClick={fechar}>Cancelar</Button>
           <Button onClick={submit} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserPlus className="mr-2 h-4 w-4" />Cadastrar</>}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserPlus className="mr-2 h-4 w-4" />{f.email.trim() ? "Cadastrar e enviar convite" : "Cadastrar"}</>}
           </Button>
         </DialogFooter>
       </DialogContent>

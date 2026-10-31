@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus } from "lucide-react";
+import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { SITE_URL } from "@/lib/contato";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
 import { EntregadoresStats } from "@/components/summaries/EntregadoresStats";
@@ -59,6 +60,8 @@ function ListaEntregadores() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [dispatcherTarget, setDispatcherTarget] = useState<Ent | null>(null);
   const [dispatcherIds, setDispatcherIds] = useState<Set<string>>(new Set());
+  const [convites, setConvites] = useState<Map<string, string>>(new Map());
+  const [empresaNome, setEmpresaNome] = useState("");
 
   async function fetchList() {
     setLoad(true);
@@ -69,10 +72,23 @@ function ListaEntregadores() {
       const { data: dispData } = await (supabase as any)
         .from("dispatchers").select("entregador_id").eq("empresa_id", user.id).eq("status", "ativo");
       setDispatcherIds(new Set((dispData ?? []).map((d: any) => d.entregador_id)));
+      const { data: ger } = await (supabase as any).from("entregadores_gerenciados").select("entregador_id, codigo_convite");
+      setConvites(new Map(((ger as any[]) ?? []).filter((g) => g.codigo_convite).map((g) => [g.entregador_id, g.codigo_convite])));
+      const { data: emp } = await (supabase as any).from("empresas").select("nome_fantasia, razao_social").eq("id", user.id).maybeSingle();
+      setEmpresaNome(emp?.nome_fantasia || emp?.razao_social || "");
     }
     setLoad(false);
   }
   useEffect(() => { fetchList(); }, []);
+
+  function reenviarConvite(e: Ent) {
+    const codigo = convites.get(e.id);
+    const email = (e as any).email as string | null;
+    if (!codigo || !email) return toast.error("Este parceiro não tem e-mail cadastrado para o convite.");
+    const msg = `Olá ${e.nome_completo}! ${empresaNome ? `A empresa ${empresaNome} cadastrou` : "Você foi cadastrado(a)"} você como parceiro(a) no TuEntrega. Para criar sua senha, abra ${SITE_URL}/auth, toque na aba "Convite" e use o e-mail ${email} e o código ${codigo}.`;
+    const fone = String((e as any).whatsapp ?? "").replace(/\D/g, "");
+    window.open(fone ? `https://wa.me/${fone.length <= 11 ? "55" + fone : fone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  }
 
   async function suspendManually(id: string) {
     const reason = prompt("Motivo da suspensão:");
@@ -150,6 +166,8 @@ function ListaEntregadores() {
                             <Badge variant="destructive">Suspenso</Badge>
                           ) : e.status === "inativo" ? (
                             <Badge variant="secondary">Inativo</Badge>
+                          ) : convites.has(e.id) ? (
+                            <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Convite pendente</Badge>
                           ) : e.activated_at ? (
                             <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Ativo</Badge>
                           ) : e.invited_at ? (
@@ -159,6 +177,11 @@ function ListaEntregadores() {
                           )}
                         </TableCell>
                         <TableCell className="text-right" onClick={(ev) => ev.stopPropagation()}>
+                          {convites.has(e.id) && (
+                            <Button variant="outline" size="sm" className="mr-1" onClick={() => reenviarConvite(e)}>
+                              <Send className="h-3.5 w-3.5 mr-1" /> Enviar convite
+                            </Button>
+                          )}
                           {dispatcherIds.has(e.id) ? (
                             <Badge variant="outline" className="mr-1">Dispatcher</Badge>
                           ) : (

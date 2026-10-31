@@ -295,7 +295,8 @@ function CreateOperation({
   const [totalPacotes, setTotalPacotes] = useState<number>(0);
   const [totalParadas, setTotalParadas] = useState<number>(0);
   const { isOperador } = useAuth();
-  const [valorPorPacote, setValorPorPacote] = useState<number>(empresa?.tms_valor_padrao_pacote ?? 1.8);
+  const [parceiros, setParceiros] = useState<{ id: string; nome_completo: string }[]>([]);
+  const [valorPorPacote, setValorPorPacote] = useState<number>(empresa?.tms_valor_padrao_pacote ?? 0);
   const [scanOpen, setScanOpen] = useState(false);
   const [filialId, setFilialId] = useState<string>("none");
   const [filiais, setFiliais] = useState<Array<{ id: string; nome: string }>>([]);
@@ -309,10 +310,13 @@ function CreateOperation({
       .order("nome")
       .then(({ data }: any) => setFiliais(data ?? []));
   }, [userId]);
+  useEffect(() => {
+    (supabase as any).from("entregadores").select("id, nome_completo").eq("status", "ativo").order("nome_completo")
+      .then(({ data }: any) => setParceiros(data ?? []));
+  }, [userId]);
 
   const origemFinal = origem === "Outro" ? origemCustom.trim() : origem;
   const mediaPorParada = totalParadas > 0 ? (totalPacotes / totalParadas) : 0;
-  const totalEstimado = totalPacotes * valorPorPacote;
 
   // Step 2
   const [divisionMode, setDivisionMode] = useState<DivisionMode>("auto");
@@ -506,6 +510,7 @@ function CreateOperation({
   async function createOperation() {
     if (!origemFinal) { toast.error("Informe a origem."); return; }
     if (rotas.length === 0) { toast.error("Crie ao menos uma rota."); return; }
+    if (!isOperador && !personalizarPorRota && !(valorPorPacote > 0)) { toast.error("Informe o valor por pacote antes de criar."); return; }
     setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -618,12 +623,12 @@ function CreateOperation({
     setStep(1); setOrigem("Mercado Livre"); setOrigemCustom("");
     setDataOperacao(new Date().toLocaleDateString("en-CA"));
     setTotalPacotes(0); setTotalParadas(0);
-    setValorPorPacote(empresa?.tms_valor_padrao_pacote ?? 1.8);
+    setValorPorPacote(empresa?.tms_valor_padrao_pacote ?? 0);
     setDivisionMode("auto"); setNumRotas(3); setManualRotas([]); setRotas([]);
     setObservacoes(""); setCreatedOpId(null); setCreatedRotaIds([]); setPublishedOffers([]);
   }
 
-  const step1Valid = !!origemFinal && totalPacotes > 0 && (isOperador || valorPorPacote > 0);
+  const step1Valid = !!origemFinal && totalPacotes > 0;
   const step2Valid =
     (divisionMode === "agenda" && !!agenda && totalPacotes > 0) ||
     divisionMode === "single" ||
@@ -648,95 +653,59 @@ function CreateOperation({
       {/* ============ STEP 1 ============ */}
       {step === 1 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Origem e volumes</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle>Iniciar operação</CardTitle>
+            <p className="text-sm text-muted-foreground">Informe o volume do dia. Valores você ajusta no final.</p>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <Field label="Origem / Cliente">
-              <Select value={origem} onValueChange={setOrigem}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ORIGENS_PRESET.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  <SelectItem value="Outro">Outro (digitar)</SelectItem>
-                </SelectContent>
-              </Select>
-              {origem === "Outro" && (
-                <Input
-                  className="mt-2"
-                  placeholder="Digite o nome do cliente"
-                  value={origemCustom}
-                  onChange={(e) => setOrigemCustom(e.target.value)}
-                />
-              )}
-            </Field>
-
-            {filiais.length > 0 && (
-              <Field label="Filial (opcional)">
-                <Select value={filialId} onValueChange={setFilialId}>
-                  <SelectTrigger><SelectValue placeholder="Sem filial" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem filial (matriz)</SelectItem>
-                    {filiais.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </Field>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Data da operação">
-                <Input type="date" value={dataOperacao} onChange={(e) => setDataOperacao(e.target.value)} />
-                <div className="flex gap-2 pt-1">
-                  {[{ l: "Hoje", d: 0 }, { l: "Amanhã", d: 1 }, { l: "Depois de amanhã", d: 2 }].map((x) => {
-                    const v = new Date(Date.now() + x.d * 86400000).toLocaleDateString("en-CA");
-                    return (
-                      <Button key={x.l} type="button" size="sm" variant={dataOperacao === v ? "default" : "outline"} onClick={() => setDataOperacao(v)}>{x.l}</Button>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground">Dá para criar hoje a operação de outro dia: as ofertas aparecem para os entregadores já com a data.</p>
-              </Field>
-              {!isOperador && (
-                <Field label="Valor por pacote (R$)">
-                  <Input
-                    type="number" step="0.01" min={0}
-                    value={valorPorPacote || ""}
-                    onChange={(e) => setValorPorPacote(Number(e.target.value) || 0)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Total estimado: <strong>R$ {totalEstimado.toFixed(2)}</strong>
-                  </p>
-                </Field>
-              )}
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr]">
               <Field label="Total de pacotes">
-                <Input
-                  type="number" min={0}
-                  value={totalPacotes || ""}
-                  onChange={(e) => setTotalPacotes(Number(e.target.value) || 0)}
-                />
+                <Input type="number" min={0} inputMode="numeric" autoFocus value={totalPacotes || ""} onChange={(e) => setTotalPacotes(Number(e.target.value) || 0)} />
               </Field>
-              <Field label="Total de paradas (opcional)">
-                <Input
-                  type="number" min={0}
-                  value={totalParadas || ""}
-                  onChange={(e) => setTotalParadas(Number(e.target.value) || 0)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {mediaPorParada > 0 ? <>Média: <strong>{mediaPorParada.toFixed(1)}</strong> pacotes por parada</> : "Pode deixar em branco — o importante são os pacotes."}
-                </p>
+              <Field label="Paradas (opcional)">
+                <Input type="number" min={0} inputMode="numeric" value={totalParadas || ""} onChange={(e) => setTotalParadas(Number(e.target.value) || 0)} />
               </Field>
+              <Field label="Data">
+                <Input type="date" value={dataOperacao} onChange={(e) => setDataOperacao(e.target.value)} />
+              </Field>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {[{ l: "Hoje", d: 0 }, { l: "Amanhã", d: 1 }, { l: "Depois de amanhã", d: 2 }].map((x) => {
+                const v = new Date(Date.now() + x.d * 86400000).toLocaleDateString("en-CA");
+                return <Button key={x.l} type="button" size="sm" variant={dataOperacao === v ? "default" : "outline"} onClick={() => setDataOperacao(v)}>{x.l}</Button>;
+              })}
+              <span className="text-xs text-muted-foreground">As ofertas aparecem para os entregadores já com a data escolhida.</span>
             </div>
 
-            <div className="rounded-md border bg-muted/40 p-3 text-sm">
-              <div className="font-medium mb-1">Métodos alternativos</div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => setScanOpen(true)}>
-                  <ScanLine className="mr-1 h-4 w-4" />Escanear pacotes
-                </Button>
-                <Button variant="outline" size="sm" disabled title="Em breve">
-                  <Package className="mr-1 h-4 w-4" />Importar planilha
-                </Button>
+            <details className="rounded-lg border bg-muted/30 p-3 text-sm">
+              <summary className="cursor-pointer font-medium">Mais opções (origem{filiais.length > 0 ? ", filial" : ""}, escanear)</summary>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <Field label="Origem / Cliente">
+                  <Select value={origem} onValueChange={setOrigem}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ORIGENS_PRESET.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      <SelectItem value="Outro">Outro (digitar)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {origem === "Outro" && <Input className="mt-2" placeholder="Nome do cliente" value={origemCustom} onChange={(e) => setOrigemCustom(e.target.value)} />}
+                </Field>
+                {filiais.length > 0 && (
+                  <Field label="Filial">
+                    <Select value={filialId} onValueChange={setFilialId}>
+                      <SelectTrigger><SelectValue placeholder="Sem filial" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sem filial (matriz)</SelectItem>
+                        {filiais.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                )}
               </div>
-            </div>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => setScanOpen(true)}>
+                <ScanLine className="mr-1 h-4 w-4" />Escanear pacotes
+              </Button>
+            </details>
 
             <div className="flex justify-end">
               <Button size="lg" onClick={() => setStep(2)} disabled={!step1Valid}>Próximo</Button>
@@ -890,7 +859,7 @@ function CreateOperation({
 
             {divisionMode === "single" && (
               <div className="rounded-md border p-3 text-sm">
-                Uma única rota com <strong>{totalPacotes}</strong> pacotes · {totalParadas > 0 && <><strong>{totalParadas}</strong> paradas · </>}<strong>R$ {totalEstimado.toFixed(2)}</strong>
+                Uma única rota com <strong>{totalPacotes}</strong> pacotes · {totalParadas > 0 && <><strong>{totalParadas}</strong> paradas</>}
               </div>
             )}
 
@@ -905,7 +874,7 @@ function CreateOperation({
       {/* ============ STEP 3 ============ */}
       {step === 3 && (
         <Card>
-          <CardHeader><CardTitle>Revisão e ajustes</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle>Valores e parceiros</CardTitle><p className="text-sm text-muted-foreground">{isOperador ? "Confira as rotas e, se quiser, escolha quem leva cada uma." : "Defina o valor por pacote (dá para personalizar rota a rota) e, se quiser, já escolha quem leva cada rota. Rotas sem parceiro vão para o mercado de ofertas."}</p></CardHeader>
           <CardContent className="space-y-5">
             <div className="grid gap-2 text-sm sm:grid-cols-2">
               <div>Origem: <strong>{origemFinal}</strong></div>
@@ -935,32 +904,34 @@ function CreateOperation({
             <div className="space-y-2">
               <div className="text-sm font-medium">Rotas</div>
               {rotas.map((r, i) => (
-                <div key={i} className={`grid gap-2 rounded border p-3 sm:items-end ${isOperador ? "sm:grid-cols-[1fr_90px_90px]" : "sm:grid-cols-[1fr_90px_90px_130px_130px]"}`}>
-                  <Field label="Nome">
-                    <Input value={r.nome} onChange={(e) => updateRota(i, { nome: e.target.value })} />
-                    {r.entregador_nome && <Badge variant="secondary" className="mt-1">Entregador: {r.entregador_nome}</Badge>}
-                  </Field>
-                  <Field label="Pacotes">
-                    <Input type="number" min={0} value={r.quantidade_pacotes || ""} onChange={(e) => updateRota(i, { quantidade_pacotes: Number(e.target.value) || 0 })} />
-                  </Field>
-                  <Field label="Paradas (opcional)">
-                    <Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => updateRota(i, { quantidade_paradas: Number(e.target.value) || 0 })} />
-                  </Field>
-                  {!isOperador && (
-                    <Field label="Valor por pacote R$">
-                      <Input
-                        type="number" step="0.01" min={0}
-                        value={personalizarPorRota ? (r.valor_por_pacote ?? valorPorPacote) : valorPorPacote}
-                        disabled={!personalizarPorRota}
-                        onChange={(e) => updateRota(i, { valor_por_pacote: Number(e.target.value) || 0 })}
-                      />
+                <div key={i} className="space-y-2 rounded-lg border p-3">
+                  <div className="grid grid-cols-[1fr_84px_84px] items-end gap-2">
+                    <Field label="Rota"><Input value={r.nome} onChange={(e) => updateRota(i, { nome: e.target.value })} /></Field>
+                    <Field label="Pacotes"><Input type="number" min={0} value={r.quantidade_pacotes || ""} onChange={(e) => updateRota(i, { quantidade_pacotes: Number(e.target.value) || 0 })} /></Field>
+                    <Field label="Paradas"><Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => updateRota(i, { quantidade_paradas: Number(e.target.value) || 0 })} /></Field>
+                  </div>
+                  <div className={`grid items-end gap-2 ${isOperador ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-[110px_110px_1fr]"}`}>
+                    {!isOperador && (
+                      <Field label="R$/pacote">
+                        <Input type="number" step="0.01" min={0}
+                          value={personalizarPorRota ? (r.valor_por_pacote ?? valorPorPacote) : valorPorPacote}
+                          disabled={!personalizarPorRota}
+                          onChange={(e) => updateRota(i, { valor_por_pacote: Number(e.target.value) || 0 })} />
+                      </Field>
+                    )}
+                    {!isOperador && <Field label="Total"><Input disabled value={`R$ ${r.valor_total.toFixed(2)}`} /></Field>}
+                    <Field label="Parceiro (opcional)">
+                      <select className="h-10 w-full rounded-md border bg-background px-2 text-sm"
+                        value={r.entregador_id ?? ""}
+                        onChange={(e) => {
+                          const d = parceiros.find((x) => x.id === e.target.value);
+                          updateRota(i, { entregador_id: e.target.value || undefined, entregador_nome: d?.nome_completo });
+                        }}>
+                        <option value="">— mercado de ofertas —</option>
+                        {parceiros.map((d) => <option key={d.id} value={d.id}>{d.nome_completo}</option>)}
+                      </select>
                     </Field>
-                  )}
-                  {!isOperador && (
-                    <Field label="Total da rota">
-                      <Input disabled value={`R$ ${r.valor_total.toFixed(2)}`} />
-                    </Field>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
