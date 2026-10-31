@@ -1,4 +1,5 @@
 import { SITE_URL } from "@/lib/contato";
+import { ConferenciaRotas } from "@/components/pacotes/ConferenciaRotas";
 import { AjusteRotas, EliminarRotaDialog, type RotaAjuste } from "@/components/pacotes/AjusteRotas";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
@@ -128,8 +129,9 @@ function EmpresaTms({ userId }: { userId: string }) {
         userId={userId}
         empresa={empresa}
         onCancel={() => setMode("list")}
-        onDone={() => {
+        onDone={(abrirId) => {
           setMode("list");
+          if (abrirId) setDetailId(abrirId);
           load();
         }}
       />
@@ -284,7 +286,7 @@ const ORIGENS_PRESET = ["Mercado Livre", "Shopee", "Shein", "Amazon", "Magalu", 
 
 function CreateOperation({
   userId, empresa, onCancel, onDone,
-}: { userId: string; empresa: EmpresaTms | null; onCancel: () => void; onDone: () => void }) {
+}: { userId: string; empresa: EmpresaTms | null; onCancel: () => void; onDone: (abrirOperacaoId?: string) => void }) {
   const nav = useNavigate();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -994,25 +996,25 @@ function CreateOperation({
             <div className="grid gap-3 sm:grid-cols-3">
               <button
                 type="button"
-                onClick={publishAsOffers}
-                disabled={submitting}
-                className="text-left rounded-lg border-2 border-primary bg-primary/5 p-4 transition-all hover:shadow-md disabled:opacity-50"
+                onClick={() => { onDone(createdOpId ?? undefined); }}
+                className="text-left rounded-lg border-2 border-primary bg-primary/5 p-4 transition-all hover:shadow-md"
               >
-                <div className="text-2xl">📢</div>
-                <div className="mt-2 font-semibold">Publicar como Oferta</div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Publica {rotas.length} oferta(s) já vinculadas a esta operação.
-                </p>
+                <div className="text-2xl">✅</div>
+                <div className="mt-2 font-semibold">Conferir as rotas</div>
+                <p className="mt-1 text-xs text-muted-foreground">Ajuste a quantidade real de cada rota, escolha parceiros e publique quando quiser. Nada vai para os entregadores antes disso.</p>
               </button>
 
               <button
                 type="button"
-                onClick={() => { onDone(); }}
-                className="text-left rounded-lg border-2 border-border p-4 transition-all hover:border-primary/40 hover:shadow-md"
+                onClick={() => { if (confirm("Publicar agora sem conferir? As rotas ficam visíveis para os entregadores.")) publishAsOffers(); }}
+                disabled={submitting}
+                className="text-left rounded-lg border-2 border-border p-4 transition-all hover:border-primary/40 hover:shadow-md disabled:opacity-50"
               >
-                <div className="text-2xl">📋</div>
-                <div className="mt-2 font-semibold">Ver operação</div>
-                <p className="mt-1 text-xs text-muted-foreground">Volta para a lista e abre o detalhe.</p>
+                <div className="text-2xl">📢</div>
+                <div className="mt-2 font-semibold">Publicar agora</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Publica as {rotas.length} rota(s) no mercado sem conferir.
+                </p>
               </button>
 
               <button
@@ -1164,37 +1166,16 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
           {op.observacoes && (
             <div className="rounded border bg-muted/40 p-2"><strong>Obs:</strong> {op.observacoes}</div>
           )}
+          <ConferenciaRotas
+            rotas={ativas as any}
+            ofertas={ofertas}
+            onChanged={() => setReloadKey((k) => k + 1)}
+            publicar={(ids) => publishPendingRotas(op, ativas.filter((r: any) => ids.includes(r.id)))}
+          />
           <AllocationPanel op={op} operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={ativas} onChanged={() => setReloadKey((k) => k + 1)} />
-          {ativas.some((r) => !r.oferta_id) && (
-            <div className="rounded-lg border bg-muted/30 p-3">
-              <p className="font-medium">
-                {ativas.filter((r) => !r.oferta_id).length} rota(s) ainda sem oferta publicada
-              </p>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Ou publique no mercado para qualquer entregador aceitar (sem escolher ninguém).
-              </p>
-              <Button
-                disabled={publishing}
-                onClick={async () => {
-                  setPublishing(true);
-                  try {
-                    const n = await publishPendingRotas(op, ativas);
-                    toast.success(`${n} oferta(s) publicada(s)!`);
-                    setReloadKey((k) => k + 1);
-                  } catch (e: any) {
-                    toast.error(e?.message ?? "Erro ao publicar.");
-                  } finally {
-                    setPublishing(false);
-                  }
-                }}
-              >
-                {publishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Publicar no mercado ({ativas.filter((r) => !r.oferta_id).length})
-              </Button>
-            </div>
-          )}
-          <div>
-            <div className="mb-1 font-medium">Rotas</div>
+          <details className="rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm font-medium">Detalhes das rotas (paradas, valores e eliminar)</summary>
+            <div className="mt-2">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1228,7 +1209,8 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
                 })}
               </TableBody>
             </Table>
-          </div>
+            </div>
+          </details>
           <AjusteRotas rotas={ativas as RotaAjuste[]} onChanged={() => setReloadKey((k) => k + 1)} />
           {!isOperador && (
             <div className="rounded bg-muted p-3">

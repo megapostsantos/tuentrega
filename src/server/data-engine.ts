@@ -634,6 +634,9 @@ const DDL_LAZY: string[] = [
 	"decidida_em" timestamp
 );`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "candidaturas_oferta_entregador_unique" ON "candidaturas" ("oferta_id","entregador_id");`,
+  `ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "pacotes_sistema" integer;`,
+  `ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "ajuste_motivo" text;`,
+  `ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "conferida" boolean DEFAULT false NOT NULL;`,
   `CREATE TABLE IF NOT EXISTS "senhas_provisorias" ("user_id" text PRIMARY KEY NOT NULL, "criada_em" timestamp DEFAULT now() NOT NULL);`,
 ];
 let tabelasGarantidas = false;
@@ -1021,6 +1024,48 @@ async function limparMeusDados(uid: string | null, args: Record<string, unknown>
   return { data: r, error: null, count: null };
 }
 
+/** Conferência final: ajusta a quantidade de pacotes de uma rota (o galpão não mandou, veio avariado...). Mantém o valor por pacote. */
+async function ajustarPacotesRota(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  const rotaId = String(args._rota_id ?? "");
+  const qtd = Math.floor(Number(args._quantidade));
+  if (!Number.isFinite(qtd) || qtd < 0 || qtd > 100000) throw new Error("Quantidade inválida");
+  const motivo = args._motivo == null || String(args._motivo).trim() === "" ? null : String(args._motivo).trim().slice(0, 200);
+  const rows = await query(
+    `select r."id", r."operacao_id", r."status", r."quantidade_pacotes" as q, r."quantidade_paradas" as p, r."valor_total" as vt, r."pacotes_sistema" as ps,
+            r."oferta_id", o."status" as ostatus
+       from "rotas_operacao" r left join "ofertas" o on o."id"::text = r."oferta_id"::text
+      where r."id"::text = $1 and ($2::text is null or r."empresa_id" = $2)`, [rotaId, uid]);
+  const r = rows[0] as any;
+  if (!r) throw new Error("Rota não encontrada");
+  if (r.status === "cancelada") throw new Error("Esta rota foi eliminada");
+  if (["in_progress", "awaiting_return", "completed"].includes(String(r.ostatus ?? ""))) throw new Error("A rota já está em andamento ou concluída e não pode mais ser ajustada");
+  const q0 = Number(r.q), vt0 = Number(r.vt);
+  const vpp = q0 > 0 ? vt0 / q0 : 0;
+  const vt1 = Math.round(vpp * qtd * 100) / 100;
+  const paradas = q0 > 0 ? Math.round((Number(r.p) * qtd) / q0) : Number(r.p);
+  const stmts: { text: string; params: unknown[] }[] = [
+    { text: `update "rotas_operacao" set "pacotes_sistema" = coalesce("pacotes_sistema", $2), "quantidade_pacotes" = $3, "quantidade_paradas" = $4, "valor_total" = $5,
+                  "ajuste_motivo" = $6, "conferida" = $7, "updated_at" = now() where "id"::text = $1`,
+      params: [rotaId, q0, qtd, paradas, vt1, motivo, args._conferida !== false] },
+  ];
+  if (r.oferta_id) {
+    stmts.push({ text: `update "ofertas" set "quantidade_pacotes" = $2, "quantidade_paradas" = $3, "valor" = $4, "updated_at" = now() where "id"::text = $1`, params: [String(r.oferta_id), qtd, paradas, vt1] });
+    const have = await query(`select count(*)::int as n from "entregas_pacotes" where "oferta_id"::text = $1 and "status" <> 'cancelado'`, [String(r.oferta_id)]);
+    const n = Number(have[0]?.n ?? 0);
+    if (qtd < n)
+      stmts.push({ text: `delete from "entregas_pacotes" where "id" in (select "id" from "entregas_pacotes" where "oferta_id"::text = $1 and "status" = 'pending' order by "numero_pacote" desc limit $2)`, params: [String(r.oferta_id), n - qtd] });
+    else if (qtd > n)
+      stmts.push({ text: `insert into "entregas_pacotes" ("oferta_id","operacao_id","numero_pacote","status") select $1, $2, g, 'pending' from generate_series($3::int, $4::int) g`, params: [String(r.oferta_id), String(r.operacao_id), n + 1, qtd] });
+  }
+  stmts.push({
+    text: `update "operacoes" o set "total_pacotes_contados" = s.c, "pacotes_faltando" = greatest(0, o."total_pacotes_sistema" - s.c), "pacotes_a_mais" = greatest(0, s.c - o."total_pacotes_sistema")
+             from (select coalesce(sum("quantidade_pacotes"), 0)::int as c from "rotas_operacao" where "operacao_id"::text = $1 and "status" <> 'cancelada') s where o."id"::text = $1`,
+    params: [String(r.operacao_id)],
+  });
+  await runTransaction(stmts);
+  return { data: { quantidade: qtd, valor_total: vt1 }, error: null, count: null };
+}
+
 /** Publica de uma vez todas as rotas da operação que ainda não têm oferta (uma única transação). */
 async function publicarRotas(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
   const opId = String(args._operacao_id ?? "");
@@ -1065,6 +1110,7 @@ async function publicarRotas(uid: string | null, args: Record<string, unknown>):
 async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   const { fn, args } = req.rpc!;
   if (fn === "publicar_rotas") return await publicarRotas(uid, args);
+  if (fn === "ajustar_pacotes_rota") return await ajustarPacotesRota(uid, args);
   if (fn === "cadastrar_membro_equipe") return await cadastrarMembroEquipe(uid, args);
   if (fn === "limpar_meus_dados") return await limparMeusDados(uid, args);
   if (fn === "candidatar_oferta") return await candidatarOferta(uid, args);
@@ -1127,7 +1173,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
         } else if (fn === "recusar_rota" || fn === "candidatar_oferta" || fn === "cancelar_candidatura" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }

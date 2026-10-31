@@ -2249,3 +2249,9 @@ CREATE TABLE IF NOT EXISTS "vinculos_empresa" ("entregador_id" text PRIMARY KEY 
 CREATE TABLE IF NOT EXISTS "candidaturas" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "oferta_id" text NOT NULL, "entregador_id" text NOT NULL, "empresa_id" text NOT NULL, "status" text DEFAULT 'pendente' NOT NULL, "created_at" timestamp DEFAULT now() NOT NULL, "decidida_em" timestamp);
 -- @@
 CREATE UNIQUE INDEX IF NOT EXISTS "candidaturas_oferta_entregador_unique" ON "candidaturas" ("oferta_id","entregador_id");
+-- @@
+ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "pacotes_sistema" integer;
+-- @@
+ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "ajuste_motivo" text;
+-- @@
+ALTER TABLE "rotas_operacao" ADD COLUMN IF NOT EXISTS "conferida" boolean DEFAULT false NOT NULL;
