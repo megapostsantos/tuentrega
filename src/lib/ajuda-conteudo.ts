@@ -159,7 +159,7 @@ export const GUIAS: Guia[] = [
     tempo: "1 min",
     tela: "/rotas",
     passos: [
-      { titulo: "Digite o ID do pacote", texto: "Use o código que aparece na etiqueta ou no aplicativo do marketplace.", barra: "Registrar insucesso", elementos: [{ t: "campo", rotulo: "ID do pacote", valor: "ML123456", destaque: true }, { t: "texto", texto: "Mínimo 4 caracteres" }] },
+      { titulo: "Leia a etiqueta (ou digite o ID)", texto: "Toque em “Ler etiqueta” e aponte a câmera para o QR code ou o código de barras: o ID entra sozinho. Se preferir, fotografe a etiqueta ou digite o ID.", barra: "Registrar insucesso", elementos: [{ t: "campo", rotulo: "ID do pacote", valor: "45802123456" }, { t: "botao", texto: "Ler etiqueta", destaque: true }] },
       { titulo: "Escolha o motivo", texto: "Cliente ausente, estabelecimento fechado, recusou, endereço não encontrado, pacote danificado ou outro.", barra: "Registrar insucesso", elementos: [{ t: "item", titulo: "Estabelecimento fechado", destaque: true }, { t: "item", titulo: "Cliente ausente" }, { t: "item", titulo: "Pacote danificado" }] },
       { titulo: "Tire a foto certa", texto: "Estabelecimento fechado, cliente ausente ou pacote recusado: foto do LOCAL (fachada, número). Pacote danificado: foto do PACOTE. A empresa vê a foto.", barra: "Registrar insucesso", elementos: [{ t: "foto", rotulo: "foto do local", destaque: true }, { t: "texto", texto: "Mostre a fachada e o número do imóvel" }] },
       { titulo: "Salve", texto: "O pacote fica marcado como não entregue e volta para a empresa no fim do dia.", barra: "Registrar insucesso", elementos: [{ t: "botao", texto: "Salvar insucesso", destaque: true }, { t: "aviso", texto: "Insucesso registrado ✓", tom: "ok" }] },

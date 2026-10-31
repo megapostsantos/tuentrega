@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Camera, Loader2 } from "lucide-react";
+import { AlertTriangle, Camera, Loader2, ScanLine } from "lucide-react";
+import { LeitorCodigo } from "@/components/rotas/LeitorCodigo";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyDestinatarioPacote } from "@/lib/whatsapp-notify";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export function InsucessoSheet({
   const [obs, setObs] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [lendo, setLendo] = useState(false);
 
   useEffect(() => {
     if (open) { setChoice("ausente"); setCodigo(""); setObs(""); setFile(null); }
@@ -102,7 +104,13 @@ export function InsucessoSheet({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="pid">ID do pacote (da etiqueta)</Label>
-            <Input id="pid" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Ex.: 45802123456" autoCapitalize="characters" />
+            <div className="flex gap-2">
+              <Input id="pid" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Ex.: 45802123456" autoCapitalize="characters" />
+              <Button type="button" variant="outline" className="shrink-0" onClick={() => setLendo(true)}>
+                <ScanLine className="mr-1 h-4 w-4" />Ler etiqueta
+              </Button>
+            </div>
+            <LeitorCodigo open={lendo} onClose={() => setLendo(false)} onCodigo={(c) => { setCodigo(c.toUpperCase()); toast.success(`ID lido: ${c}`); }} />
           </div>
 
           <div className="space-y-2">

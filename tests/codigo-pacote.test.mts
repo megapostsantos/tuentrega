@@ -1,0 +1,10 @@
+import { extrairIdPacote } from "../src/lib/codigo-pacote.ts";
+let fail = 0; const ok = (n: string, c: boolean, x?: any) => { if (!c) fail++; console.log(c ? "PASS" : "FAIL", n, c ? "" : JSON.stringify(x)); };
+ok("código de barras simples", extrairIdPacote("  45802123456 ") === "45802123456");
+ok("QR em JSON (id)", extrairIdPacote('{"id":"45802123456","sender_id":123}') === "45802123456");
+ok("QR em JSON (shipment_id)", extrairIdPacote('{"shipment_id":987654321}') === "987654321");
+ok("QR com link e parâmetro", extrairIdPacote("https://exemplo.com/r?id=ABC123XYZ&x=1") === "ABC123XYZ");
+ok("QR com link e caminho", extrairIdPacote("https://exemplo.com/p/AB12CD34EF") === "AB12CD34EF");
+ok("JSON inválido devolve o texto", extrairIdPacote("{oops") === "{oops");
+ok("vazio", extrairIdPacote("") === "");
+process.exit(fail ? 1 : 0);
