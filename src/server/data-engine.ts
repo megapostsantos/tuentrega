@@ -1476,7 +1476,18 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
   } catch (e: any) {
     const msg = e?.message ?? String(e);
     console.error("[db] erro:", msg, req.table, req.op);
-    return { data: null, error: { message: msg, code: e?.code, details: e?.detail }, count: null };
+    // erros do banco (código SQLSTATE) não devem expor nomes de tabelas, colunas ou restrições ao navegador
+    if (typeof e?.code === "string" && /^[0-9A-Z]{5}$/.test(e.code)) {
+      const amigavel: Record<string, string> = {
+        "23505": "Registro duplicado (duplicate key): esse item já existe.",
+        "23502": "Falta preencher um campo obrigatório.",
+        "23503": "Este registro depende de outro que não existe.",
+        "22P02": "Valor em formato inválido.",
+        "22001": "Texto longo demais para o campo.",
+      };
+      return { data: null, error: { message: amigavel[e.code] ?? "Não foi possível concluir a operação.", code: e.code }, count: null };
+    }
+    return { data: null, error: { message: msg, code: e?.code }, count: null };
   }
 }
 

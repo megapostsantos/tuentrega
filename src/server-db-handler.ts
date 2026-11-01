@@ -3,6 +3,8 @@ import { defineEventHandler } from "h3";
 export default defineEventHandler(async (event) => {
   const req: Request = (event as any).req;
   const url = new URL(req.url);
+  const { origemInvalida } = await import("./server/csrf");
+  if (origemInvalida(req)) return Response.json({ error: "Origem não permitida" }, { status: 403 });
 
   if (url.pathname === "/api/db/setup") {
     const { auth } = await import("./lib/auth");

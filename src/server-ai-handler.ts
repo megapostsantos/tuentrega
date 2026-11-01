@@ -5,6 +5,8 @@ const usos = new Map<string, number[]>();
 export default defineEventHandler(async (event) => {
   const req: Request = (event as any).req;
   const url = new URL(req.url);
+  const { origemInvalida } = await import("./server/csrf");
+  if (origemInvalida(req)) return Response.json({ error: "Origem não permitida" }, { status: 403 });
   if (url.pathname !== "/api/ai/ler-zonas" || req.method !== "POST") return Response.json({ error: "not found" }, { status: 404 });
 
   const { auth } = await import("./lib/auth");

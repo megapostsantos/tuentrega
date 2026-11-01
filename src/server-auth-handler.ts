@@ -8,11 +8,12 @@ export default defineEventHandler(async (event) => {
   try {
     response = await auth.handler(rawRequest);
   } catch (e: any) {
-    return Response.json({ message: `auth.handler threw: ${e?.message ?? e}` }, { status: 500 });
+    console.error("[auth] handler falhou:", e?.message ?? e);
+    return Response.json({ message: "Erro interno ao processar o pedido." }, { status: 500 });
   }
   if (response.status >= 500 && !(response.headers.get("content-length") ?? "").replace("0", "")) {
-    const detail = (globalThis as any).__lastAuthError ?? "erro interno sem detalhe (provável falha de banco)";
-    return Response.json({ message: `Falha no servidor: ${detail}` }, { status: response.status });
+    console.error("[auth] erro 5xx:", (globalThis as any).__lastAuthError ?? "sem detalhe");
+    return Response.json({ message: "Falha no servidor. Tente de novo em instantes." }, { status: response.status });
   }
   return response;
 });

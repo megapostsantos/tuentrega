@@ -12,7 +12,8 @@ export const getOfertaPublic = createServerFn({ method: "GET" })
       .from(ofertas)
       .where(eq(ofertas.id, data.id))
       .limit(1);
-    if (!oferta) return null;
+    // link público: só ofertas abertas e não privadas (o resto exige login)
+    if (!oferta || oferta.status !== "open" || oferta.tipo === "private") return null;
 
     let empresaNome: string | null = null;
     if (oferta.empresaId) {
@@ -36,7 +37,6 @@ export const getOfertaPublic = createServerFn({ method: "GET" })
       tipo_entrega: oferta.tipoEntrega,
       veiculo_necessario: oferta.veiculoNecessario,
       quantidade_pacotes: oferta.quantidadePacotes,
-      endereco_coleta: oferta.enderecoColeta,
       data_trabalho: oferta.dataTrabalho,
       hora_inicio: oferta.horaInicio,
       hora_fim: oferta.horaFim,
