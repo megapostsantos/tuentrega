@@ -1,5 +1,5 @@
 import { SITE_URL } from "@/lib/contato";
-import { ConferenciaRotas } from "@/components/pacotes/ConferenciaRotas";
+import { RotasOperacao } from "@/components/pacotes/RotasOperacao";
 import { AjusteRotas, EliminarRotaDialog, type RotaAjuste } from "@/components/pacotes/AjusteRotas";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
@@ -1192,51 +1192,16 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
           {op.observacoes && (
             <div className="rounded border bg-muted/40 p-2"><strong>Obs:</strong> {op.observacoes}</div>
           )}
-          <ConferenciaRotas
+          <RotasOperacao
+            operacaoId={op.id}
+            empresaId={op.empresa_id ?? ""}
+            dataOperacao={op.data_operacao}
             rotas={ativas as any}
             ofertas={ofertas}
             onChanged={() => setReloadKey((k) => k + 1)}
             publicar={(ids) => publishPendingRotas(op, ativas.filter((r: any) => ids.includes(r.id)))}
+            onEliminar={(r) => setEliminar(r as any)}
           />
-          <AllocationPanel op={op} operacaoId={op.id} empresaId={op.empresa_id ?? ""} dataOperacao={op.data_operacao} rotas={ativas} onChanged={() => setReloadKey((k) => k + 1)} />
-          <details className="rounded-lg border p-3">
-            <summary className="cursor-pointer text-sm font-medium">Detalhes das rotas (paradas, valores e eliminar)</summary>
-            <div className="mt-2">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Rota</TableHead>
-                  <TableHead className="text-right">Pacotes</TableHead>
-                  <TableHead className="text-right">Paradas</TableHead>
-                  {!isOperador && <TableHead className="text-right">Valor</TableHead>}
-                  <TableHead>Status</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rotas.map((r) => {
-                  const of = ofertas.find((o) => o.id === r.oferta_id);
-                  return (
-                    <TableRow key={r.id} className={r.status === "cancelada" ? "opacity-50" : ""}>
-                      <TableCell>{r.nome}</TableCell>
-                      <TableCell className="text-right">{r.quantidade_pacotes}</TableCell>
-                      <TableCell className="text-right">{r.quantidade_paradas}</TableCell>
-                      {!isOperador && <TableCell className="text-right">R$ {Number(r.valor_total).toFixed(2)}</TableCell>}
-                      <TableCell>{r.status === "cancelada" ? "Eliminada" : of?.status ?? "Não publicada"}</TableCell>
-                      <TableCell className="text-right">
-                        {!isOperador && of?.status !== "completed" && (
-                          <Button size="icon" variant="ghost" title="Eliminar rota" className="text-red-600" onClick={() => setEliminar(r)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            </div>
-          </details>
           <AjusteRotas rotas={ativas as RotaAjuste[]} onChanged={() => setReloadKey((k) => k + 1)} />
           {!isOperador && (
             <div className="rounded bg-muted p-3">
@@ -1546,156 +1511,6 @@ function AuditByRanges({
 }
 
 /* ============ Allocation panel ============ */
-
-function AllocationPanel({
-  op, operacaoId, empresaId, dataOperacao, rotas, onChanged,
-}: { op: Operacao; operacaoId: string; empresaId: string; dataOperacao: string; rotas: any[]; onChanged?: () => void }) {
-  const { isOperador } = useAuth();
-  const [novoOpen, setNovoOpen] = useState(false);
-  const [aceitos, setAceitos] = useState<any[]>([]);
-  const [ativos, setAtivos] = useState<any[]>([]);
-  const [escolha, setEscolha] = useState<Record<string, string>>({});
-  const [alocacoes, setAlocacoes] = useState<any[]>([]);
-  const [busy, setBusy] = useState(false);
-
-  async function load() {
-    const sb = supabase as any;
-    // entregadores que se comprometeram nas previsões do dia
-    const { data: prevs } = await sb.from("agenda_previsoes")
-      .select("id").eq("empresa_id", empresaId).eq("data_prevista", dataOperacao);
-    const prevIds = (prevs ?? []).map((p: any) => p.id);
-    let entregadoresAceitos: any[] = [];
-    if (prevIds.length) {
-      const { data: cs } = await sb.from("agenda_compromissos")
-        .select("id, entregador_id, pacotes_comprometidos, pacotes_ajustados, updated_at, entregadores(nome_completo, tipo_veiculo, reliability_level, reliability_score)")
-        .in("previsao_id", prevIds).neq("status", "cancelado")
-        .order("created_at", { ascending: true });
-      entregadoresAceitos = cs ?? [];
-    }
-    setAceitos(entregadoresAceitos);
-    const { data: alc } = await sb.from("alocacoes").select("*, entregadores(nome_completo)").eq("operacao_id", operacaoId);
-    setAlocacoes((alc ?? []).filter((a: any) => !["recusada", "removida"].includes(a.status)));
-    const { data: ents } = await sb.from("entregadores").select("id, nome_completo").eq("status", "ativo").order("nome_completo");
-    setAtivos(ents ?? []);
-  }
-
-  async function atribuir(rota: any, entId: string) {
-    const sb = supabase as any;
-    const { error } = await sb.from("alocacoes").insert({
-      operacao_id: operacaoId, rota_id: rota.id, entregador_id: entId,
-      oferta_id: rota.oferta_id, empresa_id: empresaId, status: "allocated",
-    });
-    if (error) throw error;
-    if (rota.oferta_id) {
-      await sb.from("ofertas").update({ entregador_id: entId, status: "accepted", atribuida_em: new Date().toISOString() }).eq("id", rota.oferta_id);
-    } else {
-      await publishPendingRotas(op, [rota]);
-    }
-  }
-
-  async function atribuirManual(rota: any) {
-    const entId = escolha[rota.id];
-    if (!entId) { toast.error("Escolha quem leva esta rota."); return; }
-    setBusy(true);
-    try {
-      await atribuir(rota, entId);
-      toast.success("Rota atribuída.");
-      await load();
-      onChanged?.();
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
-  }
-  useEffect(() => { load(); }, [operacaoId, empresaId, dataOperacao]);
-
-  function alocadoPara(rotaId: string) {
-    return alocacoes.find((a) => a.rota_id === rotaId);
-  }
-
-  async function autoAllocate() {
-    setBusy(true);
-    try {
-      const disponiveis = aceitos.filter((a) => !alocacoes.some((al) => al.entregador_id === a.entregador_id));
-      const rotasLivres = rotas.filter((r) => !alocadoPara(r.id));
-      let i = 0;
-      for (const rota of rotasLivres) {
-        if (i >= disponiveis.length) break;
-        await atribuir(rota, disponiveis[i++].entregador_id);
-      }
-      toast.success(`${Math.min(disponiveis.length, rotasLivres.length)} rota(s) alocadas.`);
-      await load();
-      onChanged?.();
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
-  }
-
-  async function startOperation() {
-    const sb = supabase as any;
-    const ofertaIds = rotas.map((r) => r.oferta_id).filter(Boolean);
-    if (ofertaIds.length) {
-      await sb.from("ofertas").update({ status: "in_progress", iniciada_em: new Date().toISOString() }).in("id", ofertaIds).not("entregador_id", "is", null);
-      const { notifyDestinatarioOferta } = await import("@/lib/whatsapp-notify");
-      ofertaIds.forEach((id: string) => { notifyDestinatarioOferta(id).catch(() => {}); });
-    }
-    await sb.from("alocacoes").update({ status: "started" }).eq("operacao_id", operacaoId);
-    toast.success("Operação iniciada!");
-    load();
-  }
-
-  const comprometidos = new Set(aceitos.map((a) => a.entregador_id));
-  const opcoes = [...ativos].sort((x, y) => Number(comprometidos.has(y.id)) - Number(comprometidos.has(x.id)));
-  const livres = rotas.filter((r) => !alocadoPara(r.id)).length;
-
-  return (
-    <div className="space-y-3 rounded-lg border-2 border-primary/40 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 font-semibold"><Users className="h-4 w-4" />Quem leva cada rota ({alocacoes.length}/{rotas.length})</div>
-        <Button size="sm" variant="outline" onClick={() => setNovoOpen(true)}><Plus className="mr-1 h-4 w-4" />Cadastrar parceiro</Button>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Escolha o parceiro em cada rota e toque em Atribuir — a oferta é criada sozinha. ★ = já confirmou na agenda de {new Date(dataOperacao).toLocaleDateString("pt-BR")}.
-        Não achou a pessoa? Cadastre acima (com e-mail ou só nome/telefone).
-      </p>
-
-      <div className="space-y-2">
-        {rotas.map((r) => {
-          const a = alocadoPara(r.id);
-          return (
-            <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm">
-              <div>
-                <div className="font-medium">{r.nome}</div>
-                <div className="text-xs text-muted-foreground">{r.quantidade_pacotes} pacotes{r.quantidade_paradas > 0 ? ` · ${r.quantidade_paradas} paradas` : ""}{!isOperador && ` · R$ ${Number(r.valor_total).toFixed(2)}`}</div>
-              </div>
-              {a ? (
-                <span className="text-emerald-700">✅ {(a.entregadores as any)?.nome_completo}</span>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <select
-                    className="h-9 rounded-md border bg-background px-2 text-sm"
-                    value={escolha[r.id] ?? ""}
-                    onChange={(e) => setEscolha((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                  >
-                    <option value="">Escolher parceiro…</option>
-                    {opcoes.map((en) => <option key={en.id} value={en.id}>{comprometidos.has(en.id) ? "★ " : ""}{en.nome_completo}</option>)}
-                  </select>
-                  <Button size="sm" disabled={busy || !escolha[r.id]} onClick={() => atribuirManual(r)}>Atribuir</Button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {aceitos.length > 0 && livres > 0 && (
-          <Button variant="outline" onClick={autoAllocate} disabled={busy}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Distribuir entre os confirmados na agenda
-          </Button>
-        )}
-        <Button onClick={startOperation} disabled={alocacoes.length === 0}>Iniciar operação</Button>
-      </div>
-      <RegisterEntregadorDialog open={novoOpen} onClose={() => setNovoOpen(false)} onCreated={load} />
-    </div>
-  );
-}
-
 
 /* ============ Route map button + dialog ============ */
 
