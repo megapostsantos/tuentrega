@@ -1,0 +1,10 @@
+import { ehAmbienteDeTeste } from "../src/components/AmbienteBanner.tsx";
+let fail = 0; const ok = (n: string, c: boolean) => { if (!c) fail++; console.log(c ? "PASS" : "FAIL", n); };
+ok("staging.tuentrega.com.br é teste", ehAmbienteDeTeste("staging.tuentrega.com.br"));
+ok("tuentrega-staging.workers.dev é teste", ehAmbienteDeTeste("tuentrega-staging.megapostsantos.workers.dev"));
+ok("homolog é teste", ehAmbienteDeTeste("homolog.tuentrega.com.br"));
+ok("tuentrega.com.br é produção", !ehAmbienteDeTeste("tuentrega.com.br"));
+ok("www.tuentrega.com.br é produção", !ehAmbienteDeTeste("www.tuentrega.com.br"));
+ok("tuentrega.megapostsantos.workers.dev é produção", !ehAmbienteDeTeste("tuentrega.megapostsantos.workers.dev"));
+ok("localhost não é tratado como teste", !ehAmbienteDeTeste("localhost"));
+process.exit(fail ? 1 : 0);

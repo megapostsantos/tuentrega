@@ -10,7 +10,7 @@ export async function sendEmail(p: { to: string; subject: string; html: string }
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to: [p.to], subject: p.subject, html: p.html }),
+      body: JSON.stringify({ from, to: [p.to], subject: process.env.APP_ENV === "staging" ? `[TESTE] ${p.subject}` : p.subject, html: p.html }),
     });
     if (!res.ok) console.error("[email] Resend respondeu", res.status, await res.text());
     return res.ok;
