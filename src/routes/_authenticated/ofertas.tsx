@@ -1,3 +1,4 @@
+import { AudienciaSelect, audienciaSalva, ROTULO_AUDIENCIA, type Audiencia } from "@/components/AudienciaSelect";
 import { SITE_URL } from "@/lib/contato";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/_authenticated/ofertas")({
 });
 
 type Oferta = {
+  visibilidade?: string | null;
   id: string;
   empresa_id: string;
   entregador_id: string | null;
@@ -305,6 +307,7 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
     expira_em: "",
   });
   const [loading, setLoading] = useState(false);
+  const [audiencia, setAudiencia] = useState<Audiencia>(audienciaSalva());
 
   const perPkg = useMemo(() => {
     const v = Number(f.valor) || 0;
@@ -398,6 +401,7 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
       exige_nota_fiscal: f.exige_nota_fiscal,
       tipo: tipo,
       tipo_entrega: f.tipo_entrega,
+      visibilidade: tipo === "private" ? "publica" : audiencia,
       veiculo_necessario: f.veiculo_necessario,
       quantidade_pacotes: f.tipo_entrega === "pacotes" ? Number(f.quantidade_pacotes) || null : null,
       endereco_coleta: f.endereco_coleta || null,
@@ -626,6 +630,13 @@ function NewOfertaForm({ onCreated }: { onCreated: () => void }) {
         <Input type="datetime-local" value={f.expira_em} onChange={(e) => setF((p) => ({ ...p, expira_em: e.target.value }))} />
       </div>
 
+      {tipo === "public" && (
+        <div className="space-y-1.5 rounded-lg border p-3">
+          <p className="text-sm font-medium">Quem pode ver esta vaga?</p>
+          <AudienciaSelect value={audiencia} onChange={setAudiencia} />
+        </div>
+      )}
+
       <div className="space-y-2 rounded-lg border p-3">
         <div className="flex items-center justify-between">
           <div>
@@ -835,6 +846,7 @@ function OfertaCard({
       <CardContent className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge className={st.cls}>{st.label}</Badge>
+          {role === "empresa" && o.visibilidade && o.visibilidade !== "publica" && <Badge variant="outline">{ROTULO_AUDIENCIA[o.visibilidade as Audiencia]}</Badge>}
           {role === "entregador" && o.status === "open" && cands[o.id] === "pendente" && <Badge className="bg-amber-100 text-amber-800">Aguardando aprovação</Badge>}
           {VIcon && <Badge variant="outline" className="gap-1"><VIcon className="h-3 w-3" /> {VEHICLE_MAP[o.veiculo_necessario!].label}</Badge>}
           {o.bairro && <Badge variant="outline" className="gap-1"><MapPin className="h-3 w-3" /> {o.bairro}</Badge>}

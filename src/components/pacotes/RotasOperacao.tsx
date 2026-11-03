@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AudienciaSelect, audienciaSalva, ROTULO_AUDIENCIA, type Audiencia } from "@/components/AudienciaSelect";
 import { RegisterEntregadorDialog } from "@/components/RegisterEntregadorDialog";
 
 export type RotaOp = {
@@ -25,7 +26,7 @@ export function RotasOperacao({
   operacaoId: string; empresaId: string; dataOperacao: string;
   rotas: RotaOp[]; ofertas: OfertaOp[];
   onChanged: () => void;
-  publicar: (rotaIds: string[]) => Promise<number>;
+  publicar: (rotaIds: string[], visibilidade: string) => Promise<number>;
   onEliminar: (r: RotaOp) => void;
 }) {
   const { isOperador } = useAuth();
@@ -33,6 +34,7 @@ export function RotasOperacao({
   const [escolha, setEscolha] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
+  const [audiencia, setAudiencia] = useState<Audiencia>(audienciaSalva());
   const [aceitos, setAceitos] = useState<any[]>([]);
   const [ativos, setAtivos] = useState<{ id: string; nome_completo: string }[]>([]);
   const [alocacoes, setAlocacoes] = useState<any[]>([]);
@@ -92,7 +94,7 @@ export function RotasOperacao({
     const pend = itens.filter((r) => ids.includes(r.id) && !r.conferida);
     if (pend.length && !confirm(`${pend.length} rota(s) ainda não foram conferidas. Publicar mesmo assim?`)) return;
     setBusy("pub");
-    try { toast.success(`${await publicar(ids)} rota(s) publicada(s) no mercado.`); onChanged(); }
+    try { toast.success(`${await publicar(ids, audiencia)} rota(s) publicada(s) · ${ROTULO_AUDIENCIA[audiencia]}.`); onChanged(); }
     catch (e: any) { toast.error(e?.message ?? "Erro ao publicar."); } finally { setBusy(null); }
   }
 
@@ -101,7 +103,7 @@ export function RotasOperacao({
     const { error } = await sb.from("alocacoes").insert({ operacao_id: operacaoId, rota_id: r.id, entregador_id: entId, oferta_id: r.oferta_id, empresa_id: empresaId, status: "allocated" });
     if (error) throw error;
     if (r.oferta_id) await sb.from("ofertas").update({ entregador_id: entId, status: "accepted", atribuida_em: new Date().toISOString() }).eq("id", r.oferta_id);
-    else await publicar([r.id]);
+    else await publicar([r.id], audiencia);
   }
 
   async function atribuirUma(r: RotaOp) {
@@ -170,7 +172,7 @@ export function RotasOperacao({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Mais ações"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {!r.oferta_id && <DropdownMenuItem onClick={() => publicarIds([r.id])}><Megaphone className="mr-2 h-4 w-4" />Publicar só esta no mercado</DropdownMenuItem>}
+                    {!r.oferta_id && <DropdownMenuItem onClick={() => publicarIds([r.id])}><Megaphone className="mr-2 h-4 w-4" />Publicar só esta ({ROTULO_AUDIENCIA[audiencia]})</DropdownMenuItem>}
                     {!isOperador && !travada && <DropdownMenuItem className="text-red-600" onClick={() => onEliminar(r)}><Trash2 className="mr-2 h-4 w-4" />Eliminar rota…</DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -218,6 +220,13 @@ export function RotasOperacao({
         })}
       </div>
 
+      {rascunhos.length > 0 && (
+        <div className="space-y-1.5 rounded-lg bg-muted/40 p-2.5">
+          <div className="text-xs font-semibold">Quem pode ver as vagas ao publicar?</div>
+          <AudienciaSelect value={audiencia} onChange={setAudiencia} />
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2 border-t pt-3">
         {naoConferidas.length > 0 && (
           <Button variant="outline" size="sm" disabled={busy === "todas"} onClick={conferirRestantes}>
@@ -230,7 +239,7 @@ export function RotasOperacao({
         <Button variant="outline" size="sm" onClick={() => setNovoOpen(true)}><UserPlus className="mr-1 h-4 w-4" />Cadastrar parceiro</Button>
         {rascunhos.length > 0 && (
           <Button size="sm" disabled={busy === "pub"} onClick={() => publicarIds(rascunhos.map((r) => r.id))}>
-            {busy === "pub" ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Megaphone className="mr-1 h-4 w-4" />}Publicar as {rascunhos.length} no mercado
+            {busy === "pub" ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Megaphone className="mr-1 h-4 w-4" />}Publicar as {rascunhos.length} · {ROTULO_AUDIENCIA[audiencia]}
           </Button>
         )}
         <Button size="sm" variant="outline" disabled={itens.length - semParceiro.length === 0} onClick={iniciar}><Play className="mr-1 h-4 w-4" />Iniciar operação</Button>

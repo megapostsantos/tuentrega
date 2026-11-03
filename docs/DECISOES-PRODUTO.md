@@ -102,3 +102,8 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 - **Convidados por uma empresa** (parceiro pré-cadastrado ou funcionário) **não passam pela aprovação**: a empresa responde por eles.
 - **Vínculo:** o parceiro que ativa a conta pelo convite fica vinculado à empresa: vê só as ofertas (e previsões) dela, e as outras empresas não o enxergam nem alocam. A empresa libera com **Desvincular**. Cobrança para o parceiro se desvincular: pendente de definir.
 - O admin pode recusar, bloquear e reverter decisões a qualquer momento.
+
+## Quem vê a vaga (audiência)
+- Ao publicar uma oferta, rota ou previsão a empresa escolhe: **Público** (todos os entregadores aprovados), **Meu clã** (parceiros do clã da empresa) ou **Equipe interna** (funcionários que também são entregadores).
+- O **clã** = parceiros vinculados (entram sozinhos) + quem a empresa adicionar manualmente (botão "+ Clã" em Entregadores). Sair do clã tira o acesso às vagas dele.
+- A regra vale no servidor: quem está fora da audiência não vê nem consegue se candidatar, mesmo forçando pelo navegador.

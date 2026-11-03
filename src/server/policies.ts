@@ -50,8 +50,14 @@ const naoRecusada: Pred = (a, p, u) =>
 /** Entregador vinculado a uma empresa (entrou por convite dela) só enxerga o que é dessa empresa. */
 const livreParaEmpresa: Pred = (a, p, u) =>
   `not exists (select 1 from "vinculos_empresa" v where v."entregador_id"::text = ${p(u)} and v."empresa_id"::text <> ${col(a, "empresa_id")}::text)`;
+/** Quem pode ver a vaga: público (todos), meu clã (parceiros do clã da empresa) ou equipe interna (funcionários que também são entregadores). */
+const audienciaSql = (ref: string, p: P, u: string) =>
+  `(coalesce(${ref}."visibilidade", 'publica') = 'publica'
+    or (${ref}."visibilidade" = 'cla' and exists (select 1 from "cla_empresa" c where c."empresa_id"::text = ${ref}."empresa_id"::text and c."entregador_id"::text = ${p(u)}))
+    or (${ref}."visibilidade" = 'equipe' and exists (select 1 from "equipe_empresa" q where q."empresa_id"::text = ${ref}."empresa_id"::text and q."user_id"::text = ${p(u)} and q."ativo" and q."entregador")))`;
+const audienciaOk: Pred = (a, p, u) => audienciaSql(`"${a}"`, p, u);
 const marketplace: Pred = (a, p, u) =>
-  `(${col(a, "status")} = 'open' and coalesce(${col(a, "tipo")}, 'normal') <> 'private' and ${naoRecusada(a, p, u)})`;
+  `(${col(a, "status")} = 'open' and coalesce(${col(a, "tipo")}, 'normal') <> 'private' and ${naoRecusada(a, p, u)} and ${audienciaOk(a, p, u)})`;
 const convidado: Pred = (a, p, u) =>
   `exists (select 1 from "ofertas_privadas_config" c where c."oferta_id"::text = ${col(a, "id")}::text and c."entregador_id"::text = ${p(u)})`;
 const dispatcherDono: Pred = (a, p, u) => `${col(a, "dispatcher_id")}::text in ${meDispatcherIds(u, p)}`;
@@ -304,6 +310,22 @@ export const POLICIES: Record<string, Policy> = {
     force: { empresa: { empresa_id: "uid" } },
   },
 
+  cla_empresa: {
+    read: { empresa: eq("empresa_id") },
+    insert: {
+      empresa: async (row, uid, run) => {
+        if (String(row.empresa_id ?? uid) !== uid) return "Valor inválido em empresa_id";
+        const r = await run(
+          `select 1 from "entregadores" e where e."id" = $1 and not exists (select 1 from "vinculos_empresa" v where v."entregador_id" = e."id" and v."empresa_id" <> $2)`,
+          [String(row.entregador_id), uid],
+        );
+        return r.length ? null : "Entregador não encontrado ou vinculado a outra empresa";
+      },
+    },
+    delete: { empresa: eq("empresa_id") },
+    force: { empresa: { empresa_id: "uid" } },
+  },
+
   zonas_empresa: {
     read: { empresa: eq("empresa_id") },
     insert: { empresa: ownCol("empresa_id") },
@@ -317,7 +339,7 @@ export const POLICIES: Record<string, Policy> = {
       empresa: eq("empresa_id"),
       entregador: or(
         eq("entregador_id"),
-        and(livreParaEmpresa, (a) => `exists (select 1 from "agenda_previsoes" pv where pv."id"::text = ${col(a, "previsao_id")}::text and pv."status" = 'aberta' and pv."data_prevista" >= current_date)`),
+        and(livreParaEmpresa, (a, p, u) => `exists (select 1 from "agenda_previsoes" pv where pv."id"::text = ${col(a, "previsao_id")}::text and pv."status" = 'aberta' and pv."data_prevista" >= current_date and ${audienciaSql("pv", p, u)})`),
       ),
     },
     insert: { empresa: ownCol("empresa_id") },
@@ -386,7 +408,7 @@ export const POLICIES: Record<string, Policy> = {
     read: {
       empresa: eq("empresa_id"),
       entregador: or(
-        and(livreParaEmpresa, (a) => `(${col(a, "status")} = 'aberta' and ${col(a, "data_prevista")} >= current_date)`),
+        and(livreParaEmpresa, audienciaOk, (a) => `(${col(a, "status")} = 'aberta' and ${col(a, "data_prevista")} >= current_date)`),
         (a, p, u) =>
           `exists (select 1 from "agenda_compromissos" c where c."previsao_id"::text = ${col(a, "id")}::text and c."entregador_id"::text = ${p(u)})`,
       ),

@@ -678,6 +678,15 @@ const DDL_LAZY: string[] = [
 	"decidido_em" timestamp,
 	"criado_em" timestamp DEFAULT now() NOT NULL
 );`,
+  `ALTER TABLE "ofertas" ADD COLUMN IF NOT EXISTS "visibilidade" text DEFAULT 'publica' NOT NULL;`,
+  `ALTER TABLE "agenda_previsoes" ADD COLUMN IF NOT EXISTS "visibilidade" text DEFAULT 'publica' NOT NULL;`,
+  `CREATE TABLE IF NOT EXISTS "cla_empresa" (
+	"empresa_id" text NOT NULL,
+	"entregador_id" text NOT NULL,
+	"origem" text DEFAULT 'manual' NOT NULL,
+	"criado_em" timestamp DEFAULT now() NOT NULL
+);`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "cla_empresa_unique" ON "cla_empresa" ("empresa_id","entregador_id");`,
   `CREATE TABLE IF NOT EXISTS "senhas_provisorias" ("user_id" text PRIMARY KEY NOT NULL, "criada_em" timestamp DEFAULT now() NOT NULL);`,
 ];
 let tabelasGarantidas = false;
@@ -968,6 +977,7 @@ export async function criarVinculo(entregadorId: string, empresaId: string) {
     `insert into "vinculos_empresa" ("entregador_id","empresa_id","empresa_nome") values ($1,$2,$3) on conflict ("entregador_id") do nothing`,
     [entregadorId, empresaId, e[0]?.nome ?? null],
   );
+  await query(`insert into "cla_empresa" ("empresa_id","entregador_id","origem") values ($1,$2,'vinculo') on conflict do nothing`, [empresaId, entregadorId]);
 }
 
 const notificar = (userId: string, titulo: string, corpo: string, link: string) => ({
@@ -1008,7 +1018,10 @@ async function candidatarOferta(uid: string | null, args: Record<string, unknown
     `select o."id", o."empresa_id", o."titulo", o."status", o."entregador_id", coalesce(o."tipo",'normal') as tipo, coalesce(e."aprovar_candidatos", true) as aprovar,
             exists (select 1 from "ofertas_privadas_config" c where c."oferta_id"::text = o."id"::text and c."entregador_id"::text = $2) as convidado,
             exists (select 1 from "ofertas_recusas" rc where rc."oferta_id"::text = o."id"::text and rc."entregador_id"::text = $2 and rc."origem" <> 'sistema') as recusada,
-            exists (select 1 from "vinculos_empresa" v where v."entregador_id"::text = $2 and v."empresa_id"::text <> o."empresa_id"::text) as de_outra_empresa
+            exists (select 1 from "vinculos_empresa" v where v."entregador_id"::text = $2 and v."empresa_id"::text <> o."empresa_id"::text) as de_outra_empresa,
+            (coalesce(o."visibilidade", 'publica') = 'publica'
+              or (o."visibilidade" = 'cla' and exists (select 1 from "cla_empresa" c where c."empresa_id"::text = o."empresa_id"::text and c."entregador_id"::text = $2))
+              or (o."visibilidade" = 'equipe' and exists (select 1 from "equipe_empresa" q where q."empresa_id"::text = o."empresa_id"::text and q."user_id"::text = $2 and q."ativo" and q."entregador"))) as audiencia_ok
        from "ofertas" o left join "empresas" e on e."id" = o."empresa_id" where o."id"::text = $1`,
     [ofertaId, uid],
   );
@@ -1017,6 +1030,7 @@ async function candidatarOferta(uid: string | null, args: Record<string, unknown
   if (o.status !== "open" || o.entregador_id) throw new Error("Esta rota não está mais disponível.");
   if (o.de_outra_empresa) throw new Error("Você está vinculado a outra empresa e só pode aceitar as ofertas dela.");
   if (o.tipo === "private" && !o.convidado) throw new Error("Esta oferta é privada.");
+  if (!o.audiencia_ok && !o.convidado) throw new Error("Esta vaga é restrita ao clã ou à equipe interna da empresa.");
   if (o.recusada) throw new Error("Você já recusou esta rota.");
   const me = await query(`select "nome_completo", "status", "suspended_at" from "entregadores" where "id" = $1`, [uid]);
   if (!me[0]) throw new Error("Complete o seu cadastro de entregador.");
@@ -1105,7 +1119,10 @@ async function postularZona(uid: string | null, args: Record<string, unknown>): 
   const rows = await query(
     `select z."id", z."empresa_id", z."nome", z."entregador_id", z."previsao_id", pv."status" as pstatus, pv."data_prevista" >= current_date as futura,
             coalesce(e."aprovar_candidatos", true) as aprovar,
-            exists (select 1 from "vinculos_empresa" v where v."entregador_id"::text = $2 and v."empresa_id"::text <> z."empresa_id"::text) as de_outra
+            exists (select 1 from "vinculos_empresa" v where v."entregador_id"::text = $2 and v."empresa_id"::text <> z."empresa_id"::text) as de_outra,
+            (coalesce(pv."visibilidade", 'publica') = 'publica'
+              or (pv."visibilidade" = 'cla' and exists (select 1 from "cla_empresa" c where c."empresa_id"::text = pv."empresa_id"::text and c."entregador_id"::text = $2))
+              or (pv."visibilidade" = 'equipe' and exists (select 1 from "equipe_empresa" q where q."empresa_id"::text = pv."empresa_id"::text and q."user_id"::text = $2 and q."ativo" and q."entregador"))) as audiencia_ok
        from "agenda_previsao_zonas" z join "agenda_previsoes" pv on pv."id"::text = z."previsao_id"::text left join "empresas" e on e."id" = z."empresa_id"
       where z."id"::text = $1`, [zonaId, uid]);
   const z = rows[0] as any;
@@ -1113,6 +1130,7 @@ async function postularZona(uid: string | null, args: Record<string, unknown>): 
   if (z.pstatus !== "aberta" || !z.futura) throw new Error("Esta previsão não está mais aberta.");
   if (z.entregador_id) throw new Error("Esta zona já tem entregador.");
   if (z.de_outra) throw new Error("Você está vinculado a outra empresa e só pode se postular às zonas dela.");
+  if (!z.audiencia_ok) throw new Error("Esta previsão é restrita ao clã ou à equipe interna da empresa.");
   const me = await query(`select "nome_completo", "status", "suspended_at" from "entregadores" where "id" = $1`, [uid]);
   if (!me[0]) throw new Error("Complete o seu cadastro de entregador.");
   if (me[0].suspended_at || me[0].status === "suspenso") throw new Error("Seu cadastro está suspenso.");
@@ -1215,6 +1233,7 @@ async function publicarRotas(uid: string | null, args: Record<string, unknown>):
   const op = ops[0] as any;
   if (!op) throw new Error("Operação não encontrada");
   const only = Array.isArray(args._rota_ids) ? (args._rota_ids as unknown[]).map(String) : null;
+  const visibilidade = ["publica", "cla", "equipe"].includes(String(args._visibilidade)) ? String(args._visibilidade) : "publica";
   const rotas = await query(
     `select r.*, a."entregador_id" as dono from "rotas_operacao" r
        left join lateral (select "entregador_id" from "alocacoes" x where x."rota_id"::text = r."id"::text and x."status" not in ('recusada','removida') limit 1) a on true
@@ -1230,10 +1249,10 @@ async function publicarRotas(uid: string | null, args: Record<string, unknown>):
     const id = crypto.randomUUID();
     const dono = r.dono ? String(r.dono) : null;
     stmts.push({
-      text: `insert into "ofertas" ("id","empresa_id","titulo","descricao","quantidade_pacotes","quantidade_paradas","valor","valor_por_pacote","status","entregador_id","atribuida_em","tipo_entrega","operacao_id","rota_operacao_id","data_trabalho")
-             values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'package_delivery',$12,$13,$14)`,
+      text: `insert into "ofertas" ("id","empresa_id","titulo","descricao","quantidade_pacotes","quantidade_paradas","valor","valor_por_pacote","status","entregador_id","atribuida_em","tipo_entrega","operacao_id","rota_operacao_id","data_trabalho","visibilidade")
+             values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'package_delivery',$12,$13,$14,$15)`,
       params: [id, op.empresa_id, `${op.origem || "Operação"} · ${r.nome} - ${dataFmt}`, op.observacoes || null, qtd, Number(r.quantidade_paradas || 0),
-        Number(r.valor_total || qtd * vp), vp, dono ? "accepted" : "open", dono, dono ? new Date().toISOString() : null, opId, String(r.id), dataOp],
+        Number(r.valor_total || qtd * vp), vp, dono ? "accepted" : "open", dono, dono ? new Date().toISOString() : null, opId, String(r.id), dataOp, visibilidade],
     });
     if (qtd > 0)
       stmts.push({

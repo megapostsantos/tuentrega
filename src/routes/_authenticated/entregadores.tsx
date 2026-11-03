@@ -63,6 +63,7 @@ function ListaEntregadores() {
   const [convites, setConvites] = useState<Map<string, string>>(new Map());
   const [empresaNome, setEmpresaNome] = useState("");
   const [vinculados, setVinculados] = useState<Set<string>>(new Set());
+  const [cla, setCla] = useState<Set<string>>(new Set());
 
   async function fetchList() {
     setLoad(true);
@@ -75,6 +76,8 @@ function ListaEntregadores() {
       setDispatcherIds(new Set((dispData ?? []).map((d: any) => d.entregador_id)));
       const { data: ger } = await (supabase as any).from("entregadores_gerenciados").select("entregador_id, codigo_convite");
       setConvites(new Map(((ger as any[]) ?? []).filter((g) => g.codigo_convite).map((g) => [g.entregador_id, g.codigo_convite])));
+      const { data: cl } = await (supabase as any).from("cla_empresa").select("entregador_id");
+      setCla(new Set(((cl as any[]) ?? []).map((c) => c.entregador_id)));
       const { data: vin } = await (supabase as any).from("vinculos_empresa").select("entregador_id");
       setVinculados(new Set(((vin as any[]) ?? []).map((v) => v.entregador_id)));
       const { data: emp } = await (supabase as any).from("empresas").select("nome_fantasia, razao_social").eq("id", user.id).maybeSingle();
@@ -91,6 +94,16 @@ function ListaEntregadores() {
     const msg = `Olá ${e.nome_completo}! ${empresaNome ? `A empresa ${empresaNome} cadastrou` : "Você foi cadastrado(a)"} você como parceiro(a) no TuEntrega. Ao ativar, você fica vinculado(a) a essa empresa e vê as ofertas dela. Para criar sua senha, abra ${SITE_URL}/auth, toque na aba "Convite" e use o e-mail ${email} e o código ${codigo}.`;
     const fone = String((e as any).whatsapp ?? "").replace(/\D/g, "");
     window.open(fone ? `https://wa.me/${fone.length <= 11 ? "55" + fone : fone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  }
+
+  async function alternarCla(e: Ent) {
+    const sbx = supabase as any;
+    const { error } = cla.has(e.id)
+      ? await sbx.from("cla_empresa").delete().eq("entregador_id", e.id)
+      : await sbx.from("cla_empresa").insert({ entregador_id: e.id });
+    if (error) return toast.error(error.message);
+    toast.success(cla.has(e.id) ? `${e.nome_completo} saiu do seu clã.` : `${e.nome_completo} entrou no seu clã.`);
+    fetchList();
   }
 
   async function desvincular(e: Ent) {
@@ -140,6 +153,7 @@ function ListaEntregadores() {
           <li>Envie o <strong>convite pelo WhatsApp</strong> (código + link). Aqui na lista, quem ainda não ativou aparece como <em>Convite pendente</em>, com o botão <strong>Enviar convite</strong>.</li>
           <li>Ao ativar a conta, ele fica <strong>Vinculado</strong> à sua empresa: vê só as <strong>suas</strong> ofertas, e as outras empresas nem enxergam o nome dele. Quem se cadastra sozinho não tem vínculo.</li>
           <li>Quando quiser liberar, use <strong>Desvincular</strong>: ele volta a ver as ofertas de todas as empresas.</li>
+          <li><strong>Seu clã:</strong> os vinculados entram nele sozinhos, e você pode adicionar qualquer parceiro com <strong>+ Clã</strong>. Ao publicar uma vaga, escolha <em>Público</em>, <em>Meu clã</em> ou <em>Equipe interna</em>.</li>
         </ol>
       </div>
       <EntregadoresStats />
@@ -198,6 +212,8 @@ function ListaEntregadores() {
                           )}
                         </TableCell>
                         <TableCell className="text-right" onClick={(ev) => ev.stopPropagation()}>
+                          {cla.has(e.id) && <Badge variant="outline" className="mr-1">No clã</Badge>}
+                          <Button variant="ghost" size="sm" className="mr-1" onClick={() => alternarCla(e)}>{cla.has(e.id) ? "Tirar do clã" : "+ Clã"}</Button>
                           {vinculados.has(e.id) && (
                             <>
                               <Badge className="mr-1 bg-primary/15 text-foreground hover:bg-primary/15">Vinculado</Badge>

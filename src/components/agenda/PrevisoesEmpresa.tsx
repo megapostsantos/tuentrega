@@ -1,3 +1,4 @@
+import { AudienciaSelect, audienciaSalva, type Audiencia } from "@/components/AudienciaSelect";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -271,6 +272,7 @@ function NovaPrevisao({
   const [veiculo, setVeiculo] = useState("");
   const [coleta, setColeta] = useState("");
   const [hora, setHora] = useState("07:00");
+  const [audiencia, setAudiencia] = useState<Audiencia>(audienciaSalva());
   const [permite, setPermite] = useState(true);
   const [ate, setAte] = useState("");
   const [obs, setObs] = useState("");
@@ -320,6 +322,7 @@ function NovaPrevisao({
       veiculo_necessario: veiculo.trim() || null,
       endereco_coleta: [coleta.trim(), obs.trim()].filter(Boolean).join(" — ") || null,
       hora_abertura: hora || null,
+      visibilidade: audiencia,
       permite_cancelamento: permite,
       cancelamento_ate: permite && ate ? new Date(ate).toISOString() : null,
       status: "aberta",
@@ -377,6 +380,10 @@ function NovaPrevisao({
             {!isOperador && <div className="space-y-1"><Label>R$/pacote</Label><Input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} /></div>}
           </div>
           <p className="text-xs text-muted-foreground">≈ {rotas} rota(s){!isOperador && ` · ${brl(nPac * (Number(valor) || 0))} no total`}</p>
+          <div className="space-y-1.5 rounded-lg border p-3">
+            <Label>Quem pode ver esta previsão?</Label>
+            <AudienciaSelect value={audiencia} onChange={setAudiencia} compact />
+          </div>
           <div className="space-y-1"><Label>Veículo necessário (opcional)</Label><Input placeholder="Ex.: moto, carro, van" value={veiculo} onChange={(e) => setVeiculo(e.target.value)} /></div>
           <div className="space-y-1">
             <Label>Local de coleta (só aparece depois que o entregador se comprometer)</Label>

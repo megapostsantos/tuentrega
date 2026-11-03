@@ -214,6 +214,7 @@ export const ofertas = pgTable("ofertas", {
   exigeNotaFiscal: boolean("exige_nota_fiscal").notNull().default(false),
   status: text("status").notNull().default("open"),
   tipoEntrega: text("tipo_entrega"),
+  visibilidade: text("visibilidade").notNull().default("publica"),
   veiculoNecessario: text("veiculo_necessario"),
   quantidadePacotes: integer("quantidade_pacotes"),
   valorPorPacote: numeric("valor_por_pacote"),
@@ -558,6 +559,13 @@ export const aprovacoesCadastro = pgTable("aprovacoes_cadastro", {
   criadoEm: timestamp("criado_em").notNull().defaultNow(),
 });
 
+export const claEmpresa = pgTable("cla_empresa", {
+  empresaId: text("empresa_id").notNull(),
+  entregadorId: text("entregador_id").notNull(),
+  origem: text("origem").notNull().default("manual"),
+  criadoEm: timestamp("criado_em").notNull().defaultNow(),
+}, (t) => [uniqueIndex("cla_empresa_unique").on(t.empresaId, t.entregadorId)]);
+
 export const fechamentosGestor = pgTable("fechamentos_gestor", {
   id: uuid("id").primaryKey().defaultRandom(),
   ofertaId: text("oferta_id").notNull(),
@@ -639,6 +647,7 @@ export const agendaPrevisoes = pgTable("agenda_previsoes", {
   veiculoNecessario: text("veiculo_necessario"),
   enderecoColeta: text("endereco_coleta"),
   horaAbertura: text("hora_abertura"),
+  visibilidade: text("visibilidade").notNull().default("publica"),
   permitelCancelamento: boolean("permite_cancelamento").notNull().default(false),
   cancelamentoAte: timestamp("cancelamento_ate"),
   status: text("status").notNull().default("pendente"),

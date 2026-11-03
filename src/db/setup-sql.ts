@@ -2268,4 +2268,12 @@ CREATE TABLE IF NOT EXISTS "agenda_zona_candidaturas" ("id" uuid PRIMARY KEY DEF
 CREATE UNIQUE INDEX IF NOT EXISTS "agenda_zona_cand_unique" ON "agenda_zona_candidaturas" ("zona_id","entregador_id");
 -- @@
 CREATE TABLE IF NOT EXISTS "aprovacoes_cadastro" ("user_id" text PRIMARY KEY NOT NULL, "status" text DEFAULT 'pendente' NOT NULL, "tipo" text, "motivo" text, "decidido_por" text, "decidido_em" timestamp, "criado_em" timestamp DEFAULT now() NOT NULL);
+-- @@
+ALTER TABLE "ofertas" ADD COLUMN IF NOT EXISTS "visibilidade" text DEFAULT 'publica' NOT NULL;
+-- @@
+ALTER TABLE "agenda_previsoes" ADD COLUMN IF NOT EXISTS "visibilidade" text DEFAULT 'publica' NOT NULL;
+-- @@
+CREATE TABLE IF NOT EXISTS "cla_empresa" ("empresa_id" text NOT NULL, "entregador_id" text NOT NULL, "origem" text DEFAULT 'manual' NOT NULL, "criado_em" timestamp DEFAULT now() NOT NULL);
+-- @@
+CREATE UNIQUE INDEX IF NOT EXISTS "cla_empresa_unique" ON "cla_empresa" ("empresa_id","entregador_id");
 `;

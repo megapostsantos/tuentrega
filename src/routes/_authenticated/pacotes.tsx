@@ -1,4 +1,5 @@
 import { SITE_URL } from "@/lib/contato";
+import { AudienciaSelect, audienciaSalva, type Audiencia } from "@/components/AudienciaSelect";
 import { RotasOperacao } from "@/components/pacotes/RotasOperacao";
 import { AjusteRotas, EliminarRotaDialog, type RotaAjuste } from "@/components/pacotes/AjusteRotas";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -325,6 +326,7 @@ function CreateOperation({
   const [listaTexto, setListaTexto] = useState("");
   const [listaFormato, setListaFormato] = useState<"ml" | "simples">("ml");
   const [lendo, setLendo] = useState(false);
+  const [audiencia, setAudiencia] = useState<Audiencia>(audienciaSalva());
   const [leitura, setLeitura] = useState<string | null>(null);
 
   async function reduzir(file: File): Promise<string> {
@@ -629,7 +631,7 @@ function CreateOperation({
     if (!createdOpId) return;
     setSubmitting(true);
     try {
-      const { error } = await (supabase as any).rpc("publicar_rotas", { _operacao_id: createdOpId });
+      const { error } = await (supabase as any).rpc("publicar_rotas", { _operacao_id: createdOpId, _visibilidade: audiencia });
       if (error) throw new Error(error.message);
       const { data: ofs } = await supabase.from("ofertas")
         .select("id, titulo, quantidade_pacotes, quantidade_paradas, valor, valor_por_pacote").eq("operacao_id", createdOpId).order("titulo");
@@ -1019,6 +1021,11 @@ function CreateOperation({
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">O que você deseja fazer agora?</p>
 
+            <div className="space-y-1.5">
+              <div className="text-xs font-semibold text-muted-foreground">Se for publicar agora, quem pode ver as vagas?</div>
+              <AudienciaSelect value={audiencia} onChange={setAudiencia} compact />
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-3">
               <button
                 type="button"
@@ -1121,10 +1128,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 /* ============ Detail dialog ============ */
 
-async function publishPendingRotas(op: Operacao, rotas: any[]): Promise<number> {
+async function publishPendingRotas(op: Operacao, rotas: any[], visibilidade: string = "publica"): Promise<number> {
   const ids = rotas.filter((r) => !r.oferta_id).map((r) => r.id);
   if (!ids.length) return 0;
-  const { data, error } = await (supabase as any).rpc("publicar_rotas", { _operacao_id: op.id, _rota_ids: ids });
+  const { data, error } = await (supabase as any).rpc("publicar_rotas", { _operacao_id: op.id, _rota_ids: ids, _visibilidade: visibilidade });
   if (error) throw new Error(error.message);
   return Number(data?.publicadas ?? ids.length);
 }
@@ -1199,7 +1206,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
             rotas={ativas as any}
             ofertas={ofertas}
             onChanged={() => setReloadKey((k) => k + 1)}
-            publicar={(ids) => publishPendingRotas(op, ativas.filter((r: any) => ids.includes(r.id)))}
+            publicar={(ids, vis) => publishPendingRotas(op, ativas.filter((r: any) => ids.includes(r.id)), vis)}
             onEliminar={(r) => setEliminar(r as any)}
           />
           <AjusteRotas rotas={ativas as RotaAjuste[]} onChanged={() => setReloadKey((k) => k + 1)} />
