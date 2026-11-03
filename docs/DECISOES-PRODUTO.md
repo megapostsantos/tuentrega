@@ -96,3 +96,9 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 - **Não vê nem digita valores**: o servidor devolve valores nulos e usa o **valor padrão por pacote** definido pelo dono. Sem acesso a pagamentos, financeiro, antecipação nem PIX. Não apaga nada.
 - Só o **dono** apaga: eliminar rota (inclusive "apagar de vez") e "Apagar histórico de testes" (Configurações). O admin tem a limpeza geral em /admin/limpeza.
 - O "dispatcher" antigo continua sendo outro conceito: parceiro entregador que gerencia time próprio.
+
+## Aprovação de cadastros e vínculo
+- **Cadastro por conta própria** (empresa ou entregador) fica **pendente** e não acessa nada até a TuEntrega (admin da plataforma, não a empresa) aprovar em **Admin → Cadastros**. Quem já usava o sistema na data da mudança continua aprovado.
+- **Convidados por uma empresa** (parceiro pré-cadastrado ou funcionário) **não passam pela aprovação**: a empresa responde por eles.
+- **Vínculo:** o parceiro que ativa a conta pelo convite fica vinculado à empresa: vê só as ofertas (e previsões) dela, e as outras empresas não o enxergam nem alocam. A empresa libera com **Desvincular**. Cobrança para o parceiro se desvincular: pendente de definir.
+- O admin pode recusar, bloquear e reverter decisões a qualquer momento.

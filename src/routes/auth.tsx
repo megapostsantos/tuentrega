@@ -166,6 +166,7 @@ function ConviteForm({ onSuccess }: { onSuccess: () => void }) {
     <>
       <h1 className="text-2xl font-bold">Tenho um convite</h1>
       <p className="mt-1 text-sm text-muted-foreground">Use o e-mail e o código que a empresa te enviou e crie sua senha. Seu histórico já está esperando por você.</p>
+      <p className="mt-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">Entrando por convite, você <strong>fica vinculado à empresa que te convidou</strong> e vê as ofertas dela. Não precisa esperar aprovação.</p>
       <form onSubmit={submit} className="mt-6 space-y-4">
         <div className="space-y-2"><Label>E-mail</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
         <div className="space-y-2"><Label>Código do convite</Label><Input required value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} className="tracking-widest" /></div>
@@ -231,6 +232,7 @@ function SignupSwitcher({ onSuccess }: { onSuccess: () => void }) {
       <>
         <h1 className="text-2xl font-bold">Como você quer usar a TuEntrega?</h1>
         <p className="mt-1 text-sm text-muted-foreground">Escolha o perfil que melhor descreve você.</p>
+        <p className="mt-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">Todo cadastro novo é <strong>analisado e aprovado pela equipe da TuEntrega</strong> antes de liberar o acesso. Foi convidado por uma empresa? Use a aba <strong>Convite</strong>.</p>
 
         <div className="mt-6 space-y-3">
           <BigRoleCard
@@ -425,7 +427,7 @@ function EmpresaForm({ onSuccess }: { onSuccess: () => void }) {
     });
     setLoading(false);
     if (err) return toast.error(err);
-    toast.success("Conta criada! Acesse seu painel.");
+    toast.success("Cadastro enviado! A TuEntrega vai analisar e liberar o seu acesso.");
     onSuccess();
   }
 
@@ -555,7 +557,7 @@ function EntregadorForm({ onSuccess }: { onSuccess: () => void }) {
     });
     setLoading(false);
     if (err) return toast.error(err);
-    toast.success("Conta criada! Acesse seu painel.");
+    toast.success("Cadastro enviado! A TuEntrega vai analisar e liberar o seu acesso.");
     onSuccess();
   }
 

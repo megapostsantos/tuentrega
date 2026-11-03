@@ -49,6 +49,8 @@ function makeScope(ctx: EngineCtx, params: unknown[]): Scope | null {
   if (ctx.internal || ctx.role === "admin") return null;
   const role = ctx.role as Role;
   if (!ctx.userId) throw Object.assign(new Error("Não autenticado"), { code: "401" });
+  if ((role as string) === "pendente") throw Object.assign(new Error("Seu cadastro está aguardando a aprovação da TuEntrega."), { code: "403" });
+  if ((role as string) === "recusado") throw Object.assign(new Error("Seu cadastro não foi aprovado. Fale com a TuEntrega."), { code: "403" });
   if (role !== "empresa" && role !== "entregador" && role !== "dispatcher")
     throw Object.assign(new Error("Sem permissão"), { code: "403" });
   return { uid: ctx.userId, role, P: (v) => `$${params.push(v)}`, operador: !!ctx.operador };
@@ -667,6 +669,15 @@ const DDL_LAZY: string[] = [
 	"decidida_em" timestamp
 );`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "agenda_zona_cand_unique" ON "agenda_zona_candidaturas" ("zona_id","entregador_id");`,
+  `CREATE TABLE IF NOT EXISTS "aprovacoes_cadastro" (
+	"user_id" text PRIMARY KEY NOT NULL,
+	"status" text DEFAULT 'pendente' NOT NULL,
+	"tipo" text,
+	"motivo" text,
+	"decidido_por" text,
+	"decidido_em" timestamp,
+	"criado_em" timestamp DEFAULT now() NOT NULL
+);`,
   `CREATE TABLE IF NOT EXISTS "senhas_provisorias" ("user_id" text PRIMARY KEY NOT NULL, "criada_em" timestamp DEFAULT now() NOT NULL);`,
 ];
 let tabelasGarantidas = false;
@@ -675,6 +686,18 @@ async function garantirTabelas() {
   tabelasGarantidas = true;
   try {
     for (const d of DDL_LAZY) await query(d);
+    // migração única: quem já usava o sistema continua aprovado; só os cadastros novos passam pela aprovação manual.
+    // (um registro-marcador evita refazer isso, mesmo que a tabela tenha sido criada antes pelo /api/db/setup)
+    const feita = await query(`select 1 from "aprovacoes_cadastro" where "user_id" = '__migracao_v1__'`);
+    if (!feita.length) {
+      await query(
+        `insert into "aprovacoes_cadastro" ("user_id","status","tipo","decidido_em","motivo")
+         select u."id", 'aprovado', case when e."id" is not null then 'empresa' when en."id" is not null then 'entregador' else coalesce(u."role", 'outro') end, now(), 'cadastro anterior à aprovação manual'
+           from "user" u left join "empresas" e on e."id" = u."id" left join "entregadores" en on en."id" = u."id"
+         on conflict do nothing`,
+      );
+      await query(`insert into "aprovacoes_cadastro" ("user_id","status","tipo") values ('__migracao_v1__','meta','meta') on conflict do nothing`);
+    }
   } catch (e) {
     tabelasGarantidas = false;
     console.error("[schema] não foi possível garantir as tabelas:", (e as Error)?.message);
@@ -885,6 +908,7 @@ async function cadastrarEntregadorGerenciado(uid: string | null, args: Record<st
       params: [id, nome, cpf, limpa(args.whatsapp), email, veic, limpa(args.marca_veiculo), limpa(args.modelo_veiculo), limpa(args.placa)?.toUpperCase() ?? null, pix, limpa(args.pix_chave)],
     },
     { text: `insert into "entregadores_gerenciados" ("entregador_id","empresa_id","codigo_convite") values ($1,$2,$3)`, params: [id, uid, codigo] },
+    { text: `insert into "aprovacoes_cadastro" ("user_id","status","tipo","motivo","decidido_em") values ($1,'aprovado','entregador','convidado por empresa',now()) on conflict do nothing`, params: [id] },
   ];
   await runTransaction(stmts);
   return { data: { id, codigo: email ? codigo : null }, error: null, count: null };
@@ -909,6 +933,7 @@ async function cadastrarMembroEquipe(uid: string | null, args: Record<string, un
     { text: `insert into "profiles" ("id","full_name","phone") values ($1,$2,$3) on conflict do nothing`, params: [id, nome, fone] },
     { text: `insert into "equipe_empresa" ("user_id","empresa_id","nome","email","codigo_convite","entregador") values ($1,$2,$3,$4,$5,$6)`, params: [id, uid, nome, email, codigo, tambemEntregador] },
   ];
+  stmts.push({ text: `insert into "aprovacoes_cadastro" ("user_id","status","tipo","motivo","decidido_em") values ($1,'aprovado','funcionario','convidado por empresa',now()) on conflict do nothing`, params: [id] });
   if (tambemEntregador) stmts.push({ text: `insert into "entregadores" ("id","nome_completo","whatsapp","email","status") values ($1,$2,$3,$4,'ativo')`, params: [id, nome, fone, email] });
   await runTransaction(stmts);
   return { data: { id, codigo }, error: null, count: null };
@@ -1601,6 +1626,12 @@ export async function registerProfile(
     stmts.push(insertStmt("entregadores", row));
   }
 
+  // cadastro novo entra como pendente: a TuEntrega aprova manualmente
+  await garantirTabelas();
+  stmts.push(
+    { text: `insert into "aprovacoes_cadastro" ("user_id","status","tipo") values ($1,'pendente',$2) on conflict ("user_id") do nothing`, params: [user.id, role] },
+    { text: `insert into "admin_notifications" ("type","title","body","link") values ('novo_cadastro',$1,$2,'/admin/cadastros')`, params: ["Novo cadastro aguardando aprovação", `${user.name} (${role === "empresa" ? "empresa" : "entregador"})`] },
+  );
   try {
     await runTransaction(stmts);
   } catch (e: any) {
@@ -1670,9 +1701,68 @@ export async function empresaDoOperador(userId: string): Promise<{ empresaId: st
 /** Contexto de acesso da sessão. Funcionário com perfil de entregador pode pedir o modo "entregador" (acesso só aos próprios dados). */
 export async function contextoDaSessao(user: { id: string; role?: string | null } | null | undefined, modo?: string | null): Promise<EngineCtx> {
   if (!user) return { userId: null, role: null };
+  if (user.role !== "operador" && user.role !== "admin") {
+    const st = await statusAprovacao(user.id);
+    if (st !== "aprovado") return { userId: user.id, role: st === "recusado" ? "recusado" : "pendente" };
+  }
   if (user.role !== "operador") return { userId: user.id, role: user.role ?? null };
   const emp = await empresaDoOperador(user.id);
   if (!emp) return { userId: user.id, role: "operador" };
   if (modo === "entregador" && emp.entregador) return { userId: user.id, role: "entregador" };
   return { userId: emp.empresaId, role: "empresa", operador: true };
+}
+
+
+// ---------- aprovação manual de cadastros (feita pelo admin da plataforma) ----------
+const cacheAprov = new Map<string, { status: string; ate: number }>();
+
+export type StatusAprovacao = "aprovado" | "pendente" | "recusado";
+
+/** Sem registro = pendente (cadastro novo ainda sem aprovação). Quem já usava o sistema foi aprovado na migração. */
+export async function statusAprovacao(userId: string): Promise<StatusAprovacao> {
+  const c = cacheAprov.get(userId);
+  if (c && c.ate > Date.now()) return c.status as StatusAprovacao;
+  await garantirTabelas();
+  const r = await query(`select "status" from "aprovacoes_cadastro" where "user_id" = $1`, [userId]);
+  const st = (r[0]?.status ?? "pendente") as StatusAprovacao;
+  cacheAprov.set(userId, { status: st, ate: Date.now() + 15_000 });
+  return st;
+}
+
+export async function motivoAprovacao(userId: string): Promise<string | null> {
+  const r = await query(`select "motivo" from "aprovacoes_cadastro" where "user_id" = $1`, [userId]);
+  return r[0]?.motivo ?? null;
+}
+
+export async function decidirCadastro(adminId: string, userId: string, aprovar: boolean, motivo?: string | null): Promise<void> {
+  await garantirTabelas();
+  const u = await query(`select u."id", u."name", e."id" as emp, en."id" as ent from "user" u left join "empresas" e on e."id" = u."id" left join "entregadores" en on en."id" = u."id" where u."id" = $1`, [userId]);
+  if (!u[0]) throw new Error("Usuário não encontrado");
+  const tipo = u[0].emp ? "empresa" : u[0].ent ? "entregador" : "outro";
+  const status = aprovar ? "aprovado" : "recusado";
+  const mot = motivo && String(motivo).trim() ? String(motivo).trim().slice(0, 300) : null;
+  await runTransaction([
+    {
+      text: `insert into "aprovacoes_cadastro" ("user_id","status","tipo","motivo","decidido_por","decidido_em") values ($1,$2,$3,$4,$5,now())
+             on conflict ("user_id") do update set "status" = excluded."status", "motivo" = excluded."motivo", "decidido_por" = excluded."decidido_por", "decidido_em" = now()`,
+      params: [userId, status, tipo, mot, adminId],
+    },
+    { text: `insert into "user_notifications" ("user_id","titulo","corpo","link") values ($1,$2,$3,'/dashboard')`, params: [userId, aprovar ? "Cadastro aprovado ✅" : "Cadastro não aprovado", aprovar ? "Seu cadastro foi aprovado. Já pode usar o TuEntrega." : (mot ?? "Fale com a TuEntrega para saber mais.")] },
+    { text: `insert into "admin_logs" ("admin_id","action","target") values ($1,$2,$3)`, params: [adminId, aprovar ? "cadastro_aprovado" : "cadastro_recusado", userId] },
+  ]);
+  cacheAprov.delete(userId);
+}
+
+export async function listarCadastros(): Promise<any[]> {
+  await garantirTabelas();
+  return await query(
+    `select u."id", u."name", u."email", u."createdAt" as criado_em, coalesce(a."status", 'pendente') as status, coalesce(a."tipo", case when e."id" is not null then 'empresa' when en."id" is not null then 'entregador' else 'incompleto' end) as tipo,
+            a."motivo", coalesce(e."nome_fantasia", e."razao_social") as empresa, e."cnpj", e."whatsapp" as empresa_whatsapp,
+            en."cpf", en."tipo_veiculo", en."whatsapp" as ent_whatsapp, v."empresa_nome" as vinculado_a,
+            exists (select 1 from "entregadores_gerenciados" g where g."entregador_id" = u."id") as pre_cadastrado
+       from "user" u left join "aprovacoes_cadastro" a on a."user_id" = u."id" left join "empresas" e on e."id" = u."id"
+       left join "entregadores" en on en."id" = u."id" left join "vinculos_empresa" v on v."entregador_id" = u."id"
+      where u."role" not in ('admin','operador')
+      order by case coalesce(a."status",'pendente') when 'pendente' then 0 when 'recusado' then 1 else 2 end, u."createdAt" desc limit 300`,
+  );
 }

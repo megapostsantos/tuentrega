@@ -80,7 +80,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
   function whats() {
     if (!feito) return;
     const link = `${SITE_URL}/auth`;
-    const msg = `Olá ${feito.nome}! ${feito.empresa ? `A empresa ${feito.empresa} cadastrou` : "Te cadastrei"} você como parceiro(a) no TuEntrega. Para criar sua senha, abra ${link}, toque na aba "Convite" e use o e-mail ${feito.email} e o código ${feito.codigo}.`;
+    const msg = `Olá ${feito.nome}! ${feito.empresa ? `A empresa ${feito.empresa} cadastrou` : "Te cadastrei"} você como parceiro(a) no TuEntrega. Ao ativar, você fica vinculado(a) a essa empresa e vê as ofertas dela. Para criar sua senha, abra ${link}, toque na aba "Convite" e use o e-mail ${feito.email} e o código ${feito.codigo}.`;
     const fone = feito.whatsapp.replace(/\D/g, "");
     window.open(`https://wa.me/${fone ? (fone.length <= 11 ? "55" + fone : fone) : ""}?text=${encodeURIComponent(msg)}`, "_blank");
   }
@@ -117,7 +117,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Cadastre agora e aloque as rotas. Com e-mail, a pessoa cria a própria senha depois e mantém todo o histórico. Sem e-mail, você opera as rotas por ela. Os documentos ficam visíveis só para a sua empresa.
+            Cadastre agora e aloque as rotas. Com e-mail, a pessoa cria a própria senha depois, mantém todo o histórico e fica vinculada à sua empresa (só vê as suas ofertas). Sem e-mail, você opera as rotas por ela. Os documentos ficam visíveis só para a sua empresa.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">

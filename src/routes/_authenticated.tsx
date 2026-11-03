@@ -9,6 +9,7 @@ import { AppTopBar } from "@/components/AppTopBar";
 import { AppDrawer } from "@/components/AppDrawer";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { BottomNav } from "@/components/BottomNav";
+import { AguardandoAprovacao } from "@/components/AguardandoAprovacao";
 import { ForcePasswordChange } from "@/components/ForcePasswordChange";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -19,6 +20,14 @@ function AuthenticatedLayout() {
   const { user, role, loading, isOperador } = useAuth();
   const navigate = useNavigate();
   const [mustChange, setMustChange] = useState(false);
+  const [aprov, setAprov] = useState<{ status: "aprovado" | "pendente" | "recusado"; motivo?: string | null } | null>(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch("/api/db/minha-aprovacao", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((j) => setAprov({ status: j?.status ?? "aprovado", motivo: j?.motivo ?? null }))
+      .catch(() => setAprov({ status: "aprovado" }));
+  }, [user?.id]);
   useEffect(() => {
     if (!user?.id) return;
     fetch("/api/db/must-change-password", { credentials: "same-origin" })
@@ -42,6 +51,7 @@ function AuthenticatedLayout() {
   if (loading || !user) return <SplashScreen />;
   if (!role && (user as any).role === "operador")
     return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Seu acesso à equipe foi desativado. Fale com o dono da empresa.</div>;
+  if (aprov && aprov.status !== "aprovado") return <AguardandoAprovacao status={aprov.status} motivo={aprov.motivo} />;
   if (mustChange) return <ForcePasswordChange />;
 
   return (

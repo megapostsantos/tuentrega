@@ -37,6 +37,10 @@ export default defineEventHandler(async (event) => {
       const { auth } = await import("./lib/auth");
       const sess = await auth.api.getSession({ headers: req.headers });
       if (!sess?.user) return new Response("não autenticado", { status: 401 });
+      if ((sess.user as any).role !== "admin" && (sess.user as any).role !== "operador") {
+        const { statusAprovacao } = await import("./server/data-engine");
+        if ((await statusAprovacao((sess.user as any).id)) !== "aprovado") return new Response("cadastro aguardando aprovação", { status: 403 });
+      }
       if (PRIVATE_BUCKETS.has(bucket) && (sess.user as any).role !== "admin") {
         const own = await rawQuery(`select 1 from "storage_objects" where bucket=$1 and path=$2 and "owner"=$3`, [bucket, path, (sess.user as any).id]);
         if (!own.length) return new Response("not found", { status: 404 });
@@ -65,6 +69,10 @@ export default defineEventHandler(async (event) => {
   if (!session?.user) return Response.json({ error: "Não autenticado" }, { status: 401 });
   const uid = (session.user as any).id as string;
   const isAdmin = (session.user as any).role === "admin";
+  if (!isAdmin && (session.user as any).role !== "operador") {
+    const { statusAprovacao } = await import("./server/data-engine");
+    if ((await statusAprovacao(uid)) !== "aprovado") return Response.json({ error: "Cadastro aguardando aprovação" }, { status: 403 });
+  }
 
   if (req.method === "POST") {
     const body: any = await req.json();

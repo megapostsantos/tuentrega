@@ -2266,4 +2266,6 @@ CREATE TABLE IF NOT EXISTS "agenda_previsao_zonas" ("id" uuid PRIMARY KEY DEFAUL
 CREATE TABLE IF NOT EXISTS "agenda_zona_candidaturas" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "zona_id" text NOT NULL, "previsao_id" text NOT NULL, "entregador_id" text NOT NULL, "empresa_id" text NOT NULL, "status" text DEFAULT 'pendente' NOT NULL, "created_at" timestamp DEFAULT now() NOT NULL, "decidida_em" timestamp);
 -- @@
 CREATE UNIQUE INDEX IF NOT EXISTS "agenda_zona_cand_unique" ON "agenda_zona_candidaturas" ("zona_id","entregador_id");
+-- @@
+CREATE TABLE IF NOT EXISTS "aprovacoes_cadastro" ("user_id" text PRIMARY KEY NOT NULL, "status" text DEFAULT 'pendente' NOT NULL, "tipo" text, "motivo" text, "decidido_por" text, "decidido_em" timestamp, "criado_em" timestamp DEFAULT now() NOT NULL);
 `;

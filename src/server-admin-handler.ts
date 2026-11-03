@@ -59,6 +59,36 @@ export default defineEventHandler(async (event) => {
     return Response.json({ senha, nome: existe[0].name, email: existe[0].email });
   }
 
+  if (url.pathname === "/api/admin/cadastros" && req.method === "GET") {
+    const { listarCadastros } = await import("./server/data-engine");
+    return Response.json(await listarCadastros());
+  }
+
+  if (url.pathname === "/api/admin/cadastros/decidir" && req.method === "POST") {
+    const body: any = await req.json().catch(() => null);
+    if (!body?.userId || typeof body?.aprovar !== "boolean") return Response.json({ error: "parâmetros inválidos" }, { status: 400 });
+    const { decidirCadastro } = await import("./server/data-engine");
+    try {
+      await decidirCadastro(user.id, String(body.userId), body.aprovar, body.motivo);
+    } catch (e: any) {
+      return Response.json({ error: e?.message ?? "Falha ao decidir" }, { status: 400 });
+    }
+    // aviso por e-mail ao usuário, se o envio estiver configurado
+    try {
+      const { rawQuery } = await import("./server/data-engine");
+      const r = await rawQuery(`select "email","name" from "user" where "id" = $1`, [String(body.userId)]);
+      if (r[0]?.email) {
+        const { sendEmail } = await import("./server/email");
+        await sendEmail({
+          to: r[0].email,
+          subject: body.aprovar ? "Seu cadastro no TuEntrega foi aprovado" : "Sobre o seu cadastro no TuEntrega",
+          html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px"><p>Olá, ${String(r[0].name ?? "").replace(/[<>&]/g, "")}.</p><p>${body.aprovar ? "Seu cadastro foi <strong>aprovado</strong>. Já pode entrar e usar o TuEntrega." : "Seu cadastro não foi aprovado neste momento. Fale com a TuEntrega para saber mais."}</p></div>`,
+        });
+      }
+    } catch { /* e-mail é um extra */ }
+    return Response.json({ ok: true });
+  }
+
   if (url.pathname === "/api/admin/email-test" && req.method === "POST") {
     const body: any = await req.json().catch(() => null);
     const to = String(body?.to ?? "").trim();

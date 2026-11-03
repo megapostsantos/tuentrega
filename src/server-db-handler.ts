@@ -72,6 +72,17 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     return Response.json({ ok: true });
   }
 
+  if (url.pathname === "/api/db/minha-aprovacao" && req.method === "GET") {
+    const { auth } = await import("./lib/auth");
+    const session = await auth.api.getSession({ headers: req.headers });
+    const u = session?.user as any;
+    if (!u) return Response.json({ status: "aprovado" });
+    if (u.role === "admin" || u.role === "operador") return Response.json({ status: "aprovado" });
+    const { statusAprovacao, motivoAprovacao } = await import("./server/data-engine");
+    const status = await statusAprovacao(u.id);
+    return Response.json({ status, motivo: status === "recusado" ? await motivoAprovacao(u.id) : null }, { headers: { "cache-control": "no-store" } });
+  }
+
   if (url.pathname === "/api/db/equipe-me" && req.method === "GET") {
     const { auth } = await import("./lib/auth");
     const session = await auth.api.getSession({ headers: req.headers });

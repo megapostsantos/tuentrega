@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, Users, Package, DollarSign, Bell, Settings,
-  ExternalLink, LogOut, Trash2,
+  ExternalLink, LogOut, Trash2, UserCheck,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 
 const items = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+  { title: "Cadastros", url: "/admin/cadastros", icon: UserCheck },
   { title: "Empresas", url: "/admin/companies", icon: Building2 },
   { title: "Entregadores", url: "/admin/deliverers", icon: Users },
   { title: "Planos", url: "/admin/plans", icon: Package },

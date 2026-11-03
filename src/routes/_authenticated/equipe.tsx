@@ -100,7 +100,7 @@ function EquipePage() {
 
   function reenviar(nome: string, email: string | null, codigo: string | null, whatsapp: string | null, tipo: "equipe" | "parceiro") {
     if (!email || !codigo) return toast.error("Sem e-mail ou código para este convite.");
-    const msg = `Olá ${nome}! ${empresaNome ? `A empresa ${empresaNome} convidou você` : "Você foi convidado(a)"} ${tipo === "equipe" ? "para a equipe" : "como parceiro(a)"} no TuEntrega. Para criar sua senha, abra ${SITE_URL}/auth, toque em "Convite" e use o e-mail ${email} e o código ${codigo}.`;
+    const msg = `Olá ${nome}! ${empresaNome ? `A empresa ${empresaNome} convidou você` : "Você foi convidado(a)"} ${tipo === "equipe" ? "para a equipe" : "como parceiro(a)"} no TuEntrega.${tipo === "equipe" ? "" : " Ao ativar, você fica vinculado(a) a essa empresa e vê as ofertas dela."} Para criar sua senha, abra ${SITE_URL}/auth, toque em "Convite" e use o e-mail ${email} e o código ${codigo}.`;
     const fone = (whatsapp ?? "").replace(/\D/g, "");
     window.open(fone ? `https://wa.me/${fone.length <= 11 ? "55" + fone : fone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   }
@@ -131,7 +131,7 @@ function EquipePage() {
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted"><Bike className="h-5 w-5" /></span>
           <span>
             <span className="block font-bold">Cadastrar parceiro entregador</span>
-            <span className="block text-xs text-muted-foreground">Quem faz as rotas. Com e-mail, ele ativa a conta e mantém o histórico; sem e-mail, você opera por ele.</span>
+            <span className="block text-xs text-muted-foreground">Quem faz as rotas. Com e-mail, ele ativa a conta, mantém o histórico e fica <strong>vinculado só à sua empresa</strong> (não vê as ofertas das outras). Sem e-mail, você opera por ele.</span>
             <span className="mt-2 inline-flex items-center text-xs font-semibold text-primary">Cadastrar <ChevronRight className="h-3.5 w-3.5" /></span>
           </span>
         </button>

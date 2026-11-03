@@ -548,6 +548,16 @@ export const agendaZonaCandidaturas = pgTable("agenda_zona_candidaturas", {
   decididaEm: timestamp("decidida_em"),
 });
 
+export const aprovacoesCadastro = pgTable("aprovacoes_cadastro", {
+  userId: text("user_id").primaryKey(),
+  status: text("status").notNull().default("pendente"),
+  tipo: text("tipo"),
+  motivo: text("motivo"),
+  decididoPor: text("decidido_por"),
+  decididoEm: timestamp("decidido_em"),
+  criadoEm: timestamp("criado_em").notNull().defaultNow(),
+});
+
 export const fechamentosGestor = pgTable("fechamentos_gestor", {
   id: uuid("id").primaryKey().defaultRandom(),
   ofertaId: text("oferta_id").notNull(),

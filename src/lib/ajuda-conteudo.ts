@@ -111,15 +111,16 @@ export const GUIAS: Guia[] = [
   },
   {
     id: "parceiro-sem-app",
-    titulo: "Cadastrar parceiro (com ou sem app)",
-    resumo: "Cadastre pelo e-mail, envie o convite e o histórico fica com a pessoa.",
+    titulo: "Convidar parceiros e o vínculo",
+    resumo: "Cadastre pelo e-mail, envie o convite: o parceiro fica vinculado só à sua empresa.",
     perfis: ["dono", "funcionario"],
     tempo: "2 min",
     tela: "/entregadores",
     passos: [
       { titulo: "Cadastre o parceiro", texto: "Nome e telefone ou e-mail bastam. Comprovante de residência e documento são recomendados e ficam visíveis só para a sua empresa.", barra: "Cadastrar parceiro", elementos: [{ t: "campo", rotulo: "Nome completo", valor: "Jefferson Alves" }, { t: "campo", rotulo: "E-mail (opcional)", valor: "jefferson@email.com", destaque: true }, { t: "foto", rotulo: "comprovante e documento" }] },
       { titulo: "Envie o convite pelo WhatsApp", texto: "A tela mostra um código. Mande para a pessoa pelo botão do WhatsApp.", barra: "Jefferson cadastrado", elementos: [{ t: "item", titulo: "E-mail", sub: "jefferson@email.com" }, { t: "item", titulo: "Código", sub: "K7M2Q9XA" }, { t: "botao", texto: "Enviar convite pelo WhatsApp", destaque: true }] },
-      { titulo: "A pessoa ativa a conta no login", texto: "No login, na aba “Convite”, ela informa e-mail, código e cria a senha. O histórico que você já registrou continua com ela.", barra: "Login · Convite", elementos: [{ t: "abas", itens: ["Entrar", "Cadastrar", "Convite"], ativo: 2 }, { t: "campo", rotulo: "Código do convite", valor: "K7M2Q9XA", destaque: true }, { t: "campo", rotulo: "Crie uma senha", valor: "••••••" }, { t: "botao", texto: "Ativar minha conta" }] },
+      { titulo: "A pessoa ativa a conta e fica vinculada", texto: "No login, na aba “Convite”, ela informa e-mail, código e cria a senha. O histórico que você já registrou continua com ela. A partir daí ela fica VINCULADA à sua empresa: vê só as suas ofertas, e as outras empresas nem enxergam o nome dela. Não precisa de aprovação da TuEntrega.", barra: "Login · Convite", elementos: [{ t: "abas", itens: ["Entrar", "Cadastrar", "Convite"], ativo: 2 }, { t: "campo", rotulo: "Código do convite", valor: "K7M2Q9XA", destaque: true }, { t: "campo", rotulo: "Crie uma senha", valor: "••••••" }, { t: "botao", texto: "Ativar minha conta" }] },
+      { titulo: "Para liberar, desvincule", texto: "Em Entregadores, o parceiro vinculado mostra a marca “Vinculado” e o botão Desvincular. Depois disso ele volta a ver as ofertas de todas as empresas.", barra: "Entregadores", elementos: [{ t: "item", titulo: "Alcino", badge: "Vinculado", tom: "ok" }, { t: "botao", texto: "Desvincular", claro: true, destaque: true }] },
       { titulo: "Sem e-mail? Você opera a rota por ele", texto: "Para parceiro cadastrado sem acesso ao app, use “Operar rota” no painel: você dá as baixas e encerra a rota por ele.", barra: "Rotas ao vivo", elementos: [{ t: "item", titulo: "Mega · Jefferson", badge: "Sem app (gerenciado)", tom: "alerta" }, { t: "botao", texto: "Operar rota", destaque: true }] },
     ],
   },
@@ -168,6 +169,20 @@ export const GUIAS: Guia[] = [
   },
 
   // -------------------------------------------------------------- ENTREGADOR
+  {
+    id: "convite-vinculo",
+    titulo: "Convite de uma empresa e vínculo",
+    resumo: "Como entrar pelo convite e o que muda: você passa a ver as ofertas da empresa que convidou.",
+    perfis: ["entregador"],
+    tempo: "1 min",
+    tela: "/ofertas",
+    passos: [
+      { titulo: "Você recebe o convite no WhatsApp", texto: "A empresa te cadastra com o seu e-mail e envia uma mensagem com o endereço do TuEntrega, o seu e-mail e um código.", barra: "WhatsApp", elementos: [{ t: "aviso", texto: "A empresa X convidou você como parceiro(a). E-mail: voce@email.com · Código: K7M2Q9XA", tom: "ok" }] },
+      { titulo: "Ative pela aba Convite", texto: "Na tela de entrada, toque em Convite, informe e-mail e código e crie a sua senha. Não precisa esperar aprovação da TuEntrega.", barra: "Login · Convite", elementos: [{ t: "abas", itens: ["Entrar", "Cadastrar", "Convite"], ativo: 2 }, { t: "campo", rotulo: "Código do convite", valor: "K7M2Q9XA", destaque: true }, { t: "botao", texto: "Ativar minha conta" }] },
+      { titulo: "Você fica vinculado à empresa", texto: "Em Ofertas aparece um aviso: você está vinculado e vê as ofertas dessa empresa. Quando ela liberar o vínculo, você volta a ver as ofertas de todas.", barra: "Ofertas", elementos: [{ t: "aviso", texto: "Você está vinculado a Empresa X: aparecem aqui as ofertas dessa empresa.", tom: "alerta" }, { t: "item", titulo: "Mega", sub: "135 pacotes", badge: "Aberta", tom: "alerta" }] },
+      { titulo: "Cadastrou-se sozinho?", texto: "Quem cria a conta por conta própria passa por uma aprovação da equipe da TuEntrega e, depois de aprovado, não fica vinculado a ninguém: vê as ofertas de todas as empresas.", barra: "Cadastro em análise", elementos: [{ t: "aviso", texto: "Recebemos o seu cadastro. A equipe da TuEntrega analisa e libera o acesso em breve.", tom: "alerta" }] },
+    ],
+  },
   {
     id: "aceitar-ofertas",
     titulo: "Encontrar e aceitar ofertas",

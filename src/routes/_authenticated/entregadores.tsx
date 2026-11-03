@@ -88,7 +88,7 @@ function ListaEntregadores() {
     const codigo = convites.get(e.id);
     const email = (e as any).email as string | null;
     if (!codigo || !email) return toast.error("Este parceiro não tem e-mail cadastrado para o convite.");
-    const msg = `Olá ${e.nome_completo}! ${empresaNome ? `A empresa ${empresaNome} cadastrou` : "Você foi cadastrado(a)"} você como parceiro(a) no TuEntrega. Para criar sua senha, abra ${SITE_URL}/auth, toque na aba "Convite" e use o e-mail ${email} e o código ${codigo}.`;
+    const msg = `Olá ${e.nome_completo}! ${empresaNome ? `A empresa ${empresaNome} cadastrou` : "Você foi cadastrado(a)"} você como parceiro(a) no TuEntrega. Ao ativar, você fica vinculado(a) a essa empresa e vê as ofertas dela. Para criar sua senha, abra ${SITE_URL}/auth, toque na aba "Convite" e use o e-mail ${email} e o código ${codigo}.`;
     const fone = String((e as any).whatsapp ?? "").replace(/\D/g, "");
     window.open(fone ? `https://wa.me/${fone.length <= 11 ? "55" + fone : fone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   }
@@ -131,6 +131,16 @@ function ListaEntregadores() {
         <Button onClick={() => setInviteOpen(true)} className="shrink-0">
           <UserPlus className="h-4 w-4 mr-2" /> Novo entregador
         </Button>
+      </div>
+
+      <div className="rounded-2xl border border-primary/40 bg-primary/5 p-4 text-sm">
+        <div className="font-semibold">Como convidar os seus parceiros</div>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+          <li>Toque em <strong>Novo entregador</strong> e cadastre com o <strong>e-mail</strong> da pessoa.</li>
+          <li>Envie o <strong>convite pelo WhatsApp</strong> (código + link). Aqui na lista, quem ainda não ativou aparece como <em>Convite pendente</em>, com o botão <strong>Enviar convite</strong>.</li>
+          <li>Ao ativar a conta, ele fica <strong>Vinculado</strong> à sua empresa: vê só as <strong>suas</strong> ofertas, e as outras empresas nem enxergam o nome dele. Quem se cadastra sozinho não tem vínculo.</li>
+          <li>Quando quiser liberar, use <strong>Desvincular</strong>: ele volta a ver as ofertas de todas as empresas.</li>
+        </ol>
       </div>
       <EntregadoresStats />
 

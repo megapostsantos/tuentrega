@@ -30,6 +30,7 @@ import { Route as AdminFinancialRouteImport } from './routes/admin.financial'
 import { Route as AdminDeliverersRouteImport } from './routes/admin.deliverers'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCompaniesRouteImport } from './routes/admin.companies'
+import { Route as AdminCadastrosRouteImport } from './routes/admin.cadastros'
 import { Route as AuthenticatedTimeRouteImport } from './routes/_authenticated/time'
 import { Route as AuthenticatedRotasRouteImport } from './routes/_authenticated/rotas'
 import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
@@ -156,6 +157,11 @@ const AdminDashboardRoute = AdminDashboardRouteImport.update({
 const AdminCompaniesRoute = AdminCompaniesRouteImport.update({
   id: '/companies',
   path: '/companies',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCadastrosRoute = AdminCadastrosRouteImport.update({
+  id: '/cadastros',
+  path: '/cadastros',
   getParentRoute: () => AdminRoute,
 } as any)
 const AuthenticatedTimeRoute = AuthenticatedTimeRouteImport.update({
@@ -308,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/rotas': typeof AuthenticatedRotasRoute
   '/time': typeof AuthenticatedTimeRoute
+  '/admin/cadastros': typeof AdminCadastrosRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/deliverers': typeof AdminDeliverersRoute
@@ -353,6 +360,7 @@ export interface FileRoutesByTo {
   '/pagamentos': typeof AuthenticatedPagamentosRoute
   '/rotas': typeof AuthenticatedRotasRoute
   '/time': typeof AuthenticatedTimeRoute
+  '/admin/cadastros': typeof AdminCadastrosRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/deliverers': typeof AdminDeliverersRoute
@@ -400,6 +408,7 @@ export interface FileRoutesById {
   '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
   '/_authenticated/rotas': typeof AuthenticatedRotasRoute
   '/_authenticated/time': typeof AuthenticatedTimeRoute
+  '/admin/cadastros': typeof AdminCadastrosRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/deliverers': typeof AdminDeliverersRoute
@@ -447,6 +456,7 @@ export interface FileRouteTypes {
     | '/pagamentos'
     | '/rotas'
     | '/time'
+    | '/admin/cadastros'
     | '/admin/companies'
     | '/admin/dashboard'
     | '/admin/deliverers'
@@ -492,6 +502,7 @@ export interface FileRouteTypes {
     | '/pagamentos'
     | '/rotas'
     | '/time'
+    | '/admin/cadastros'
     | '/admin/companies'
     | '/admin/dashboard'
     | '/admin/deliverers'
@@ -538,6 +549,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pagamentos'
     | '/_authenticated/rotas'
     | '/_authenticated/time'
+    | '/admin/cadastros'
     | '/admin/companies'
     | '/admin/dashboard'
     | '/admin/deliverers'
@@ -717,6 +729,13 @@ declare module '@tanstack/react-router' {
       path: '/companies'
       fullPath: '/admin/companies'
       preLoaderRoute: typeof AdminCompaniesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/cadastros': {
+      id: '/admin/cadastros'
+      path: '/cadastros'
+      fullPath: '/admin/cadastros'
+      preLoaderRoute: typeof AdminCadastrosRouteImport
       parentRoute: typeof AdminRoute
     }
     '/_authenticated/time': {
@@ -951,6 +970,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminCadastrosRoute: typeof AdminCadastrosRoute
   AdminCompaniesRoute: typeof AdminCompaniesRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminDeliverersRoute: typeof AdminDeliverersRoute
@@ -963,6 +983,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminCadastrosRoute: AdminCadastrosRoute,
   AdminCompaniesRoute: AdminCompaniesRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminDeliverersRoute: AdminDeliverersRoute,

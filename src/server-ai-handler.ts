@@ -14,6 +14,10 @@ export default defineEventHandler(async (event) => {
   const user = session?.user as any;
   if (!user || !["empresa", "operador", "admin"].includes(user.role)) return Response.json({ error: "Sem permissão" }, { status: 403 });
 
+  if (user.role !== "admin" && user.role !== "operador") {
+    const { statusAprovacao } = await import("./server/data-engine");
+    if ((await statusAprovacao(user.id)) !== "aprovado") return Response.json({ error: "Cadastro aguardando aprovação" }, { status: 403 });
+  }
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return Response.json({ error: "A leitura por imagem ainda não foi ativada (falta a chave ANTHROPIC_API_KEY)." }, { status: 501 });
 

@@ -6,6 +6,7 @@ const sql = fs.readFileSync(new URL("../src/db/setup.sql", import.meta.url), "ut
 let off: number | null = 0; while (off !== null) { const r = await runSetupBatch(sql, off, 40); off = r.next; }
 for (const [i, r] of [["E1","empresa"],["E2","empresa"]]) await pg.query(`insert into "user" (id,name,email,role) values ($1,$1,$1||'@x.com',$2)`, [i, r]);
 await pg.query(`insert into empresas (id,razao_social,tms_valor_padrao_pacote) values ('E1','A',2),('E2','B',2)`);
+await pg.query(`insert into aprovacoes_cadastro (user_id,status) select id,'aprovado' from "user" where role <> 'operador' on conflict do nothing`).catch(() => {});
 const base = { filters: [], order: [] } as any; const run = (c: any, r: any) => executeQuery({ ...base, ...r }, c);
 const rpc = (c: any, fn: string, args: any) => run(c, { table: "", op: "rpc", rpc: { fn, args } });
 const dono = { userId: "E1", role: "empresa" };
