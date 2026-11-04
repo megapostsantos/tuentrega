@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus, Send } from "lucide-react";
+import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus, Send, Trash2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_URL } from "@/lib/contato";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
 import { EntregadoresStats } from "@/components/summaries/EntregadoresStats";
+import { EmailConviteDialog } from "@/components/EmailConviteDialog";
 import { RegisterEntregadorDialog } from "@/components/RegisterEntregadorDialog";
 
 import { EmptyModule } from "@/components/EmptyModule";
@@ -88,10 +89,25 @@ function ListaEntregadores() {
   }
   useEffect(() => { fetchList(); }, []);
 
-  function reenviarConvite(e: Ent) {
-    const codigo = convites.get(e.id);
-    const email = (e as any).email as string | null;
-    if (!codigo || !email) return toast.error("Este parceiro não tem e-mail cadastrado para o convite.");
+  const [emailAlvo, setEmailAlvo] = useState<null | { id: string; nome: string; email: string | null; enviar: boolean }>(null);
+
+  async function remover(e: Ent) {
+    const pendente = convites.has(e.id);
+    const aviso = pendente
+      ? `Apagar o cadastro de ${e.nome_completo}? Ele ainda não ativou a conta, então tudo some. Não dá para desfazer.`
+      : `Remover ${e.nome_completo} da sua empresa? Ele deixa de ser seu parceiro (vínculo, equipe e dispatcher), mas a conta dele continua existindo.`;
+    if (!confirm(aviso)) return;
+    const { error } = await (supabase as any).rpc("remover_parceiro", { entregador_id: e.id });
+    if (error) return toast.error(error.message);
+    toast.success(pendente ? "Cadastro apagado." : "Parceiro removido da sua empresa.");
+    fetchList();
+  }
+
+  function reenviarConvite(e: Ent, ov?: { email: string; codigo: string | null }) {
+    const codigo = ov?.codigo ?? convites.get(e.id);
+    const email = ov?.email ?? ((e as any).email as string | null);
+    if (!email || email.endsWith("@sem-acesso.tuentrega.local")) { setEmailAlvo({ id: e.id, nome: e.nome_completo, email: null, enviar: true }); return; }
+    if (!codigo) return toast.error("Este parceiro não tem código de convite.");
     const msg = `Olá ${e.nome_completo}! ${empresaNome ? `A empresa ${empresaNome} cadastrou` : "Você foi cadastrado(a)"} você como parceiro(a) no TuEntrega. Ao ativar, você fica vinculado(a) a essa empresa e vê as ofertas dela. Para criar sua senha, abra ${SITE_URL}/auth, toque na aba "Convite" e use o e-mail ${email} e o código ${codigo}.`;
     const fone = String((e as any).whatsapp ?? "").replace(/\D/g, "");
     window.open(fone ? `https://wa.me/${fone.length <= 11 ? "55" + fone : fone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
@@ -210,10 +226,12 @@ function ListaEntregadores() {
                     <div className="mt-3 flex flex-wrap gap-2" onClick={(ev) => ev.stopPropagation()}>
                       <Button variant="outline" size="sm" onClick={() => alternarCla(e)}>{cla.has(e.id) ? "Tirar da equipe" : "+ Equipe"}</Button>
                       {convites.has(e.id) && <Button variant="outline" size="sm" onClick={() => reenviarConvite(e)}><Send className="mr-1 h-3.5 w-3.5" />Enviar convite</Button>}
+                      {convites.has(e.id) && <Button variant="outline" size="sm" onClick={() => setEmailAlvo({ id: e.id, nome: e.nome_completo, email: (e as any).email ?? null, enviar: false })}><Mail className="mr-1 h-3.5 w-3.5" />E-mail</Button>}
                       {vinculados.has(e.id) && <Button variant="outline" size="sm" onClick={() => desvincular(e)}>Desvincular</Button>}
                       {!dispatcherIds.has(e.id) && <Button variant="outline" size="sm" onClick={() => setDispatcherTarget(e)}><UserCog className="mr-1 h-3.5 w-3.5" />Dispatcher</Button>}
                       <Button variant="ghost" size="sm" title="Suspender" onClick={() => suspendManually(e.id)}><ShieldOff className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="sm" title="Zerar score" onClick={() => resetScore(e.id)}><RotateCcw className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="sm" className="text-red-600" onClick={() => remover(e)}><Trash2 className="mr-1 h-3.5 w-3.5" />{convites.has(e.id) ? "Apagar" : "Remover"}</Button>
                     </div>
                   </div>
                 );
@@ -272,6 +290,8 @@ function ListaEntregadores() {
                           <Button variant="ghost" size="sm" onClick={() => resetScore(e.id)}>
                             <RotateCcw className="h-4 w-4" />
                           </Button>
+                          {convites.has(e.id) && <Button variant="ghost" size="sm" title="Editar e-mail" onClick={() => setEmailAlvo({ id: e.id, nome: e.nome_completo, email: (e as any).email ?? null, enviar: false })}><Mail className="h-4 w-4" /></Button>}
+                          <Button variant="ghost" size="sm" className="text-red-600" title={convites.has(e.id) ? "Apagar cadastro" : "Remover da empresa"} onClick={() => remover(e)}><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -284,6 +304,16 @@ function ListaEntregadores() {
         </CardContent>
       </Card>
 
+      <EmailConviteDialog
+        alvo={emailAlvo}
+        onClose={() => setEmailAlvo(null)}
+        onSaved={(id, email, codigo) => {
+          const alvo = emailAlvo; setEmailAlvo(null);
+          fetchList();
+          const ent = list.find((x) => x.id === id);
+          if (alvo?.enviar && ent) reenviarConvite(ent, { email, codigo });
+        }}
+      />
       <ScoreHistoryDialog ent={detail} onClose={() => setDetail(null)} />
       <DispatcherDialog
         ent={dispatcherTarget}

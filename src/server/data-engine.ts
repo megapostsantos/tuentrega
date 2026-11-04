@@ -930,6 +930,63 @@ async function cadastrarEntregadorGerenciado(uid: string | null, args: Record<st
   return { data: { id, codigo: email ? codigo : null }, error: null, count: null };
 }
 
+
+/** Dono remove um parceiro: se ainda não ativou a conta, apaga o pré-cadastro; se já ativou, só tira da sua empresa (a conta dele continua). */
+async function removerParceiro(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Informe a empresa");
+  const id = String(args.entregador_id ?? "");
+  if (!id) throw new Error("Informe o parceiro");
+  const ger = await query(`select 1 from "entregadores_gerenciados" where "entregador_id" = $1 and "empresa_id" = $2`, [id, uid]);
+  if (ger.length) {
+    const { excluirConta } = await import("./limpeza");
+    await excluirConta(id, uid);
+    return { data: { apagado: true }, error: null, count: null };
+  }
+  const meu = await query(
+    `select 1 where exists (select 1 from "vinculos_empresa" where "entregador_id" = $1 and "empresa_id" = $2)
+        or exists (select 1 from "cla_empresa" where "entregador_id" = $1 and "empresa_id" = $2)
+        or exists (select 1 from "dispatchers" where "entregador_id" = $1 and "empresa_id" = $2)`, [id, uid]);
+  if (!meu.length) throw Object.assign(new Error("Parceiro não encontrado na sua empresa"), { code: "403" });
+  await runTransaction([
+    { text: `delete from "vinculos_empresa" where "entregador_id" = $1 and "empresa_id" = $2`, params: [id, uid] },
+    { text: `delete from "cla_empresa" where "entregador_id" = $1 and "empresa_id" = $2`, params: [id, uid] },
+    { text: `delete from "dispatchers" where "entregador_id" = $1 and "empresa_id" = $2`, params: [id, uid] },
+  ]);
+  return { data: { apagado: false }, error: null, count: null };
+}
+
+/** Dono remove um funcionário (a conta dele é apagada). */
+async function removerMembroEquipe(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Informe a empresa");
+  const id = String(args.user_id ?? "");
+  const m = await query(`select 1 from "equipe_empresa" where "user_id" = $1 and "empresa_id" = $2`, [id, uid]);
+  if (!m.length) throw Object.assign(new Error("Funcionário não encontrado"), { code: "403" });
+  const { excluirConta } = await import("./limpeza");
+  await excluirConta(id, uid);
+  return { data: { apagado: true }, error: null, count: null };
+}
+
+/** Corrige o e-mail de quem ainda não ativou o convite (parceiro pré-cadastrado ou funcionário). Devolve o código para reenviar. */
+async function atualizarEmailConvite(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Informe a empresa");
+  const id = String(args.user_id ?? "");
+  const email = String(args.email ?? "").trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Informe um e-mail válido");
+  const g = await query(`select "codigo_convite" from "entregadores_gerenciados" where "entregador_id" = $1 and "empresa_id" = $2`, [id, uid]);
+  const q2 = g.length ? [] : await query(`select "codigo_convite" from "equipe_empresa" where "user_id" = $1 and "empresa_id" = $2 and "codigo_convite" is not null`, [id, uid]);
+  const alvo = (g[0] ?? q2[0]) as any;
+  if (!alvo) throw new Error("Só dá para editar o e-mail de quem ainda não ativou o convite");
+  const ja = await query(`select 1 from "user" where lower("email") = $1 and "id" <> $2`, [email, id]);
+  if (ja.length) throw new Error("Já existe uma conta com este e-mail");
+  const stmts: { text: string; params: unknown[] }[] = [
+    { text: `update "user" set "email" = $2 where "id" = $1`, params: [id, email] },
+    { text: `update "entregadores" set "email" = $2 where "id" = $1`, params: [id, email] },
+    { text: `update "equipe_empresa" set "email" = $2 where "user_id" = $1`, params: [id, email] },
+  ];
+  await runTransaction(stmts);
+  return { data: { codigo: alvo.codigo_convite ?? null, email }, error: null, count: null };
+}
+
 /** Dono cadastra um funcionário (operador). Ele ativa a conta pela aba Convite, com e-mail e código. */
 async function cadastrarMembroEquipe(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
   if (!uid) throw new Error("Informe a empresa");
@@ -1291,6 +1348,9 @@ async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   if (fn === "finalizar_rota") return await finalizarRota(uid, args);
   if (fn === "receber_devolucao") return await receberDevolucao(uid, args);
   if (fn === "cadastrar_entregador_gerenciado") return await cadastrarEntregadorGerenciado(uid, args);
+  if (fn === "remover_parceiro") return await removerParceiro(uid, args);
+  if (fn === "remover_membro_equipe") return await removerMembroEquipe(uid, args);
+  if (fn === "atualizar_email_convite") return await atualizarEmailConvite(uid, args);
   if (fn === "mover_pacotes") return await moverPacotes(uid, args);
   if (fn === "eliminar_rota") return await eliminarRota(uid, args);
   if (fn === "recusar_rota") {
@@ -1343,7 +1403,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
         } else if (fn === "recusar_rota" || fn === "postular_zona" || fn === "cancelar_postulacao_zona" || fn === "candidatar_oferta" || fn === "cancelar_candidatura" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado" || fn === "remover_parceiro" || fn === "remover_membro_equipe" || fn === "atualizar_email_convite") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }

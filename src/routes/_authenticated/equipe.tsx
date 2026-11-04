@@ -1,7 +1,8 @@
+import { EmailConviteDialog } from "@/components/EmailConviteDialog";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Share2, UserPlus, Copy, Briefcase, Bike, ChevronRight, Send } from "lucide-react";
+import { Loader2, Share2, UserPlus, Copy, Briefcase, Bike, ChevronRight, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -33,6 +34,7 @@ function EquipePage() {
   const [aprovar, setAprovar] = useState(true);
   const [parceiros, setParceiros] = useState<{ id: string; nome: string; email: string | null; whatsapp: string | null; codigo: string | null }[]>([]);
   const [novoParceiro, setNovoParceiro] = useState(false);
+  const [emailAlvo, setEmailAlvo] = useState<null | { id: string; nome: string; email: string | null }>(null);
   const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string }>(null);
 
   async function load() {
@@ -105,6 +107,18 @@ function EquipePage() {
     window.open(fone ? `https://wa.me/${fone.length <= 11 ? "55" + fone : fone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   }
 
+  async function removerMembro(m: Membro) {
+    if (!confirm(`Apagar ${m.nome}? A conta de funcionário dele é removida de vez. Não dá para desfazer.`)) return;
+    const { error } = await sb.rpc("remover_membro_equipe", { user_id: m.user_id });
+    if (error) return toast.error(error.message);
+    toast.success("Funcionário removido."); load();
+  }
+  async function removerParceiro(p: { id: string; nome: string; codigo: string | null }) {
+    if (!confirm(p.codigo ? `Apagar o cadastro de ${p.nome}? Tudo some. Não dá para desfazer.` : `Remover ${p.nome} da sua empresa?`)) return;
+    const { error } = await sb.rpc("remover_parceiro", { entregador_id: p.id });
+    if (error) return toast.error(error.message);
+    toast.success("Parceiro removido."); load();
+  }
   function fechar() { setNovo(false); setFeito(null); setF({ nome: "", email: "", whatsapp: "", entregador: false }); }
 
   async function alternarEntregador(m: Membro) {
@@ -166,7 +180,9 @@ function EquipePage() {
                 {m.entregador && <Badge variant="outline"><Bike className="mr-1 h-3 w-3" />Também entregador</Badge>}
                 <Button size="sm" variant="outline" onClick={() => alternarEntregador(m)}>{m.entregador ? "Desligar entregador" : "Habilitar entregador"}</Button>
                 {m.codigo_convite && <Button size="sm" variant="outline" onClick={() => reenviar(m.nome ?? "", m.email, m.codigo_convite, null, "equipe")}><Send className="mr-1 h-3.5 w-3.5" />Reenviar</Button>}
+                {m.codigo_convite && <Button size="sm" variant="outline" onClick={() => setEmailAlvo({ id: m.user_id, nome: m.nome ?? "", email: m.email })}>Editar e-mail</Button>}
                 <Button size="sm" variant="outline" onClick={() => alternar(m)}>{m.ativo ? "Desativar" : "Reativar"}</Button>
+                <Button size="sm" variant="outline" className="text-red-600" onClick={() => removerMembro(m)}><Trash2 className="mr-1 h-3.5 w-3.5" />Apagar</Button>
               </div>
             </div>
           ))}
@@ -186,13 +202,16 @@ function EquipePage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {p.codigo
-                  ? <><Badge className="bg-amber-100 text-amber-800">Convite pendente · {p.codigo}</Badge><Button size="sm" variant="outline" onClick={() => reenviar(p.nome, p.email, p.codigo, p.whatsapp, "parceiro")}><Send className="mr-1 h-3.5 w-3.5" />Reenviar</Button></>
+                  ? <><Badge className="bg-amber-100 text-amber-800">Convite pendente · {p.codigo}</Badge><Button size="sm" variant="outline" onClick={() => reenviar(p.nome, p.email, p.codigo, p.whatsapp, "parceiro")}><Send className="mr-1 h-3.5 w-3.5" />Reenviar</Button><Button size="sm" variant="outline" onClick={() => setEmailAlvo({ id: p.id, nome: p.nome, email: p.email })}>Editar e-mail</Button></>
                   : <Badge variant="secondary">Sem app (você opera)</Badge>}
+                <Button size="sm" variant="outline" className="text-red-600" onClick={() => removerParceiro(p)}><Trash2 className="mr-1 h-3.5 w-3.5" />{p.codigo ? "Apagar" : "Remover"}</Button>
               </div>
             </div>
           ))}
         </TabsContent>
       </Tabs>
+
+      <EmailConviteDialog alvo={emailAlvo} onClose={() => setEmailAlvo(null)} onSaved={() => { setEmailAlvo(null); load(); }} />
 
       <Card>
         <CardHeader><CardTitle className="text-base">Quem faz as suas rotas</CardTitle></CardHeader>
