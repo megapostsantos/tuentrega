@@ -2275,3 +2275,7 @@ ALTER TABLE "agenda_previsoes" ADD COLUMN IF NOT EXISTS "visibilidade" text DEFA
 CREATE TABLE IF NOT EXISTS "cla_empresa" ("empresa_id" text NOT NULL, "entregador_id" text NOT NULL, "origem" text DEFAULT 'manual' NOT NULL, "criado_em" timestamp DEFAULT now() NOT NULL);
 -- @@
 CREATE UNIQUE INDEX IF NOT EXISTS "cla_empresa_unique" ON "cla_empresa" ("empresa_id","entregador_id");
+-- @@
+ALTER TABLE "entregadores" ADD COLUMN IF NOT EXISTS "dias_disponiveis" text[] DEFAULT '{}';
+-- @@
+ALTER TABLE "entregadores" ADD COLUMN IF NOT EXISTS "obs_disponibilidade" text;

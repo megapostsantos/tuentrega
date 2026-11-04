@@ -27,6 +27,7 @@ type Ent = {
   id: string; nome_completo: string; whatsapp: string | null; tipo_veiculo: string | null;
   status: string; reliability_score: number | null; reliability_level: string | null;
   suspended_at: string | null; suspension_reason: string | null;
+  dias_disponiveis?: string[] | null; turnos?: string[] | null; bairros?: string[] | null; obs_disponibilidade?: string | null;
   tipo_operacao?: string | null; invited_at?: string | null; activated_at?: string | null;
 };
 
@@ -379,6 +380,16 @@ function ScoreHistoryDialog({ ent, onClose }: { ent: Ent | null; onClose: () => 
             </div>
             {ent.suspension_reason && <p className="mt-2 text-sm text-destructive">Motivo: {ent.suspension_reason}</p>}
           </div>
+
+          {(ent.dias_disponiveis?.length || ent.turnos?.length || ent.bairros?.length || ent.obs_disponibilidade) ? (
+            <div className="rounded-md border p-3 text-sm space-y-1">
+              <h4 className="font-medium">Disponibilidade</h4>
+              {!!ent.dias_disponiveis?.length && <div><span className="text-muted-foreground">Dias: </span>{["seg","ter","qua","qui","sex","sab","dom"].filter((d) => ent.dias_disponiveis!.includes(d)).map((d) => ({ seg: "Seg", ter: "Ter", qua: "Qua", qui: "Qui", sex: "Sex", sab: "Sáb", dom: "Dom" } as Record<string, string>)[d]).join(", ")}</div>}
+              {!!ent.turnos?.length && <div><span className="text-muted-foreground">Horários: </span>{ent.turnos.map((t) => ({ manha: "Manhã", tarde: "Tarde", noite: "Noite", madrugada: "Madrugada" } as Record<string, string>)[t] ?? t).join(", ")}</div>}
+              {!!ent.bairros?.length && <div><span className="text-muted-foreground">Região: </span>{ent.bairros.join(", ")}</div>}
+              {ent.obs_disponibilidade && <div><span className="text-muted-foreground">Obs.: </span>{ent.obs_disponibilidade}</div>}
+            </div>
+          ) : null}
 
           <div>
             <h4 className="mb-2 font-medium text-sm">Histórico recente</h4>

@@ -137,12 +137,12 @@ export const POLICIES: Record<string, Policy> = {
       empresa: [
         "nome_completo", "cpf", "whatsapp", "tipo_veiculo", "marca_veiculo", "modelo_veiculo", "placa",
         "pix_tipo", "pix_chave", "banco", "data_nascimento", "cep", "rua", "numero", "complemento", "bairro",
-        "cidade", "estado", "email", "tipo_pessoa", "status", "updated_at",
+        "cidade", "estado", "email", "tipo_pessoa", "status", "turnos", "bairros", "dias_disponiveis", "obs_disponibilidade", "updated_at",
       ],
       entregador: [
         "nome_completo", "cpf", "cnpj", "whatsapp", "tipo_veiculo", "marca_veiculo", "modelo_veiculo", "placa",
         "pix_tipo", "pix_chave", "banco", "data_nascimento", "selfie_url", "plataforma_comprovante_url",
-        "cep", "rua", "numero", "complemento", "bairro", "cidade", "estado", "turnos", "plataformas", "bairros",
+        "cep", "rua", "numero", "complemento", "bairro", "cidade", "estado", "turnos", "plataformas", "bairros", "dias_disponiveis", "obs_disponibilidade",
         "email", "tipo_pessoa", "updated_at",
       ],
     },

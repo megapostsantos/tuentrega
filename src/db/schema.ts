@@ -183,6 +183,8 @@ export const entregadores = pgTable("entregadores", {
   cidade: text("cidade"),
   estado: text("estado"),
   turnos: text("turnos").array().notNull().default([]),
+  diasDisponiveis: text("dias_disponiveis").array().notNull().default([]),
+  obsDisponibilidade: text("obs_disponibilidade"),
   plataformas: text("plataformas").array().notNull().default([]),
   plataformaComprovanteUrl: text("plataforma_comprovante_url"),
   status: text("status").notNull().default("ativo"),

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, UserPlus, FileCheck2, Share2, Copy } from "lucide-react";
+import { Loader2, UserPlus, FileCheck2, CalendarClock, Share2, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_URL } from "@/lib/contato";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,14 @@ const VEICULOS = [
   { value: "caminhao", label: "Caminhão/Van" },
   { value: "walker", label: "A pé" },
 ];
+const DIAS = [
+  { v: "seg", l: "Seg" }, { v: "ter", l: "Ter" }, { v: "qua", l: "Qua" }, { v: "qui", l: "Qui" },
+  { v: "sex", l: "Sex" }, { v: "sab", l: "Sáb" }, { v: "dom", l: "Dom" },
+];
+const TURNOS = [
+  { v: "manha", l: "Manhã (6h–12h)" }, { v: "tarde", l: "Tarde (12h–18h)" },
+  { v: "noite", l: "Noite (18h–0h)" }, { v: "madrugada", l: "Madrugada" },
+];
 const PIX = ["cpf", "cnpj", "email", "telefone", "aleatoria"];
 
 export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Cadastrar parceiro" }: Props) {
@@ -34,13 +42,18 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
   const [doc, setDoc] = useState<File | null>(null);
   const [docTipo, setDocTipo] = useState("documento_identidade");
   const [aceite, setAceite] = useState(false);
+  const [dias, setDias] = useState<string[]>([]);
+  const [turnos, setTurnos] = useState<string[]>([]);
+  const [regiao, setRegiao] = useState("");
+  const [obsDisp, setObsDisp] = useState("");
+  const alterna = (lista: string[], v: string, set: (x: string[]) => void) => set(lista.includes(v) ? lista.filter((x) => x !== v) : [...lista, v]);
   const [saving, setSaving] = useState(false);
   const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string | null; empresa: string }>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
 
   function fechar() {
     setF({ nome: "", cpf: "", whatsapp: "", email: "", veic: "", marca: "", modelo: "", placa: "", pixTipo: "", pixChave: "" });
-    setResid(null); setDoc(null); setAceite(false); setFeito(null); onClose();
+    setResid(null); setDoc(null); setAceite(false); setDias([]); setTurnos([]); setRegiao(""); setObsDisp(""); setFeito(null); onClose();
   }
 
   async function enviar(empresaId: string, entId: string, tipo: string, file: File) {
@@ -64,6 +77,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
         nome_completo: f.nome, cpf: f.cpf, whatsapp: f.whatsapp, email: f.email,
         tipo_veiculo: f.veic, marca_veiculo: f.marca, modelo_veiculo: f.modelo, placa: f.placa,
         pix_tipo: f.pixTipo, pix_chave: f.pixChave,
+        dias_disponiveis: dias, turnos, bairros: regiao.split(/[,;\n]/).map((x) => x.trim()).filter(Boolean), obs_disponibilidade: obsDisp,
       });
       if (error) throw new Error(error.message);
       const id = data.id as string;
@@ -150,6 +164,32 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
               </Select>
             </div>
             <div className="space-y-1"><Label>Chave PIX</Label><Input value={f.pixChave} onChange={set("pixChave")} /></div>
+          </div>
+
+          <div className="space-y-3 rounded-md border p-3">
+            <div className="flex items-center gap-2 text-sm font-medium"><CalendarClock className="h-4 w-4" />Disponibilidade</div>
+            <p className="text-xs text-muted-foreground">Fica salvo no cadastro para você consultar na hora de montar as rotas, mesmo que a pessoa nunca entre na plataforma.</p>
+            <div className="space-y-1">
+              <Label>Dias da semana em que pode trabalhar</Label>
+              <div className="flex flex-wrap gap-2">
+                {DIAS.map((d) => (
+                  <button key={d.v} type="button" onClick={() => alterna(dias, d.v, setDias)}
+                    className={`rounded-full border px-3 py-1.5 text-sm ${dias.includes(d.v) ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{d.l}</button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Horários</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {TURNOS.map((t) => (
+                  <label key={t.v} className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={turnos.includes(t.v)} onCheckedChange={() => alterna(turnos, t.v, setTurnos)} />{t.l}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1"><Label>Bairros / região onde atua</Label><Input value={regiao} onChange={(e) => setRegiao(e.target.value)} placeholder="Ex: Gonzaga, Boqueirão, Vila Mathias" /></div>
+            <div className="space-y-1"><Label>Observações de horário</Label><Input value={obsDisp} onChange={(e) => setObsDisp(e.target.value)} placeholder="Ex: só depois das 14h; folga quinzenal aos domingos" /></div>
           </div>
 
           <div className="space-y-3 rounded-md border p-3">

@@ -586,6 +586,8 @@ const DDL_LAZY: string[] = [
 	"criado_em" timestamp DEFAULT now() NOT NULL
 );`,
   `ALTER TABLE "entregadores_gerenciados" ADD COLUMN IF NOT EXISTS "codigo_convite" text;`,
+  `ALTER TABLE "entregadores" ADD COLUMN IF NOT EXISTS "dias_disponiveis" text[] DEFAULT '{}';`,
+  `ALTER TABLE "entregadores" ADD COLUMN IF NOT EXISTS "obs_disponibilidade" text;`,
   `CREATE TABLE IF NOT EXISTS "entregador_documentos" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"entregador_id" text NOT NULL,
@@ -907,14 +909,19 @@ async function cadastrarEntregadorGerenciado(uid: string | null, args: Record<st
   const pix = enumPix.includes(String(args.pix_tipo)) ? String(args.pix_tipo) : null;
   const alfa = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const codigo = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => alfa[b % alfa.length]).join("");
+  const lista = (v: unknown, ok: string[]) => (Array.isArray(v) ? [...new Set(v.map(String).filter((x) => ok.includes(x)))] : []);
+  const dias = lista(args.dias_disponiveis, ["seg", "ter", "qua", "qui", "sex", "sab", "dom"]);
+  const turnos = lista(args.turnos, ["manha", "tarde", "noite", "madrugada"]);
+  const bairros = Array.isArray(args.bairros) ? args.bairros.map((b) => String(b).trim().slice(0, 60)).filter(Boolean).slice(0, 30) : [];
+  const obsDisp = limpa(args.obs_disponibilidade)?.slice(0, 500) ?? null;
   const stmts: { text: string; params: unknown[] }[] = [
     { text: `insert into "user" ("id","name","email","emailVerified","role") values ($1,$2,$3,false,'entregador')`, params: [id, nome, emailFinal] },
     { text: `insert into "profiles" ("id","full_name","phone") values ($1,$2,$3) on conflict do nothing`, params: [id, nome, limpa(args.whatsapp)] },
     { text: `insert into "user_roles" ("user_id","role") values ($1,'entregador'::app_role) on conflict do nothing`, params: [id] },
     {
-      text: `insert into "entregadores" ("id","nome_completo","cpf","whatsapp","email","tipo_veiculo","marca_veiculo","modelo_veiculo","placa","pix_tipo","pix_chave","status")
-             values ($1,$2,$3,$4,$5,$6::veiculo_tipo,$7,$8,$9,$10::pix_tipo,$11,'ativo')`,
-      params: [id, nome, cpf, limpa(args.whatsapp), email, veic, limpa(args.marca_veiculo), limpa(args.modelo_veiculo), limpa(args.placa)?.toUpperCase() ?? null, pix, limpa(args.pix_chave)],
+      text: `insert into "entregadores" ("id","nome_completo","cpf","whatsapp","email","tipo_veiculo","marca_veiculo","modelo_veiculo","placa","pix_tipo","pix_chave","status","dias_disponiveis","turnos","bairros","obs_disponibilidade")
+             values ($1,$2,$3,$4,$5,$6::veiculo_tipo,$7,$8,$9,$10::pix_tipo,$11,'ativo',$12::text[],$13::text[],$14::text[],$15)`,
+      params: [id, nome, cpf, limpa(args.whatsapp), email, veic, limpa(args.marca_veiculo), limpa(args.modelo_veiculo), limpa(args.placa)?.toUpperCase() ?? null, pix, limpa(args.pix_chave), dias, turnos, bairros, obsDisp],
     },
     { text: `insert into "entregadores_gerenciados" ("entregador_id","empresa_id","codigo_convite") values ($1,$2,$3)`, params: [id, uid, codigo] },
     { text: `insert into "aprovacoes_cadastro" ("user_id","status","tipo","motivo","decidido_em") values ($1,'aprovado','entregador','convidado por empresa',now()) on conflict do nothing`, params: [id] },
