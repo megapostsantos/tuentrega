@@ -919,9 +919,10 @@ async function cadastrarEntregadorGerenciado(uid: string | null, args: Record<st
     { text: `insert into "profiles" ("id","full_name","phone") values ($1,$2,$3) on conflict do nothing`, params: [id, nome, limpa(args.whatsapp)] },
     { text: `insert into "user_roles" ("user_id","role") values ($1,'entregador'::app_role) on conflict do nothing`, params: [id] },
     {
-      text: `insert into "entregadores" ("id","nome_completo","cpf","whatsapp","email","tipo_veiculo","marca_veiculo","modelo_veiculo","placa","pix_tipo","pix_chave","status","dias_disponiveis","turnos","bairros","obs_disponibilidade")
-             values ($1,$2,$3,$4,$5,$6::veiculo_tipo,$7,$8,$9,$10::pix_tipo,$11,'ativo',$12::text[],$13::text[],$14::text[],$15)`,
-      params: [id, nome, cpf, limpa(args.whatsapp), email, veic, limpa(args.marca_veiculo), limpa(args.modelo_veiculo), limpa(args.placa)?.toUpperCase() ?? null, pix, limpa(args.pix_chave), dias, turnos, bairros, obsDisp],
+      text: `insert into "entregadores" ("id","nome_completo","cpf","whatsapp","email","tipo_veiculo","marca_veiculo","modelo_veiculo","placa","pix_tipo","pix_chave","status","dias_disponiveis","turnos","bairros","obs_disponibilidade","cep","rua","numero","complemento","bairro","cidade","estado")
+             values ($1,$2,$3,$4,$5,$6::veiculo_tipo,$7,$8,$9,$10::pix_tipo,$11,'ativo',$12::text[],$13::text[],$14::text[],$15,$16,$17,$18,$19,$20,$21,$22)`,
+      params: [id, nome, cpf, limpa(args.whatsapp), email, veic, limpa(args.marca_veiculo), limpa(args.modelo_veiculo), limpa(args.placa)?.toUpperCase() ?? null, pix, limpa(args.pix_chave), dias, turnos, bairros, obsDisp,
+        limpa(args.cep)?.replace(/\D/g, "") ?? null, limpa(args.rua), limpa(args.numero), limpa(args.complemento), limpa(args.bairro), limpa(args.cidade), limpa(args.estado)?.toUpperCase().slice(0, 2) ?? null],
     },
     { text: `insert into "entregadores_gerenciados" ("entregador_id","empresa_id","codigo_convite") values ($1,$2,$3)`, params: [id, uid, codigo] },
     { text: `insert into "aprovacoes_cadastro" ("user_id","status","tipo","motivo","decidido_em") values ($1,'aprovado','entregador','convidado por empresa',now()) on conflict do nothing`, params: [id] },
@@ -976,6 +977,11 @@ async function atualizarEmailConvite(uid: string | null, args: Record<string, un
   const q2 = g.length ? [] : await query(`select "codigo_convite" from "equipe_empresa" where "user_id" = $1 and "empresa_id" = $2 and "codigo_convite" is not null`, [id, uid]);
   const alvo = (g[0] ?? q2[0]) as any;
   if (!alvo) throw new Error("Só dá para editar o e-mail de quem ainda não ativou o convite");
+  if (g.length && !alvo.codigo_convite) {
+    const alfa = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    alvo.codigo_convite = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => alfa[b % alfa.length]).join("");
+    await query(`update "entregadores_gerenciados" set "codigo_convite" = $3 where "entregador_id" = $1 and "empresa_id" = $2`, [id, uid, alvo.codigo_convite]);
+  }
   const ja = await query(`select 1 from "user" where lower("email") = $1 and "id" <> $2`, [email, id]);
   if (ja.length) throw new Error("Já existe uma conta com este e-mail");
   const stmts: { text: string; params: unknown[] }[] = [

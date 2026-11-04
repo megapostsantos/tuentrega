@@ -7,6 +7,7 @@ let off: number | null = 0; while (off !== null) { const r = await runSetupBatch
 const base = { filters: [], order: [] } as any; const run = (c: any, r: any) => executeQuery({ ...base, ...r }, c);
 const rpc = (c: any, fn: string, args: any) => run(c, { table: "", op: "rpc", rpc: { fn, args } });
 const dono = { userId: "E1", role: "empresa" }, op = { userId: "E1", role: "empresa", operador: true }, outra = { userId: "E2", role: "empresa" };
+const eq = (col: string, val: any) => ({ k: "f", col, op: "eq", val });
 let fail = 0; const ok = (n: string, c: boolean, x?: any) => { if (!c) fail++; console.log(c ? "PASS" : "FAIL", n, c ? "" : JSON.stringify(x)); };
 
 for (const [i, r] of [["E1","empresa"],["E2","empresa"],["D1","entregador"]]) await pg.query(`insert into "user" (id,name,email,role) values ($1,$1,$1||'@x.com',$2)`, [i, r]);
@@ -41,5 +42,24 @@ r = await rpc(outra, "remover_membro_equipe", { user_id: bia });
 ok("outra empresa não remove funcionário", !!r.error, r);
 r = await rpc(dono, "remover_membro_equipe", { user_id: bia });
 ok("dono remove funcionário", !r.error && (await pg.query(`select 1 from "user" where id=$1`, [bia])).rows.length === 0, r);
+
+// edição de dados do parceiro pré-cadastrado
+r = await rpc(dono, "cadastrar_entregador_gerenciado", { nome_completo: "Alcino", whatsapp: "13999", cep: "11060-001", rua: "Rua A", bairro: "Gonzaga", cidade: "Santos", estado: "sp", bairros: ["Gonzaga (Santos-SP)"], dias_disponiveis: ["seg", "xx"] });
+const alc = r.data.id;
+let row: any = (await pg.query(`select cep,bairro,estado,dias_disponiveis from entregadores where id=$1`, [alc])).rows[0];
+ok("endereço e dias gravados no cadastro", row.cep === "11060001" && row.bairro === "Gonzaga" && row.estado === "SP" && row.dias_disponiveis.join() === "seg", row);
+const upd = (c: any, id: string, v: any) => run(c, { table: "entregadores", op: "update", values: v, filters: [eq("id", id)] });
+r = await upd(dono, alc, { pix_tipo: "cpf", pix_chave: "123", rua: "Rua B", obs_disponibilidade: "só tarde" });
+row = (await pg.query(`select pix_chave,rua,obs_disponibilidade from entregadores where id=$1`, [alc])).rows[0];
+ok("empresa edita parceiro pré-cadastrado", row.pix_chave === "123" && row.rua === "Rua B" && row.obs_disponibilidade === "só tarde", [r, row]);
+await upd(outra, alc, { rua: "HACK" });
+row = (await pg.query(`select rua from entregadores where id=$1`, [alc])).rows[0];
+ok("outra empresa não edita", row.rua === "Rua B", row);
+r = await rpc(dono, "atualizar_email_convite", { user_id: alc, email: "alcino@x.com" });
+ok("gera código se faltava", !!r.data?.codigo, r);
+await pg.query(`delete from entregadores_gerenciados where entregador_id=$1`, [alc]);
+await upd(dono, alc, { rua: "DEPOIS DE ATIVAR" });
+row = (await pg.query(`select rua from entregadores where id=$1`, [alc])).rows[0];
+ok("após ativar a conta a empresa não edita mais", row.rua === "Rua B", row);
 console.log(fail ? `${fail} FALHAS` : "✔ parceiros-gestao.test.mts");
 process.exit(fail ? 1 : 0);

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, UserPlus, FileCheck2, CalendarClock, Share2, Copy } from "lucide-react";
+import { Loader2, UserPlus, FileCheck2, CalendarClock, Home, Share2, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_URL } from "@/lib/contato";
+import { fetchCEP, maskCEP, onlyDigits } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,8 @@ type Props = {
   onCreated?: () => void;
   defaultTipoOperacao?: "nex" | "distribuicao" | "ambos";
   title?: string;
+  /** Se informado, edita este parceiro (só funciona enquanto ele não ativou a conta). */
+  editar?: Record<string, any> | null;
 };
 
 const VEICULOS = [
@@ -37,8 +40,8 @@ const TURNOS = [
 ];
 const PIX = ["cpf", "cnpj", "email", "telefone", "aleatoria"];
 
-export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Cadastrar parceiro" }: Props) {
-  const [f, setF] = useState({ nome: "", cpf: "", whatsapp: "", email: "", veic: "", marca: "", modelo: "", placa: "", pixTipo: "", pixChave: "" });
+export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Cadastrar parceiro", editar }: Props) {
+  const [f, setF] = useState({ nome: "", cpf: "", whatsapp: "", email: "", veic: "", marca: "", modelo: "", placa: "", pixTipo: "", pixChave: "", cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "" });
   const [resid, setResid] = useState<File | null>(null);
   const [doc, setDoc] = useState<File | null>(null);
   const [docTipo, setDocTipo] = useState("documento_identidade");
@@ -52,8 +55,23 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
   const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string | null; empresa: string }>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
 
+  useEffect(() => {
+    if (!open || !editar) return;
+    const v = (x: unknown) => (x == null ? "" : String(x));
+    setF({ nome: v(editar.nome_completo), cpf: v(editar.cpf), whatsapp: v(editar.whatsapp), email: v(editar.email).endsWith("@sem-acesso.tuentrega.local") ? "" : v(editar.email),
+      veic: v(editar.tipo_veiculo), marca: v(editar.marca_veiculo), modelo: v(editar.modelo_veiculo), placa: v(editar.placa), pixTipo: v(editar.pix_tipo), pixChave: v(editar.pix_chave),
+      cep: v(editar.cep), rua: v(editar.rua), numero: v(editar.numero), complemento: v(editar.complemento), bairro: v(editar.bairro), cidade: v(editar.cidade), estado: v(editar.estado) });
+    setDias(editar.dias_disponiveis ?? []); setTurnos(editar.turnos ?? []); setRegiao(editar.bairros ?? []); setObsDisp(v(editar.obs_disponibilidade));
+  }, [open, editar]);
+
+  async function buscarCep(c: string) {
+    if (onlyDigits(c).length !== 8) return;
+    const r = await fetchCEP(c);
+    if (r) setF((s) => ({ ...s, rua: r.logradouro || s.rua, bairro: r.bairro || s.bairro, cidade: r.localidade || s.cidade, estado: r.uf || s.estado }));
+  }
+
   function fechar() {
-    setF({ nome: "", cpf: "", whatsapp: "", email: "", veic: "", marca: "", modelo: "", placa: "", pixTipo: "", pixChave: "" });
+    setF({ nome: "", cpf: "", whatsapp: "", email: "", veic: "", marca: "", modelo: "", placa: "", pixTipo: "", pixChave: "", cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "" });
     setResid(null); setDoc(null); setAceite(false); setDias([]); setTurnos([]); setRegiao([]); setObsDisp(""); setFeito(null); onClose();
   }
 
@@ -68,16 +86,33 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
 
   async function submit() {
     if (!f.nome.trim()) return toast.error("Informe o nome.");
-    if (!f.whatsapp.trim() && !f.email.trim()) return toast.error("Informe telefone ou e-mail.");
+    if (!editar && !f.whatsapp.trim() && !f.email.trim()) return toast.error("Informe telefone ou e-mail.");
     if ((resid || doc) && !aceite) return toast.error("Confirme a autorização de uso dos documentos.");
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Sessão expirada");
+      if (editar) {
+        const nul = (x: string) => (x.trim() === "" ? null : x.trim());
+        const { error: upErr } = await (supabase as any).from("entregadores").update({
+          nome_completo: f.nome.trim(), cpf: nul(onlyDigits(f.cpf)), whatsapp: nul(f.whatsapp), tipo_veiculo: nul(f.veic), marca_veiculo: nul(f.marca), modelo_veiculo: nul(f.modelo),
+          placa: nul(f.placa.toUpperCase()), pix_tipo: nul(f.pixTipo), pix_chave: nul(f.pixChave),
+          cep: nul(onlyDigits(f.cep)), rua: nul(f.rua), numero: nul(f.numero), complemento: nul(f.complemento), bairro: nul(f.bairro), cidade: nul(f.cidade), estado: nul(f.estado.toUpperCase()),
+          dias_disponiveis: dias, turnos, bairros: regiao, obs_disponibilidade: nul(obsDisp), updated_at: new Date().toISOString(),
+        } as never).eq("id", editar.id);
+        if (upErr) throw new Error(upErr.message);
+        if (resid) await enviar(user.id, editar.id, "comprovante_residencia", resid);
+        if (doc) await enviar(user.id, editar.id, docTipo, doc);
+        toast.success("Dados salvos.");
+        onCreated?.();
+        fechar();
+        return;
+      }
       const { data, error } = await (supabase as any).rpc("cadastrar_entregador_gerenciado", {
         nome_completo: f.nome, cpf: f.cpf, whatsapp: f.whatsapp, email: f.email,
         tipo_veiculo: f.veic, marca_veiculo: f.marca, modelo_veiculo: f.modelo, placa: f.placa,
         pix_tipo: f.pixTipo, pix_chave: f.pixChave,
+        cep: f.cep, rua: f.rua, numero: f.numero, complemento: f.complemento, bairro: f.bairro, cidade: f.cidade, estado: f.estado,
         dias_disponiveis: dias, turnos, bairros: regiao, obs_disponibilidade: obsDisp,
       });
       if (error) throw new Error(error.message);
@@ -141,7 +176,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
             <div className="space-y-1"><Label>Telefone / WhatsApp</Label><Input value={f.whatsapp} onChange={set("whatsapp")} placeholder="(13) 99999-9999" /></div>
             <div className="space-y-1"><Label>CPF</Label><Input value={f.cpf} onChange={set("cpf")} placeholder="000.000.000-00" /></div>
           </div>
-          <div className="space-y-1"><Label>E-mail (para ele criar a senha depois)</Label><Input type="email" value={f.email} onChange={set("email")} /></div>
+          {editar ? <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">E-mail: <strong>{f.email || "não informado"}</strong>. Para trocar ou enviar o convite, use o botão E-mail na lista.</p> : <div className="space-y-1"><Label>E-mail (para ele criar a senha depois)</Label><Input type="email" value={f.email} onChange={set("email")} /></div>}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label>Veículo</Label>
@@ -165,6 +200,24 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
               </Select>
             </div>
             <div className="space-y-1"><Label>Chave PIX</Label><Input value={f.pixChave} onChange={set("pixChave")} /></div>
+          </div>
+
+          <div className="space-y-3 rounded-md border p-3">
+            <div className="flex items-center gap-2 text-sm font-medium"><Home className="h-4 w-4" />Endereço de residência</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label>CEP</Label><Input inputMode="numeric" value={f.cep} onChange={(e) => { const v = maskCEP(e.target.value); setF((s) => ({ ...s, cep: v })); buscarCep(v); }} placeholder="00000-000" /></div>
+              <div className="space-y-1"><Label>Número</Label><Input value={f.numero} onChange={set("numero")} /></div>
+            </div>
+            <div className="space-y-1"><Label>Rua</Label><Input value={f.rua} onChange={set("rua")} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label>Complemento</Label><Input value={f.complemento} onChange={set("complemento")} /></div>
+              <div className="space-y-1"><Label>Bairro</Label><Input value={f.bairro} onChange={set("bairro")} /></div>
+            </div>
+            <div className="grid grid-cols-[1fr_80px] gap-3">
+              <div className="space-y-1"><Label>Cidade</Label><Input value={f.cidade} onChange={set("cidade")} /></div>
+              <div className="space-y-1"><Label>UF</Label><Input maxLength={2} value={f.estado} onChange={(e) => setF((s) => ({ ...s, estado: e.target.value.toUpperCase() }))} /></div>
+            </div>
+            <p className="text-xs text-muted-foreground">O comprovante de residência (abaixo) confirma este endereço.</p>
           </div>
 
           <div className="space-y-3 rounded-md border p-3">
@@ -220,7 +273,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
         <DialogFooter>
           <Button variant="outline" onClick={fechar}>Cancelar</Button>
           <Button onClick={submit} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserPlus className="mr-2 h-4 w-4" />{f.email.trim() ? "Cadastrar e enviar convite" : "Cadastrar"}</>}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserPlus className="mr-2 h-4 w-4" />{editar ? "Salvar alterações" : f.email.trim() ? "Cadastrar e enviar convite" : "Cadastrar"}</>}
           </Button>
         </DialogFooter>
       </DialogContent>

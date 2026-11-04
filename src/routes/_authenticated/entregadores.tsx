@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus, Send, Trash2, Mail } from "lucide-react";
+import { Users, Loader2, ShieldOff, RotateCcw, Star, UserCog, UserPlus, Send, Trash2, Mail, Pencil, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_URL } from "@/lib/contato";
 import { useAuth } from "@/hooks/use-auth";
@@ -57,6 +57,10 @@ function EntregadoresPage() {
 
 function ListaEntregadores() {
   const [list, setList] = useState<Ent[]>([]);
+  const [busca, setBusca] = useState("");
+  const [filtro, setFiltro] = useState<"todos" | "equipe" | "pendente" | "ativo" | "suspenso">("todos");
+  const [gerenciados, setGerenciados] = useState<Set<string>>(new Set());
+  const [editando, setEditando] = useState<Ent | null>(null);
   const [load, setLoad] = useState(true);
   const [detail, setDetail] = useState<Ent | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -77,6 +81,7 @@ function ListaEntregadores() {
         .from("dispatchers").select("entregador_id").eq("empresa_id", user.id).eq("status", "ativo");
       setDispatcherIds(new Set((dispData ?? []).map((d: any) => d.entregador_id)));
       const { data: ger } = await (supabase as any).from("entregadores_gerenciados").select("entregador_id, codigo_convite");
+      setGerenciados(new Set(((ger as any[]) ?? []).map((g) => g.entregador_id)));
       setConvites(new Map(((ger as any[]) ?? []).filter((g) => g.codigo_convite).map((g) => [g.entregador_id, g.codigo_convite])));
       const { data: cl } = await (supabase as any).from("cla_empresa").select("entregador_id");
       setCla(new Set(((cl as any[]) ?? []).map((c) => c.entregador_id)));
@@ -89,10 +94,25 @@ function ListaEntregadores() {
   }
   useEffect(() => { fetchList(); }, []);
 
+  const semAc = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const visiveis = list.filter((e) => {
+    if (filtro === "equipe" && !cla.has(e.id)) return false;
+    if (filtro === "pendente" && !convites.has(e.id)) return false;
+    if (filtro === "ativo" && (e.suspended_at || e.status !== "ativo" || convites.has(e.id))) return false;
+    if (filtro === "suspenso" && !(e.suspended_at || e.status === "suspenso")) return false;
+    const q = semAc(busca).trim();
+    if (!q) return true;
+    const x = e as any;
+    const dig = q.replace(/\D/g, "");
+    const campos = [x.nome_completo, x.email, x.cidade, x.bairro, x.rua, x.estado, x.tipo_veiculo, x.marca_veiculo, x.modelo_veiculo, x.placa, x.obs_disponibilidade, ...(x.bairros ?? []), ...(x.turnos ?? []), ...(x.dias_disponiveis ?? [])].map(semAc).join(" | ");
+    if (campos.includes(q)) return true;
+    return dig.length >= 3 && [x.whatsapp, x.cpf, x.cep].some((n) => String(n ?? "").replace(/\D/g, "").includes(dig));
+  });
+
   const [emailAlvo, setEmailAlvo] = useState<null | { id: string; nome: string; email: string | null; enviar: boolean }>(null);
 
   async function remover(e: Ent) {
-    const pendente = convites.has(e.id);
+    const pendente = gerenciados.has(e.id);
     const aviso = pendente
       ? `Apagar o cadastro de ${e.nome_completo}? Ele ainda não ativou a conta, então tudo some. Não dá para desfazer.`
       : `Remover ${e.nome_completo} da sua empresa? Ele deixa de ser seu parceiro (vínculo, equipe e dispatcher), mas a conta dele continua existindo.`;
@@ -199,14 +219,26 @@ function ListaEntregadores() {
           </Button>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input className="pl-9" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar nome, telefone, e-mail, bairro, cidade, placa…" />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {([["todos", "Todos"], ["equipe", "Minha equipe"], ["pendente", "Convite pendente"], ["ativo", "Ativos"], ["suspenso", "Suspensos"]] as const).map(([k, l]) => (
+                <button key={k} type="button" onClick={() => setFiltro(k)} className={`rounded-full border px-3 py-1.5 text-xs ${filtro === k ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{l}</button>
+              ))}
+            </div>
+          </div>
+          {!load && (busca || filtro !== "todos") && <p className="mb-3 text-xs text-muted-foreground">{visiveis.length} de {list.length} entregadores</p>}
           {load ? (
             <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-          ) : list.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum entregador.</p>
+          ) : visiveis.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{list.length === 0 ? "Nenhum entregador." : "Nenhum entregador com esse filtro."}</p>
           ) : (
             <>
             <div className="space-y-3 md:hidden">
-              {list.map((e) => {
+              {visiveis.map((e) => {
                 const lvl = LEVELS[e.reliability_level || "gold"] || LEVELS.gold;
                 return (
                   <div key={e.id} className="rounded-xl border p-3" onClick={() => setDetail(e)}>
@@ -226,12 +258,13 @@ function ListaEntregadores() {
                     <div className="mt-3 flex flex-wrap gap-2" onClick={(ev) => ev.stopPropagation()}>
                       <Button variant="outline" size="sm" onClick={() => alternarCla(e)}>{cla.has(e.id) ? "Tirar da equipe" : "+ Equipe"}</Button>
                       {convites.has(e.id) && <Button variant="outline" size="sm" onClick={() => reenviarConvite(e)}><Send className="mr-1 h-3.5 w-3.5" />Enviar convite</Button>}
-                      {convites.has(e.id) && <Button variant="outline" size="sm" onClick={() => setEmailAlvo({ id: e.id, nome: e.nome_completo, email: (e as any).email ?? null, enviar: false })}><Mail className="mr-1 h-3.5 w-3.5" />E-mail</Button>}
+                      {gerenciados.has(e.id) && <Button variant="outline" size="sm" onClick={() => setEditando(e)}><Pencil className="mr-1 h-3.5 w-3.5" />Editar dados</Button>}
+                      {gerenciados.has(e.id) && <Button variant="outline" size="sm" onClick={() => setEmailAlvo({ id: e.id, nome: e.nome_completo, email: (e as any).email ?? null, enviar: !convites.has(e.id) })}><Mail className="mr-1 h-3.5 w-3.5" />E-mail</Button>}
                       {vinculados.has(e.id) && <Button variant="outline" size="sm" onClick={() => desvincular(e)}>Desvincular</Button>}
                       {!dispatcherIds.has(e.id) && <Button variant="outline" size="sm" onClick={() => setDispatcherTarget(e)}><UserCog className="mr-1 h-3.5 w-3.5" />Dispatcher</Button>}
                       <Button variant="ghost" size="sm" title="Suspender" onClick={() => suspendManually(e.id)}><ShieldOff className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="sm" title="Zerar score" onClick={() => resetScore(e.id)}><RotateCcw className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="sm" className="text-red-600" onClick={() => remover(e)}><Trash2 className="mr-1 h-3.5 w-3.5" />{convites.has(e.id) ? "Apagar" : "Remover"}</Button>
+                      <Button variant="outline" size="sm" className="text-red-600" onClick={() => remover(e)}><Trash2 className="mr-1 h-3.5 w-3.5" />{gerenciados.has(e.id) ? "Apagar" : "Remover"}</Button>
                     </div>
                   </div>
                 );
@@ -250,7 +283,7 @@ function ListaEntregadores() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {list.map((e) => {
+                  {visiveis.map((e) => {
                     const lvl = LEVELS[e.reliability_level || "gold"] || LEVELS.gold;
                     return (
                       <TableRow key={e.id} className="cursor-pointer" onClick={() => setDetail(e)}>
@@ -290,8 +323,9 @@ function ListaEntregadores() {
                           <Button variant="ghost" size="sm" onClick={() => resetScore(e.id)}>
                             <RotateCcw className="h-4 w-4" />
                           </Button>
-                          {convites.has(e.id) && <Button variant="ghost" size="sm" title="Editar e-mail" onClick={() => setEmailAlvo({ id: e.id, nome: e.nome_completo, email: (e as any).email ?? null, enviar: false })}><Mail className="h-4 w-4" /></Button>}
-                          <Button variant="ghost" size="sm" className="text-red-600" title={convites.has(e.id) ? "Apagar cadastro" : "Remover da empresa"} onClick={() => remover(e)}><Trash2 className="h-4 w-4" /></Button>
+                          {gerenciados.has(e.id) && <Button variant="ghost" size="sm" title="Editar dados" onClick={() => setEditando(e)}><Pencil className="h-4 w-4" /></Button>}
+                          {gerenciados.has(e.id) && <Button variant="ghost" size="sm" title="E-mail / convite" onClick={() => setEmailAlvo({ id: e.id, nome: e.nome_completo, email: (e as any).email ?? null, enviar: !convites.has(e.id) })}><Mail className="h-4 w-4" /></Button>}
+                          <Button variant="ghost" size="sm" className="text-red-600" title={gerenciados.has(e.id) ? "Apagar cadastro" : "Remover da empresa"} onClick={() => remover(e)}><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -319,6 +353,13 @@ function ListaEntregadores() {
         ent={dispatcherTarget}
         onClose={() => setDispatcherTarget(null)}
         onDone={() => { setDispatcherTarget(null); fetchList(); }}
+      />
+      <RegisterEntregadorDialog
+        open={!!editando}
+        editar={editando as any}
+        title={editando ? `Editar ${editando.nome_completo}` : undefined}
+        onClose={() => setEditando(null)}
+        onCreated={() => fetchList()}
       />
       <RegisterEntregadorDialog
         open={inviteOpen}
