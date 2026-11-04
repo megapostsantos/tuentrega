@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
@@ -66,6 +67,11 @@ function itemVisible(item: Item, role: AppRole | null, isOperador = false): bool
 
 export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () => void; role: AppRole | null }) {
   const navigate = useNavigate();
+  useEffect(() => {
+    const f = () => onClose();
+    window.addEventListener("tuentrega:fechar-menu", f);
+    return () => window.removeEventListener("tuentrega:fechar-menu", f);
+  }, [onClose]);
   const { user, isOperador } = useAuth();
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (p: string) => currentPath === p;

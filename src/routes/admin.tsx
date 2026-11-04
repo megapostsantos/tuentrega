@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/
 import { useEffect, useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
+import { RoleSwitcherHost } from "@/components/RoleSwitcher";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +50,7 @@ function AdminLayout() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AdminSidebar unreadCount={unread} />
+        <RoleSwitcherHost />
         <div className="flex flex-1 flex-col">
           <ImpersonationBanner />
           <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur">

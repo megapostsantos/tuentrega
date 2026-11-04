@@ -1,0 +1,27 @@
+import { PGlite } from "@electric-sql/pglite";
+import fs from "fs";
+import { __setQueryImpl, runSetupBatch } from "../src/server/data-engine.ts";
+import { excluirConta } from "../src/server/limpeza.ts";
+const pg = new PGlite(); __setQueryImpl(async (q, p) => (await pg.query(q, p as any[])).rows as any[]);
+const sql = fs.readFileSync(new URL("../src/db/setup.sql", import.meta.url), "utf8");
+let off: number | null = 0; while (off !== null) { const r = await runSetupBatch(sql, off, 40); off = r.next; }
+let ok = 0;
+const check = (c: boolean, m: string) => { if (!c) { console.error("✗", m); process.exit(1); } ok++; };
+for (const [i, r] of [["A1","admin"],["E1","empresa"],["D1","entregador"],["D2","entregador"]]) await pg.query(`insert into "user" (id,name,email,role) values ($1,$1,$1||'@x.com',$2)`, [i, r]);
+await pg.query(`insert into "user" (id,name,email,role) values ('D3','Caio','gerenciado-x@sem-acesso.tuentrega.local','entregador')`);
+await pg.query(`insert into empresas (id,razao_social) values ('E1','A')`);
+await pg.query(`insert into entregadores (id,nome_completo,status) values ('D1','Ana','ativo'),('D2','Beto','ativo'),('D3','Caio','ativo')`);
+await pg.query(`insert into entregadores_gerenciados (entregador_id,empresa_id) values ('D2','E1'),('D3','E1')`);
+const falha = async (f: () => Promise<unknown>) => { try { await f(); return ""; } catch (e: any) { return e.message as string; } };
+check(/administrador/.test(await falha(() => excluirConta("A1", "X"))), "admin não é apagado");
+check(/própria/.test(await falha(() => excluirConta("D1", "D1"))), "não apaga a si mesmo");
+await excluirConta("D1", "A1");
+check((await pg.query(`select 1 from "user" where id='D1'`)).rows.length === 0, "entregador apagado");
+check((await pg.query(`select 1 from entregadores where id='D1'`)).rows.length === 0, "perfil do entregador apagado");
+await excluirConta("E1", "A1");
+check((await pg.query(`select 1 from empresas where id='E1'`)).rows.length === 0, "empresa apagada");
+check((await pg.query(`select 1 from "user" where id='D2'`)).rows.length === 1, "parceiro com conta real permanece");
+check((await pg.query(`select 1 from "user" where id='D3'`)).rows.length === 0, "pré-cadastro sem acesso some junto");
+check((await pg.query(`select 1 from entregadores where id='D3'`)).rows.length === 0, "perfil do pré-cadastro some");
+check((await pg.query(`select 1 from entregadores_gerenciados where empresa_id='E1'`)).rows.length === 0, "vínculos de gestão removidos");
+console.log(`✔ exclusao.test.mts  (${ok} verificações)`);

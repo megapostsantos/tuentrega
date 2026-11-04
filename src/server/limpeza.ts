@@ -91,3 +91,46 @@ export async function limparEmpresa(empresaId: string) {
   await runTransaction(stmts);
   return { ok: true };
 }
+
+/** Apaga de vez UMA conta (entregador, empresa ou funcionário) e o que depende dela. Empresa leva junto histórico e equipe. Admins nunca. */
+export async function excluirConta(userId: string, adminId: string) {
+  if (userId === adminId) throw new Error("Você não pode apagar a sua própria conta");
+  const u = await rawQuery(`select "id","role","name" from "user" where "id" = $1`, [userId]);
+  if (!u[0]) throw new Error("Conta não encontrada");
+  if (u[0].role === "admin") throw new Error("Contas de administrador não podem ser apagadas aqui");
+  const cols = await existentes();
+  const tem = (t: string, c?: string) => (c ? cols.has(`${t}.${c}`) : [...cols].some((k) => k.startsWith(`${t}.`)));
+
+  const ids = [userId];
+  if (tem("equipe_empresa")) {
+    const eq = await rawQuery(`select "user_id" from "equipe_empresa" where "empresa_id" = $1`, [userId]);
+    for (const r of eq) if (r.user_id) ids.push(String(r.user_id));
+  }
+
+  if ((await rawQuery(`select 1 from "empresas" where "id" = $1`, [userId])).length) {
+    await limparEmpresa(userId);
+    // parceiros pré-cadastrados que nunca ativaram a conta (e-mail interno) somem junto; quem já tem conta real fica
+    if (tem("entregadores_gerenciados", "empresa_id")) {
+      const so = await rawQuery(`select g."entregador_id" as id from "entregadores_gerenciados" g join "user" u on u."id" = g."entregador_id" where g."empresa_id" = $1 and u."email" like '%@sem-acesso.tuentrega.local'`, [userId]);
+      for (const r of so) ids.push(String(r.id));
+    }
+  }
+
+  const stmts: { text: string; params: unknown[] }[] = [];
+  const del = (t: string, c: string) => { if (tem(t, c)) stmts.push({ text: `delete from "${t}" where "${c}"::text = any($1::text[])`, params: [ids] }); };
+  // histórico do entregador: solta as ofertas dele e remove o resto
+  if (tem("ofertas", "entregador_id")) stmts.push({ text: `update "ofertas" set "entregador_id" = null where "entregador_id"::text = any($1::text[]) and "status" in ('open','accepted')`, params: [ids] });
+  for (const [t, c] of [
+    ["ofertas_recusas", "entregador_id"], ["entregador_localizacao", "entregador_id"], ["antecipacoes", "entregador_id"],
+    ["confiabilidade_historico", "entregador_id"], ["candidaturas", "entregador_id"], ["agenda_zona_candidaturas", "entregador_id"],
+    ["cla_empresa", "entregador_id"], ["cla_empresa", "empresa_id"], ["vinculos_empresa", "entregador_id"], ["vinculos_empresa", "empresa_id"],
+    ["equipe_empresa", "user_id"], ["equipe_empresa", "empresa_id"], ["aprovacoes_cadastro", "user_id"],
+    ["user_notifications", "user_id"], ["admin_notifications", "user_id"],
+  ] as [string, string][]) del(t, c);
+  // gerenciados da empresa: somem junto com a empresa
+  for (const [t, c] of POR_USUARIO) del(t, c);
+  if (tem("storage_objects", "owner")) stmts.push({ text: `delete from "storage_objects" where "owner" = any($1::text[])`, params: [ids] });
+  if (tem("admin_logs")) stmts.push({ text: `insert into "admin_logs" ("admin_id","action","target") values ($1,'conta_apagada',$2)`, params: [adminId, userId] });
+  await runTransaction(stmts);
+  return { ok: true, nome: u[0].name as string, contas: ids.length };
+}

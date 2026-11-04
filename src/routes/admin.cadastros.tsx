@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Check, X, Building2, Bike, Link2, ShieldAlert } from "lucide-react";
+import { Loader2, Check, X, Building2, Bike, Link2, ShieldAlert, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { setImpersonation } from "@/lib/impersonation";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +21,8 @@ type Cad = {
 const ABAS = [["pendente", "Pendentes"], ["aprovado", "Aprovados"], ["recusado", "Recusados"]] as const;
 
 function CadastrosPage() {
+  const { realUserId } = useAuth();
+  const navigate = useNavigate();
   const [lista, setLista] = useState<Cad[] | null>(null);
   const [aba, setAba] = useState<"pendente" | "aprovado" | "recusado">("pendente");
   const [busca, setBusca] = useState("");
@@ -30,6 +34,29 @@ function CadastrosPage() {
     setLista(await r.json());
   }
   useEffect(() => { carregar(); }, []);
+
+  async function apagar(c: Cad) {
+    const aviso = c.tipo === "empresa"
+      ? `Apagar a empresa ${c.empresa || c.name} de vez? Isso remove também a equipe, as rotas, ofertas, pacotes e o histórico dela. Não dá para desfazer.`
+      : `Apagar ${c.name} de vez? A conta, os documentos e o histórico dessa pessoa somem. Não dá para desfazer.`;
+    if (!confirm(aviso)) return;
+    if (prompt('Para confirmar, digite APAGAR') !== "APAGAR") return toast.info("Nada foi apagado.");
+    setBusy(c.id);
+    const r = await fetch("/api/admin/cadastros/excluir", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: c.id, confirmar: "APAGAR" }) });
+    setBusy(null);
+    if (!r.ok) return toast.error((await r.json().catch(() => ({})))?.error ?? "Falha ao apagar");
+    toast.success(`${c.name} foi apagado.`);
+    carregar();
+  }
+
+  async function verComo(c: Cad) {
+    if (!realUserId || (c.tipo !== "empresa" && c.tipo !== "entregador")) return;
+    const res = await fetch("/api/admin/impersonate", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetUserId: c.id, targetType: c.tipo }) }).catch(() => null);
+    const sessionId = res?.ok ? (await res.json()).id : crypto.randomUUID();
+    setImpersonation({ targetUserId: c.id, targetType: c.tipo, targetName: c.empresa || c.name, sessionId, adminId: realUserId });
+    toast.success(`Visualizando como ${c.empresa || c.name}`);
+    navigate({ to: "/dashboard" });
+  }
 
   async function decidir(c: Cad, aprovar: boolean) {
     let motivo: string | null = null;
@@ -93,6 +120,8 @@ function CadastrosPage() {
                 {c.pre_cadastrado && !c.vinculado_a && <div className="text-xs text-amber-700">Pré-cadastrado por uma empresa (ainda não ativou a conta)</div>}
                 {c.motivo && c.status !== "aprovado" && <div className="rounded bg-red-50 p-2 text-xs text-red-800">Motivo: {c.motivo}</div>}
                 <div className="flex justify-end gap-2 pt-1">
+                  {(c.tipo === "empresa" || c.tipo === "entregador") && <Button size="sm" variant="outline" onClick={() => verComo(c)}><Eye className="mr-1 h-4 w-4" />Ver perfil</Button>}
+                  <Button size="sm" variant="outline" className="text-red-600" disabled={busy === c.id} onClick={() => apagar(c)}><Trash2 className="mr-1 h-4 w-4" />Apagar</Button>
                   {c.status !== "aprovado" && <Button size="sm" disabled={busy === c.id} onClick={() => decidir(c, true)}><Check className="mr-1 h-4 w-4" />Aprovar</Button>}
                   {c.status !== "recusado" && <Button size="sm" variant="outline" className="text-red-600" disabled={busy === c.id} onClick={() => decidir(c, false)}><X className="mr-1 h-4 w-4" />{c.status === "aprovado" ? "Bloquear" : "Recusar"}</Button>}
                 </div>

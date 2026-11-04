@@ -6,7 +6,9 @@ import {
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { useEffect } from "react";
 import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +28,12 @@ const items = [
 ];
 
 export function AdminSidebar({ unreadCount = 0 }: { unreadCount?: number }) {
+  const { setOpenMobile } = useSidebar();
+  useEffect(() => {
+    const f = () => setOpenMobile(false);
+    window.addEventListener("tuentrega:fechar-menu", f);
+    return () => window.removeEventListener("tuentrega:fechar-menu", f);
+  }, [setOpenMobile]);
   const navigate = useNavigate();
   const path = useRouterState({ select: (r) => r.location.pathname });
 

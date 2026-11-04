@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Shield, Building2, Bike, X, ChevronsUpDown, Search, Eye } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -13,6 +13,17 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+type PickerType = null | "empresa" | "entregador";
+let pickerAtual: PickerType = null;
+const ouvintes = new Set<() => void>();
+const setPicker = (t: PickerType) => { pickerAtual = t; ouvintes.forEach((f) => f()); };
+const usePicker = () => useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f); }; }, () => pickerAtual, () => null);
+/** O seletor abre fora do menu lateral (no celular o menu é uma gaveta e travava o toque na lista). */
+function abrirPicker(t: "empresa" | "entregador") {
+  window.dispatchEvent(new Event("tuentrega:fechar-menu"));
+  setTimeout(() => setPicker(t), 150);
+}
+
 type ViewMode = "admin" | "empresa" | "entregador";
 type AccountRow = { id: string; name: string };
 
@@ -20,7 +31,6 @@ export function RoleSwitcher() {
   const { realRole, realUserId, isImpersonating, role } = useAuth();
   const imp = useImpersonation();
   const navigate = useNavigate();
-  const [pickerOpen, setPickerOpen] = useState<null | "empresa" | "entregador">(null);
 
   if (realRole !== "admin") return null;
 
@@ -61,7 +71,7 @@ export function RoleSwitcher() {
     if (last) {
       await impersonate(type, { id: last.targetUserId, name: last.targetName });
     } else {
-      setPickerOpen(type);
+      abrirPicker(type);
     }
   }
 
@@ -100,7 +110,7 @@ export function RoleSwitcher() {
             <strong>{imp.targetName}</strong>
           </span>
           <button
-            onClick={() => setPickerOpen(imp.targetType)}
+            onClick={() => abrirPicker(imp.targetType)}
             className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
             title="Trocar conta"
           >
@@ -116,14 +126,6 @@ export function RoleSwitcher() {
         </div>
       )}
 
-      <AccountPicker
-        type={pickerOpen}
-        onClose={() => setPickerOpen(null)}
-        onPick={(t, row) => {
-          setPickerOpen(null);
-          impersonate(t, row);
-        }}
-      />
     </div>
   );
 }
@@ -215,4 +217,29 @@ function AccountPicker({
       </DialogContent>
     </Dialog>
   );
+}
+
+/** Montado uma vez no layout (fora do menu lateral): mostra a lista de contas e entra na conta escolhida. */
+export function RoleSwitcherHost() {
+  const type = usePicker();
+  const { realRole, realUserId } = useAuth();
+  const navigate = useNavigate();
+  if (realRole !== "admin") return null;
+  async function entrar(t: "empresa" | "entregador", target: AccountRow) {
+    setPicker(null);
+    if (!realUserId) return;
+    try {
+      const res = await fetch("/api/admin/impersonate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId: target.id, targetType: t }),
+      }).catch(() => null);
+      const sessionId = res?.ok ? (await res.json()).id : crypto.randomUUID();
+      setImpersonation({ targetUserId: target.id, targetType: t, targetName: target.name, sessionId, adminId: realUserId });
+      toast.success(`Visualizando como ${target.name}`);
+      navigate({ to: "/dashboard" });
+    } catch (e: any) {
+      toast.error("Erro ao assumir conta", { description: e?.message });
+    }
+  }
+  return <AccountPicker type={type} onClose={() => setPicker(null)} onPick={entrar} />;
 }

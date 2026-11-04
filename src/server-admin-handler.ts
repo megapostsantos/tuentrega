@@ -114,5 +114,16 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  if (url.pathname === "/api/admin/cadastros/excluir" && req.method === "POST") {
+    const body: any = await req.json().catch(() => null);
+    if (!body?.userId || body?.confirmar !== "APAGAR") return Response.json({ error: "Confirmação inválida" }, { status: 400 });
+    const { excluirConta } = await import("./server/limpeza");
+    try {
+      return Response.json(await excluirConta(String(body.userId), user.id));
+    } catch (e: any) {
+      return Response.json({ error: e?.message ?? "Falha ao apagar" }, { status: 400 });
+    }
+  }
+
   return Response.json({ error: "not found" }, { status: 404 });
 });

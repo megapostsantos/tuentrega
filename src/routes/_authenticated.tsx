@@ -7,6 +7,7 @@ import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { ActiveRouteBanner } from "@/components/ActiveRouteBanner";
 import { AppTopBar } from "@/components/AppTopBar";
 import { AppDrawer } from "@/components/AppDrawer";
+import { RoleSwitcherHost } from "@/components/RoleSwitcher";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { BottomNav } from "@/components/BottomNav";
 import { AguardandoAprovacao } from "@/components/AguardandoAprovacao";
@@ -60,6 +61,7 @@ function AuthenticatedLayout() {
       <ActiveRouteBanner />
       <AppTopBar onOpenDrawer={() => setDrawerOpen(true)} />
       <AppDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} role={role} />
+      <RoleSwitcherHost />
       <OfflineBanner />
       <main className="flex-1 pb-24 md:pb-6">
         <div className="mx-auto w-full max-w-6xl">

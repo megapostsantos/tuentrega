@@ -7,7 +7,9 @@ import {
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { useEffect } from "react";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { signOut } from "@/lib/auth-client";
@@ -91,6 +93,12 @@ function itemVisible(item: Item, role: AppRole | null, isOperador = false): bool
 }
 
 export function AppSidebar({ role }: { role: AppRole | null }) {
+  const { setOpenMobile } = useSidebar();
+  useEffect(() => {
+    const f = () => setOpenMobile(false);
+    window.addEventListener("tuentrega:fechar-menu", f);
+    return () => window.removeEventListener("tuentrega:fechar-menu", f);
+  }, [setOpenMobile]);
   const navigate = useNavigate();
   const { user, isOperador } = useAuth();
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
