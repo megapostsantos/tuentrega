@@ -85,8 +85,8 @@ function Landing() {
             <a href="#operacoes" className="hover:text-white">Operações</a>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/auth" className="hidden items-center rounded-full border-2 border-white/30 px-4 py-2 text-sm text-white hover:border-white sm:inline-flex" style={heading}>Entrar</Link>
-            <Link to="/auth" className="inline-flex items-center rounded-full px-4 py-2 text-sm" style={{ background: YELLOW, color: NAVY, ...heading }}>Criar conta</Link>
+            <Link to="/auth" className="inline-flex items-center rounded-full border-2 border-white/30 px-3 py-2 text-sm text-white hover:border-white sm:px-4" style={heading}>Entrar</Link>
+            <Link to="/auth" className="inline-flex items-center rounded-full px-3 py-2 text-sm sm:px-4" style={{ background: YELLOW, color: NAVY, ...heading }}>Criar conta</Link>
           </div>
         </div>
       </nav>
@@ -109,6 +109,9 @@ function Landing() {
             <CTA href="/auth"><Building2 className="h-5 w-5" /> Sou empresa — criar conta</CTA>
             <CTA href="/auth" variant="outline"><Bike className="h-5 w-5" /> Sou entregador — ver ofertas</CTA>
           </div>
+          <p className="mt-4 text-sm text-white/80">
+            Já tem conta? <Link to="/auth" className="font-bold underline underline-offset-4" style={{ color: YELLOW }}>Entrar</Link>
+          </p>
           <a href={wa("Olá! Quero conhecer a TuEntrega.")} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 text-sm text-white/80 underline-offset-4 hover:underline">
             <MessageCircle className="h-4 w-4" /> Prefere conversar? Fale pelo WhatsApp
           </a>
