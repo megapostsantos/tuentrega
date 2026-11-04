@@ -59,7 +59,7 @@ function makeScope(ctx: EngineCtx, params: unknown[]): Scope | null {
   if ((role as string) === "recusado") throw Object.assign(new Error("Seu cadastro não foi aprovado. Fale com a TuEntrega."), { code: "403" });
   if (role !== "empresa" && role !== "entregador" && role !== "dispatcher")
     throw Object.assign(new Error("Sem permissão"), { code: "403" });
-  return { uid: ctx.userId, role, P: (v) => `$${params.push(v)}`, operador: !!ctx.operador, equipe: !!ctx.equipe, autor: ctx.autor };
+  return { uid: ctx.userId, role, P: (v) => `$${params.push(v)}`, operador: !!ctx.operador, equipe: !!ctx.equipe || !!ctx.operador, autor: ctx.autor };
 }
 
 function forbidden(msg = "Sem permissão"): never {
