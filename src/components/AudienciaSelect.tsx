@@ -7,9 +7,9 @@ const KEY = "tu_audiencia";
 export function audienciaSalva(): Audiencia {
   try { const v = localStorage.getItem(KEY); return v === "cla" || v === "equipe" ? v : "publica"; } catch { return "publica"; }
 }
-export const ROTULO_AUDIENCIA: Record<Audiencia, string> = { publica: "Público", cla: "Meu clã", equipe: "Equipe interna" };
+export const ROTULO_AUDIENCIA: Record<Audiencia, string> = { publica: "Público", cla: "Minha equipe", equipe: "Só funcionários" };
 
-/** Quem pode ver a vaga: todos, só o clã da empresa (parceiros vinculados e adicionados) ou só a equipe interna. */
+/** Quem pode ver a vaga: todos, só a equipe da empresa (parceiros vinculados e adicionados) ou só os funcionários. */
 export function AudienciaSelect({ value, onChange, compact = false }: { value: Audiencia; onChange: (v: Audiencia) => void; compact?: boolean }) {
   const [n, setN] = useState<{ cla: number; equipe: number } | null>(null);
   useEffect(() => {
@@ -22,8 +22,8 @@ export function AudienciaSelect({ value, onChange, compact = false }: { value: A
   const pick = (v: Audiencia) => { try { localStorage.setItem(KEY, v); } catch { /* ignore */ } onChange(v); };
   const opcoes: { v: Audiencia; icone: string; t: string; d: string; n?: number }[] = [
     { v: "publica", icone: "🌍", t: "Público", d: "Todos os entregadores aprovados" },
-    { v: "cla", icone: "👥", t: "Meu clã", d: "Só os parceiros do seu clã (vinculados e os que você adicionar)", n: n?.cla },
-    { v: "equipe", icone: "🏠", t: "Equipe interna", d: "Só funcionários que também fazem rotas", n: n?.equipe },
+    { v: "cla", icone: "👥", t: "Minha equipe", d: "Só os parceiros da sua equipe (vinculados e os que você adicionar)", n: n?.cla },
+    { v: "equipe", icone: "🏠", t: "Só funcionários", d: "Só funcionários seus que também fazem rotas", n: n?.equipe },
   ];
   return (
     <div className={`grid gap-2 ${compact ? "sm:grid-cols-3" : "sm:grid-cols-3"}`}>

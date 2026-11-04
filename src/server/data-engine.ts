@@ -1037,7 +1037,7 @@ async function candidatarOferta(uid: string | null, args: Record<string, unknown
   if (o.status !== "open" || o.entregador_id) throw new Error("Esta rota não está mais disponível.");
   if (o.de_outra_empresa) throw new Error("Você está vinculado a outra empresa e só pode aceitar as ofertas dela.");
   if (o.tipo === "private" && !o.convidado) throw new Error("Esta oferta é privada.");
-  if (!o.audiencia_ok && !o.convidado) throw new Error("Esta vaga é restrita ao clã ou à equipe interna da empresa.");
+  if (!o.audiencia_ok && !o.convidado) throw new Error("Esta vaga é restrita à equipe ou aos funcionários da empresa.");
   if (o.recusada) throw new Error("Você já recusou esta rota.");
   const me = await query(`select "nome_completo", "status", "suspended_at" from "entregadores" where "id" = $1`, [uid]);
   if (!me[0]) throw new Error("Complete o seu cadastro de entregador.");
@@ -1137,7 +1137,7 @@ async function postularZona(uid: string | null, args: Record<string, unknown>): 
   if (z.pstatus !== "aberta" || !z.futura) throw new Error("Esta previsão não está mais aberta.");
   if (z.entregador_id) throw new Error("Esta zona já tem entregador.");
   if (z.de_outra) throw new Error("Você está vinculado a outra empresa e só pode se postular às zonas dela.");
-  if (!z.audiencia_ok) throw new Error("Esta previsão é restrita ao clã ou à equipe interna da empresa.");
+  if (!z.audiencia_ok) throw new Error("Esta previsão é restrita à equipe ou aos funcionários da empresa.");
   const me = await query(`select "nome_completo", "status", "suspended_at" from "entregadores" where "id" = $1`, [uid]);
   if (!me[0]) throw new Error("Complete o seu cadastro de entregador.");
   if (me[0].suspended_at || me[0].status === "suspenso") throw new Error("Seu cadastro está suspenso.");

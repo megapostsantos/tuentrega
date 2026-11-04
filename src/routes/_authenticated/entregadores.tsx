@@ -103,7 +103,7 @@ function ListaEntregadores() {
       ? await sbx.from("cla_empresa").delete().eq("entregador_id", e.id)
       : await sbx.from("cla_empresa").insert({ entregador_id: e.id });
     if (error) return toast.error(error.message);
-    toast.success(cla.has(e.id) ? `${e.nome_completo} saiu do seu clã.` : `${e.nome_completo} entrou no seu clã.`);
+    toast.success(cla.has(e.id) ? `${e.nome_completo} saiu da sua equipe.` : `${e.nome_completo} entrou na sua equipe.`);
     fetchList();
   }
 
@@ -138,6 +138,22 @@ function ListaEntregadores() {
     fetchList();
   }
 
+  const statusBadge = (e: Ent) => (
+    <>{e.suspended_at || e.status === "suspenso" ? (
+      <Badge variant="destructive">Suspenso</Badge>
+    ) : e.status === "inativo" ? (
+      <Badge variant="secondary">Inativo</Badge>
+    ) : convites.has(e.id) ? (
+      <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Convite pendente</Badge>
+    ) : e.activated_at ? (
+      <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Ativo</Badge>
+    ) : e.invited_at ? (
+      <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Convite enviado</Badge>
+    ) : (
+      <Badge variant="outline">{e.status}</Badge>
+    )}</>
+  );
+
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -154,7 +170,7 @@ function ListaEntregadores() {
           <li>Envie o <strong>convite pelo WhatsApp</strong> (código + link). Aqui na lista, quem ainda não ativou aparece como <em>Convite pendente</em>, com o botão <strong>Enviar convite</strong>.</li>
           <li>Ao ativar a conta, ele fica <strong>Vinculado</strong> à sua empresa: vê só as <strong>suas</strong> ofertas, e as outras empresas nem enxergam o nome dele. Quem se cadastra sozinho não tem vínculo.</li>
           <li>Quando quiser liberar, use <strong>Desvincular</strong>: ele volta a ver as ofertas de todas as empresas.</li>
-          <li><strong>Seu clã:</strong> os vinculados entram nele sozinhos, e você pode adicionar qualquer parceiro com <strong>+ Clã</strong>. Ao publicar uma vaga, escolha <em>Público</em>, <em>Meu clã</em> ou <em>Equipe interna</em>.</li>
+          <li><strong>Minha equipe:</strong> os vinculados entram nela sozinhos, e você pode adicionar qualquer parceiro com <strong>+ Equipe</strong>. Ao publicar uma vaga, escolha <em>Público</em>, <em>Minha equipe</em> ou <em>Só funcionários</em>.</li>
         </ol>
       </div>
       <EntregadoresStats />
@@ -172,7 +188,38 @@ function ListaEntregadores() {
           ) : list.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum entregador.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="space-y-3 md:hidden">
+              {list.map((e) => {
+                const lvl = LEVELS[e.reliability_level || "gold"] || LEVELS.gold;
+                return (
+                  <div key={e.id} className="rounded-xl border p-3" onClick={() => setDetail(e)}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold">{e.nome_completo}</div>
+                        <div className="text-xs text-muted-foreground">{e.tipo_veiculo ?? "Veículo não informado"} · score <strong>{e.reliability_score ?? 100}</strong></div>
+                      </div>
+                      <div className="shrink-0">{statusBadge(e)}</div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <Badge className={lvl.color}>{"★".repeat(lvl.stars)}{"☆".repeat(5 - lvl.stars)} {lvl.label}</Badge>
+                      {cla.has(e.id) && <Badge variant="outline">Na equipe</Badge>}
+                      {vinculados.has(e.id) && <Badge className="bg-primary/15 text-foreground hover:bg-primary/15">Vinculado</Badge>}
+                      {dispatcherIds.has(e.id) && <Badge variant="outline">Dispatcher</Badge>}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2" onClick={(ev) => ev.stopPropagation()}>
+                      <Button variant="outline" size="sm" onClick={() => alternarCla(e)}>{cla.has(e.id) ? "Tirar da equipe" : "+ Equipe"}</Button>
+                      {convites.has(e.id) && <Button variant="outline" size="sm" onClick={() => reenviarConvite(e)}><Send className="mr-1 h-3.5 w-3.5" />Enviar convite</Button>}
+                      {vinculados.has(e.id) && <Button variant="outline" size="sm" onClick={() => desvincular(e)}>Desvincular</Button>}
+                      {!dispatcherIds.has(e.id) && <Button variant="outline" size="sm" onClick={() => setDispatcherTarget(e)}><UserCog className="mr-1 h-3.5 w-3.5" />Dispatcher</Button>}
+                      <Button variant="ghost" size="sm" title="Suspender" onClick={() => suspendManually(e.id)}><ShieldOff className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" title="Zerar score" onClick={() => resetScore(e.id)}><RotateCcw className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -197,24 +244,10 @@ function ListaEntregadores() {
                             {"★".repeat(lvl.stars)}{"☆".repeat(5 - lvl.stars)} {lvl.label}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          {e.suspended_at || e.status === "suspenso" ? (
-                            <Badge variant="destructive">Suspenso</Badge>
-                          ) : e.status === "inativo" ? (
-                            <Badge variant="secondary">Inativo</Badge>
-                          ) : convites.has(e.id) ? (
-                            <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Convite pendente</Badge>
-                          ) : e.activated_at ? (
-                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Ativo</Badge>
-                          ) : e.invited_at ? (
-                            <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Convite enviado</Badge>
-                          ) : (
-                            <Badge variant="outline">{e.status}</Badge>
-                          )}
-                        </TableCell>
+                        <TableCell>{statusBadge(e)}</TableCell>
                         <TableCell className="text-right" onClick={(ev) => ev.stopPropagation()}>
-                          {cla.has(e.id) && <Badge variant="outline" className="mr-1">No clã</Badge>}
-                          <Button variant="ghost" size="sm" className="mr-1" onClick={() => alternarCla(e)}>{cla.has(e.id) ? "Tirar do clã" : "+ Clã"}</Button>
+                          {cla.has(e.id) && <Badge variant="outline" className="mr-1">Na equipe</Badge>}
+                          <Button variant="ghost" size="sm" className="mr-1" onClick={() => alternarCla(e)}>{cla.has(e.id) ? "Tirar da equipe" : "+ Equipe"}</Button>
                           {vinculados.has(e.id) && (
                             <>
                               <Badge className="mr-1 bg-primary/15 text-foreground hover:bg-primary/15">Vinculado</Badge>
@@ -246,6 +279,7 @@ function ListaEntregadores() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

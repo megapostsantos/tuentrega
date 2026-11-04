@@ -50,7 +50,7 @@ const naoRecusada: Pred = (a, p, u) =>
 /** Entregador vinculado a uma empresa (entrou por convite dela) só enxerga o que é dessa empresa. */
 const livreParaEmpresa: Pred = (a, p, u) =>
   `not exists (select 1 from "vinculos_empresa" v where v."entregador_id"::text = ${p(u)} and v."empresa_id"::text <> ${col(a, "empresa_id")}::text)`;
-/** Quem pode ver a vaga: público (todos), meu clã (parceiros do clã da empresa) ou equipe interna (funcionários que também são entregadores). */
+/** Quem pode ver a vaga: público (todos), minha equipe (parceiros da equipe da empresa) ou só funcionários (funcionários que também são entregadores). */
 const audienciaSql = (ref: string, p: P, u: string) =>
   `(coalesce(${ref}."visibilidade", 'publica') = 'publica'
     or (${ref}."visibilidade" = 'cla' and exists (select 1 from "cla_empresa" c where c."empresa_id"::text = ${ref}."empresa_id"::text and c."entregador_id"::text = ${p(u)}))
