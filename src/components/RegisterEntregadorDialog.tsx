@@ -6,6 +6,7 @@ import { SITE_URL } from "@/lib/contato";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SeletorBairros } from "@/components/SeletorBairros";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -44,7 +45,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
   const [aceite, setAceite] = useState(false);
   const [dias, setDias] = useState<string[]>([]);
   const [turnos, setTurnos] = useState<string[]>([]);
-  const [regiao, setRegiao] = useState("");
+  const [regiao, setRegiao] = useState<string[]>([]);
   const [obsDisp, setObsDisp] = useState("");
   const alterna = (lista: string[], v: string, set: (x: string[]) => void) => set(lista.includes(v) ? lista.filter((x) => x !== v) : [...lista, v]);
   const [saving, setSaving] = useState(false);
@@ -53,7 +54,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
 
   function fechar() {
     setF({ nome: "", cpf: "", whatsapp: "", email: "", veic: "", marca: "", modelo: "", placa: "", pixTipo: "", pixChave: "" });
-    setResid(null); setDoc(null); setAceite(false); setDias([]); setTurnos([]); setRegiao(""); setObsDisp(""); setFeito(null); onClose();
+    setResid(null); setDoc(null); setAceite(false); setDias([]); setTurnos([]); setRegiao([]); setObsDisp(""); setFeito(null); onClose();
   }
 
   async function enviar(empresaId: string, entId: string, tipo: string, file: File) {
@@ -77,7 +78,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
         nome_completo: f.nome, cpf: f.cpf, whatsapp: f.whatsapp, email: f.email,
         tipo_veiculo: f.veic, marca_veiculo: f.marca, modelo_veiculo: f.modelo, placa: f.placa,
         pix_tipo: f.pixTipo, pix_chave: f.pixChave,
-        dias_disponiveis: dias, turnos, bairros: regiao.split(/[,;\n]/).map((x) => x.trim()).filter(Boolean), obs_disponibilidade: obsDisp,
+        dias_disponiveis: dias, turnos, bairros: regiao, obs_disponibilidade: obsDisp,
       });
       if (error) throw new Error(error.message);
       const id = data.id as string;
@@ -188,7 +189,7 @@ export function RegisterEntregadorDialog({ open, onClose, onCreated, title = "Ca
                 ))}
               </div>
             </div>
-            <div className="space-y-1"><Label>Bairros / região onde atua</Label><Input value={regiao} onChange={(e) => setRegiao(e.target.value)} placeholder="Ex: Gonzaga, Boqueirão, Vila Mathias" /></div>
+            <SeletorBairros value={regiao} onChange={setRegiao} />
             <div className="space-y-1"><Label>Observações de horário</Label><Input value={obsDisp} onChange={(e) => setObsDisp(e.target.value)} placeholder="Ex: só depois das 14h; folga quinzenal aos domingos" /></div>
           </div>
 

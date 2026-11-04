@@ -1,3 +1,4 @@
+import { SeletorBairros } from "@/components/SeletorBairros";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -284,6 +285,7 @@ type EntregadorRow = {
   data_nascimento: string | null; selfie_url: string | null;
   cep: string | null; rua: string | null; numero: string | null; complemento: string | null;
   bairro: string | null; cidade: string | null; estado: string | null;
+  bairros?: string[] | null; dias_disponiveis?: string[] | null;
   turnos: string[]; plataformas: string[]; plataforma_comprovante_url: string | null;
   tipo_pessoa: "pf" | "pj" | null; cnpj: string | null;
 };
@@ -405,7 +407,7 @@ function EntregadorProfile() {
       selfie_url: f.selfie_url, plataforma_comprovante_url: f.plataforma_comprovante_url,
       cep: f.cep, rua: f.rua, numero: f.numero, complemento: f.complemento,
       bairro: f.bairro, cidade: f.cidade, estado: f.estado,
-      turnos: f.turnos, plataformas: f.plataformas,
+      turnos: f.turnos, plataformas: f.plataformas, bairros: f.bairros ?? [], dias_disponiveis: f.dias_disponiveis ?? [],
       tipo_pessoa: f.tipo_pessoa ?? null,
       cnpj: f.tipo_pessoa === "pj" ? (f.cnpj ?? null) : null,
     } as never).eq("id", f.id);
@@ -537,6 +539,18 @@ function EntregadorProfile() {
               </div>
               <EmptyHint v={f.turnos} />
             </Field>
+
+            <Field label="Dias disponíveis" className="sm:col-span-2">
+              <div className="flex flex-wrap gap-2">
+                {([["seg","Seg"],["ter","Ter"],["qua","Qua"],["qui","Qui"],["sex","Sex"],["sab","Sáb"],["dom","Dom"]] as const).map(([v, l]) => {
+                  const on = (f.dias_disponiveis ?? []).includes(v);
+                  return <button key={v} type="button" onClick={() => setF({ ...f, dias_disponiveis: on ? (f.dias_disponiveis ?? []).filter((x) => x !== v) : [...(f.dias_disponiveis ?? []), v] })}
+                    className={`rounded-full border px-3 py-1.5 text-sm ${on ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{l}</button>;
+                })}
+              </div>
+            </Field>
+
+            <div className="sm:col-span-2"><SeletorBairros value={f.bairros ?? []} onChange={(v) => setF({ ...f, bairros: v })} /></div>
 
             <Field label="Plataformas cadastradas" className="sm:col-span-2">
               <div className={`flex flex-wrap gap-3 rounded-md border p-3 ${f.plataformas.length === 0 ? "border-primary/70" : ""}`}>
