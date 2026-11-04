@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
@@ -54,6 +55,7 @@ const admin: Item[] = [
 ];
 
 export function BottomNav({ role, isOperador = false }: { role: AppRole | null; isOperador?: boolean }) {
+  const { isEquipe } = useAuth();
   const current = useRouterState({ select: (r) => r.location.pathname });
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -61,7 +63,7 @@ export function BottomNav({ role, isOperador = false }: { role: AppRole | null; 
     current === to || (to !== "/dashboard" && current.startsWith(to));
 
   if (role === "empresa") {
-    const lista = empresaMore.filter((i) => !(isOperador && i.soDono));
+    const lista = empresaMore.filter((i) => !(isOperador && i.soDono) && !(isEquipe && i.to === "/equipe"));
     const moreActive = lista.some((i) => isActive(i.to));
     return (
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background safe-bottom md:hidden">

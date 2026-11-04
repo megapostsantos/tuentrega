@@ -16,6 +16,10 @@ export interface AuthState {
   isImpersonating: boolean;
   /** funcionário da empresa: vê a empresa, mas sem valores e sem exclusões */
   isOperador: boolean;
+  /** supervisor: vê e define valores e dá baixa em pagamentos, mas não mexe em empresa, equipe nem exclusões */
+  isSupervisor: boolean;
+  /** funcionário ou supervisor (qualquer cargo da equipe): tudo que é só do dono fica fechado */
+  isEquipe: boolean;
   /** funcionário que também é entregador pode alternar o modo (Gestão ⇄ Entregador) */
   podeAlternarModo: boolean;
   modo: Modo;
@@ -24,7 +28,7 @@ export interface AuthState {
   realRole: AppRole | null;
 }
 
-type EquipeInfo = { empresaId: string | null; ativo: boolean; entregador: boolean };
+type EquipeInfo = { empresaId: string | null; ativo: boolean; entregador: boolean; cargo?: string };
 const equipeCache = new Map<string, EquipeInfo>();
 
 function useEquipe(userId: string | undefined, enabled: boolean): { info: EquipeInfo | null; pending: boolean } {
@@ -68,10 +72,11 @@ export function useAuth(): AuthState {
   if (ehOperador && user) {
     const ok = !!equipe.info?.ativo && !!equipe.info.empresaId;
     const podeAlternarModo = ok && !!equipe.info?.entregador;
+    const supervisor = equipe.info?.cargo === "supervisor";
     const modo: Modo = podeAlternarModo ? modoSalvo : "gestao";
     const alternarModo = () => setModo(modo === "gestao" ? "entregador" : "gestao");
     if (modo === "entregador") {
-      return { user, session, role: "entregador", roles: ["entregador"], loading, isImpersonating: false, isOperador: false, podeAlternarModo, modo, alternarModo, realUserId: user.id, realRole: null };
+      return { user, session, role: "entregador", roles: ["entregador"], loading, isImpersonating: false, isOperador: false, isSupervisor: false, isEquipe: false, podeAlternarModo, modo, alternarModo, realUserId: user.id, realRole: null };
     }
     return {
       user: ok ? { ...user, id: equipe.info!.empresaId! } : user,
@@ -80,7 +85,9 @@ export function useAuth(): AuthState {
       roles: ok ? ["empresa"] : [],
       loading,
       isImpersonating: false,
-      isOperador: true,
+      isOperador: !supervisor,
+      isSupervisor: supervisor,
+      isEquipe: true,
       podeAlternarModo,
       modo,
       alternarModo,
@@ -98,6 +105,8 @@ export function useAuth(): AuthState {
       loading,
       isImpersonating: true,
       isOperador: false,
+      isSupervisor: false,
+      isEquipe: false,
       podeAlternarModo: false,
       modo: "gestao",
       alternarModo: () => {},
@@ -114,6 +123,8 @@ export function useAuth(): AuthState {
     loading,
     isImpersonating: false,
     isOperador: false,
+    isSupervisor: false,
+    isEquipe: false,
     podeAlternarModo: false,
     modo: "gestao",
     alternarModo: () => {},

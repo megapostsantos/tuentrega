@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, Megaphone, Minus, MoreHorizontal, Plus, Trash2, UserPlus, Users, Wand2, Play } from "lucide-react";
+import { CheckCircle2, DollarSign, Loader2, Megaphone, Minus, MoreHorizontal, Plus, Trash2, UserPlus, Users, Wand2, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AudienciaSelect, audienciaSalva, ROTULO_AUDIENCIA, type Audiencia } from "@/components/AudienciaSelect";
+import { SugerirValorDialog, type AlvoSugestao } from "@/components/SugerirValorDialog";
 import { RegisterEntregadorDialog } from "@/components/RegisterEntregadorDialog";
 
 export type RotaOp = {
@@ -29,7 +30,8 @@ export function RotasOperacao({
   publicar: (rotaIds: string[], visibilidade: string) => Promise<number>;
   onEliminar: (r: RotaOp) => void;
 }) {
-  const { isOperador } = useAuth();
+  const { isEquipe: isOperador, isOperador: eFuncionario } = useAuth();
+  const [sugerir, setSugerir] = useState<AlvoSugestao | null>(null);
   const [edits, setEdits] = useState<Record<string, { qtd: number; motivo: string }>>({});
   const [escolha, setEscolha] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -173,6 +175,7 @@ export function RotasOperacao({
                   <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Mais ações"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {!r.oferta_id && <DropdownMenuItem onClick={() => publicarIds([r.id])}><Megaphone className="mr-2 h-4 w-4" />Publicar só esta ({ROTULO_AUDIENCIA[audiencia]})</DropdownMenuItem>}
+                    {eFuncionario && !travada && <DropdownMenuItem onClick={() => setSugerir({ tipo: "rota", id: r.id, titulo: r.nome })}><DollarSign className="mr-2 h-4 w-4" />Sugerir outro valor…</DropdownMenuItem>}
                     {!isOperador && !travada && <DropdownMenuItem className="text-red-600" onClick={() => onEliminar(r)}><Trash2 className="mr-2 h-4 w-4" />Eliminar rota…</DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -244,6 +247,7 @@ export function RotasOperacao({
         )}
         <Button size="sm" variant="outline" disabled={itens.length - semParceiro.length === 0} onClick={iniciar}><Play className="mr-1 h-4 w-4" />Iniciar operação</Button>
       </div>
+      <SugerirValorDialog alvo={sugerir} onClose={() => setSugerir(null)} />
       <RegisterEntregadorDialog open={novoOpen} onClose={() => setNovoOpen(false)} onCreated={load} />
     </div>
   );

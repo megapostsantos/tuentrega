@@ -84,9 +84,11 @@ const ENTREGADOR_URLS = new Set(["/dashboard", "/ofertas", "/agenda", "/configur
 
 const SO_DONO = new Set(["/financeiro", "/pagamentos", "/equipe"]);
 
-function itemVisible(item: Item, role: AppRole | null, isOperador = false): boolean {
+/** Funcionário não vê financeiro/pagamentos; supervisor vê, mas nenhum dos dois vê Equipe. */
+function itemVisible(item: Item, role: AppRole | null, isOperador = false, isEquipe = false): boolean {
   if (!role) return false;
   if (isOperador && SO_DONO.has(item.url)) return false;
+  if (isEquipe && item.url === "/equipe") return false;
   if (!item.roles.includes(role)) return false;
   if (role === "entregador" && !ENTREGADOR_URLS.has(item.url)) return false;
   return true;
@@ -100,7 +102,7 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
     return () => window.removeEventListener("tuentrega:fechar-menu", f);
   }, [setOpenMobile]);
   const navigate = useNavigate();
-  const { user, isOperador } = useAuth();
+  const { user, isOperador, isEquipe } = useAuth();
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (p: string) => currentPath === p;
 
@@ -131,7 +133,7 @@ export function AppSidebar({ role }: { role: AppRole | null }) {
       <SidebarContent className="bg-[#0B0B0D]">
         <RoleSwitcher />
         {GROUPS.map((group) => {
-          const visibleItems = group.items.filter((i) => itemVisible(i, role, isOperador));
+          const visibleItems = group.items.filter((i) => itemVisible(i, role, isOperador, isEquipe));
           if (visibleItems.length === 0) return null;
           return (
             <SidebarGroup key={group.label}>

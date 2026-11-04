@@ -1,10 +1,11 @@
+import { SugerirValorDialog } from "@/components/SugerirValorDialog";
 import { AudienciaSelect, audienciaSalva, ROTULO_AUDIENCIA, type Audiencia } from "@/components/AudienciaSelect";
 import { SITE_URL } from "@/lib/contato";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   Store, Plus, FileText, MapPin, Loader2, Clock, Package, Copy,
-  Bike, Car, Truck, Footprints, Zap, Bike as Motorcycle, X, Pencil, Share2, Mail,
+  Bike, Car, Truck, Footprints, Zap, Bike as Motorcycle, X, Pencil, Share2, Mail, DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -827,6 +828,7 @@ function OfertaCard({
   const { isOperador } = useAuth();
   const canEdit = role === "empresa" && o.status === "open" && !isOperador;
   const canShare = role === "empresa" && ["open", "accepted", "in_progress"].includes(o.status);
+  const [sugerindo, setSugerindo] = useState(false);
 
   return (
     <Card>
@@ -867,6 +869,11 @@ function OfertaCard({
               <Share2 className="h-4 w-4" />
             </Button>
           )}
+          {role === "empresa" && isOperador && o.status === "open" && (
+            <Button size="sm" variant="outline" onClick={() => setSugerindo(true)} title="Sugerir outro valor">
+              <DollarSign className="h-4 w-4" />
+            </Button>
+          )}
           {canEdit && (
             <Button size="sm" variant="outline" onClick={() => setEditing(true)} title="Editar">
               <Pencil className="h-4 w-4" />
@@ -885,6 +892,7 @@ function OfertaCard({
       {sharing && (
         <ShareOfertaDialog o={o} onClose={() => setSharing(false)} />
       )}
+      <SugerirValorDialog alvo={sugerindo ? { tipo: "oferta", id: o.id, titulo: o.titulo } : null} onClose={() => setSugerindo(false)} />
     </Card>
   );
 }

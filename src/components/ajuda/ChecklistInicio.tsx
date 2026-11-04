@@ -10,7 +10,7 @@ const key = (uid: string) => `tu_checklist_fechado_${uid}`;
 
 /** "Primeiros passos": some sozinho quando tudo foi feito (ou quando a pessoa dispensa). */
 export function ChecklistInicio({ userId, tipo }: { userId?: string; tipo: "empresa" | "entregador" }) {
-  const { isOperador } = useAuth();
+  const { isEquipe: isOperador } = useAuth();
   const [itens, setItens] = useState<Item[] | null>(null);
   const [fechado, setFechado] = useState(true);
 

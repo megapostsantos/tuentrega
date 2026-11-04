@@ -57,9 +57,11 @@ const ENTREGADOR_URLS = new Set(["/dashboard", "/ofertas", "/agenda", "/configur
 
 const SO_DONO = new Set(["/financeiro", "/pagamentos", "/equipe"]);
 
-function itemVisible(item: Item, role: AppRole | null, isOperador = false): boolean {
+/** Funcionário não vê financeiro/pagamentos; supervisor vê, mas nenhum dos dois vê Equipe. */
+function itemVisible(item: Item, role: AppRole | null, isOperador = false, isEquipe = false): boolean {
   if (!role) return false;
   if (isOperador && SO_DONO.has(item.url)) return false;
+  if (isEquipe && item.url === "/equipe") return false;
   if (!item.roles.includes(role)) return false;
   if (role === "entregador" && !ENTREGADOR_URLS.has(item.url)) return false;
   return true;
@@ -72,7 +74,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
     window.addEventListener("tuentrega:fechar-menu", f);
     return () => window.removeEventListener("tuentrega:fechar-menu", f);
   }, [onClose]);
-  const { user, isOperador } = useAuth();
+  const { user, isOperador, isEquipe } = useAuth();
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (p: string) => currentPath === p;
 
@@ -130,7 +132,7 @@ export function AppDrawer({ open, onClose, role }: { open: boolean; onClose: () 
         {/* Groups */}
         <nav className="flex-1 overflow-y-auto px-2 py-3">
           {GROUPS.map((group) => {
-            const visible = group.items.filter((i) => itemVisible(i, role, isOperador));
+            const visible = group.items.filter((i) => itemVisible(i, role, isOperador, isEquipe));
             if (visible.length === 0) return null;
             return (
               <div key={group.label} className="mb-4">

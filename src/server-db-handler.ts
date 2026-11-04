@@ -91,7 +91,7 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     if (user.role !== "operador") return Response.json({ operador: false });
     const { empresaDoOperador } = await import("./server/data-engine");
     const emp = await empresaDoOperador(user.id);
-    return Response.json({ operador: true, ativo: !!emp, empresaId: emp?.empresaId ?? null, entregador: !!emp?.entregador });
+    return Response.json({ operador: true, ativo: !!emp, empresaId: emp?.empresaId ?? null, entregador: !!emp?.entregador, cargo: emp?.cargo ?? "funcionario" });
   }
 
   if (url.pathname === "/api/db/claim-invite" && req.method === "POST") {

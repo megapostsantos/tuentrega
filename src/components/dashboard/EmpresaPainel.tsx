@@ -1,3 +1,4 @@
+import { SugestoesValorPainel } from "@/components/SugestoesValorPainel";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -26,7 +27,7 @@ const STATUS: Record<string, { label: string; cls: string; ordem: number }> = {
 };
 
 export function EmpresaPainel({ userId }: { userId?: string }) {
-  const { isOperador } = useAuth();
+  const { isOperador, isEquipe } = useAuth();
   const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [pks, setPks] = useState<Pk[]>([]);
   const [aPagar, setAPagar] = useState(0);
@@ -102,6 +103,8 @@ export function EmpresaPainel({ userId }: { userId?: string }) {
           <Plus className="h-4 w-4" /> Nova operação
         </Link>
       </div>
+
+      <SugestoesValorPainel />
 
       <ChecklistInicio userId={userId} tipo="empresa" />
 
@@ -187,7 +190,7 @@ export function EmpresaPainel({ userId }: { userId?: string }) {
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {[
-          ...(isOperador ? [] : [{ label: "Equipe (RH)", to: "/equipe", icon: UserCog }]),
+          ...(isEquipe ? [] : [{ label: "Equipe (RH)", to: "/equipe", icon: UserCog }]),
           { label: "Entregadores", to: "/entregadores", icon: Users },
           { label: "Agenda", to: "/agenda", icon: CalendarDays },
           { label: "Rotas ao vivo", to: "/rotas", icon: MapIcon },

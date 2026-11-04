@@ -500,7 +500,25 @@ export const equipeEmpresa = pgTable("equipe_empresa", {
   email: text("email"),
   ativo: boolean("ativo").notNull().default(true),
   codigoConvite: text("codigo_convite"),
+  cargo: text("cargo").notNull().default("funcionario"),
   criadoEm: timestamp("criado_em").notNull().defaultNow(),
+});
+
+export const sugestoesValor = pgTable("sugestoes_valor", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  empresaId: text("empresa_id").notNull(),
+  autorId: text("autor_id"),
+  autorNome: text("autor_nome"),
+  alvoTipo: text("alvo_tipo").notNull(),
+  alvoId: text("alvo_id").notNull(),
+  titulo: text("titulo"),
+  quantidadePacotes: integer("quantidade_pacotes").notNull().default(0),
+  valorPorPacote: numeric("valor_por_pacote").notNull(),
+  motivo: text("motivo"),
+  status: text("status").notNull().default("pendente"),
+  decididoPor: text("decidido_por"),
+  criadoEm: timestamp("criado_em").notNull().defaultNow(),
+  decididoEm: timestamp("decidido_em"),
 });
 
 export const vinculosEmpresa = pgTable("vinculos_empresa", {

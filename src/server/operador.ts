@@ -24,7 +24,7 @@ export const OPERADOR_MASCARAS: Record<string, string[]> = {
 };
 
 /** RPCs que só o dono executa. */
-export const OPERADOR_RPC_NEGADAS = new Set(["eliminar_rota", "limpar_meus_dados", "cadastrar_membro_equipe", "definir_membro_entregador", "remover_parceiro", "remover_membro_equipe", "atualizar_email_convite"]);
+export const OPERADOR_RPC_NEGADAS = new Set(["eliminar_rota", "limpar_meus_dados", "cadastrar_membro_equipe", "definir_membro_entregador", "remover_parceiro", "remover_membro_equipe", "atualizar_email_convite", "decidir_sugestao_valor"]);
 
 export function mascarado(table: string, col: string): boolean {
   return !!OPERADOR_MASCARAS[table]?.includes(col);

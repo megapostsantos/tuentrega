@@ -361,10 +361,14 @@ export const POLICIES: Record<string, Policy> = {
     read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },
   },
 
+  sugestoes_valor: {
+    read: { empresa: eq("empresa_id") },
+  },
+
   equipe_empresa: {
     read: { empresa: eq("empresa_id") },
     update: { empresa: eq("empresa_id") },
-    updateCols: { empresa: ["ativo", "nome"] },
+    updateCols: { empresa: ["ativo", "nome", "cargo"] },
     delete: { empresa: eq("empresa_id") },
   },
 

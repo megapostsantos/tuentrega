@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 });
 
 function Settings() {
-  const { user, role, loading, isOperador } = useAuth();
+  const { user, role, loading, isEquipe: isOperador } = useAuth();
   const navigate = useNavigate();
 
   async function logout() {

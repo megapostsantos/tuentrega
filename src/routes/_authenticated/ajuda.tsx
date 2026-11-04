@@ -43,7 +43,7 @@ function perfilAtual(role: string | null, isOperador: boolean): Perfil[] {
 }
 
 function AjudaPage() {
-  const { role, isOperador } = useAuth();
+  const { role, isEquipe: isOperador } = useAuth();
   const { guia } = Route.useSearch();
   const perfis = perfilAtual(role, isOperador);
   const lista = useMemo(() => GUIAS.filter((g) => g.perfis.some((p) => perfis.includes(p))), [role, isOperador]); // eslint-disable-line

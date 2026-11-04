@@ -12,6 +12,10 @@ export interface EngineCtx {
   internal?: boolean;
   /** funcionário da empresa: userId já é o id da empresa; sem valores e sem exclusões */
   operador?: boolean;
+  /** funcionário OU supervisor: não mexe em dados da empresa, equipe e exclusões (só o dono) */
+  equipe?: boolean;
+  /** id real de quem está logado (para registrar autoria) */
+  autor?: string;
 }
 
 type Fk = { col: string; table: string; refCol: string };
@@ -43,6 +47,8 @@ interface Scope {
   role: Role;
   P: (v: unknown) => string;
   operador?: boolean;
+  equipe?: boolean;
+  autor?: string;
 }
 
 function makeScope(ctx: EngineCtx, params: unknown[]): Scope | null {
@@ -53,7 +59,7 @@ function makeScope(ctx: EngineCtx, params: unknown[]): Scope | null {
   if ((role as string) === "recusado") throw Object.assign(new Error("Seu cadastro não foi aprovado. Fale com a TuEntrega."), { code: "403" });
   if (role !== "empresa" && role !== "entregador" && role !== "dispatcher")
     throw Object.assign(new Error("Sem permissão"), { code: "403" });
-  return { uid: ctx.userId, role, P: (v) => `$${params.push(v)}`, operador: !!ctx.operador };
+  return { uid: ctx.userId, role, P: (v) => `$${params.push(v)}`, operador: !!ctx.operador, equipe: !!ctx.equipe, autor: ctx.autor };
 }
 
 function forbidden(msg = "Sem permissão"): never {
@@ -621,6 +627,23 @@ const DDL_LAZY: string[] = [
 	"criado_em" timestamp DEFAULT now() NOT NULL
 );`,
   `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "entregador" boolean DEFAULT false NOT NULL;`,
+  `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "cargo" text DEFAULT 'funcionario' NOT NULL;`,
+  `CREATE TABLE IF NOT EXISTS "sugestoes_valor" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"empresa_id" text NOT NULL,
+	"autor_id" text,
+	"autor_nome" text,
+	"alvo_tipo" text NOT NULL,
+	"alvo_id" text NOT NULL,
+	"titulo" text,
+	"quantidade_pacotes" integer DEFAULT 0 NOT NULL,
+	"valor_por_pacote" numeric NOT NULL,
+	"motivo" text,
+	"status" text DEFAULT 'pendente' NOT NULL,
+	"decidido_por" text,
+	"criado_em" timestamp DEFAULT now() NOT NULL,
+	"decidido_em" timestamp
+);`,
   `ALTER TABLE "empresas" ADD COLUMN IF NOT EXISTS "aprovar_candidatos" boolean DEFAULT true NOT NULL;`,
   `CREATE TABLE IF NOT EXISTS "vinculos_empresa" (
 	"entregador_id" text PRIMARY KEY NOT NULL,
@@ -932,6 +955,50 @@ async function cadastrarEntregadorGerenciado(uid: string | null, args: Record<st
 }
 
 
+
+/** Funcionário sugere outro valor por pacote para uma vaga/rota; supervisor ou dono aprova. */
+async function sugerirValor(uid: string | null, autor: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Informe a empresa");
+  const tipo = args.alvo_tipo === "rota" ? "rota" : "oferta";
+  const id = String(args.alvo_id ?? "");
+  const v = Math.round(Number(args.valor_por_pacote) * 100) / 100;
+  if (!(v > 0 && v < 1000)) throw new Error("Informe um valor por pacote válido");
+  const alvo = tipo === "rota"
+    ? await query(`select "nome" as titulo, "quantidade_pacotes" as q from "rotas_operacao" where "id"::text = $1 and "empresa_id" = $2 and "status" in ('draft','open')`, [id, uid])
+    : await query(`select "titulo", "quantidade_pacotes" as q from "ofertas" where "id"::text = $1 and "empresa_id" = $2 and "status" = 'open'`, [id, uid]);
+  if (!alvo[0]) throw new Error("Rota ou vaga não encontrada, ou já fechada");
+  const nome = autor ? ((await query(`select "name" from "user" where "id" = $1`, [autor]))[0]?.name ?? null) : null;
+  await query(`update "sugestoes_valor" set "status" = 'substituida' where "alvo_tipo" = $1 and "alvo_id" = $2 and "status" = 'pendente'`, [tipo, id]);
+  await query(
+    `insert into "sugestoes_valor" ("empresa_id","autor_id","autor_nome","alvo_tipo","alvo_id","titulo","quantidade_pacotes","valor_por_pacote","motivo")
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [uid, autor, nome, tipo, id, alvo[0].titulo, Number(alvo[0].q ?? 0), v, args.motivo ? String(args.motivo).trim().slice(0, 300) : null],
+  );
+  return { data: { ok: true }, error: null, count: null };
+}
+
+/** Supervisor ou dono aprova (aplica o valor) ou recusa a sugestão. */
+async function decidirSugestaoValor(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Informe a empresa");
+  const sg = await query(`select * from "sugestoes_valor" where "id"::text = $1 and "empresa_id" = $2 and "status" = 'pendente'`, [String(args.id ?? ""), uid]);
+  const x = sg[0] as any;
+  if (!x) throw new Error("Sugestão não encontrada ou já decidida");
+  const aprovar = args.aprovar === true;
+  const stmts: { text: string; params: unknown[] }[] = [];
+  if (aprovar) {
+    const v = Number(x.valor_por_pacote);
+    const upOferta = (cond: string, p: unknown[]) => ({ text: `update "ofertas" set "valor_por_pacote" = $1, "valor" = round("quantidade_pacotes" * $1::numeric, 2) where ${cond} and "empresa_id" = $2 and "status" = 'open'`, params: [v, uid, ...p] });
+    if (x.alvo_tipo === "oferta") stmts.push(upOferta(`"id"::text = $3`, [x.alvo_id]));
+    else {
+      stmts.push({ text: `update "rotas_operacao" set "valor_total" = round("quantidade_pacotes" * $1::numeric, 2), "updated_at" = now() where "id"::text = $3 and "empresa_id" = $2 and "status" in ('draft','open')`, params: [v, uid, x.alvo_id] });
+      stmts.push(upOferta(`"id"::text = (select "oferta_id"::text from "rotas_operacao" where "id"::text = $3)`, [x.alvo_id]));
+    }
+  }
+  stmts.push({ text: `update "sugestoes_valor" set "status" = $2, "decidido_em" = now() where "id" = $1::uuid`, params: [x.id, aprovar ? "aprovada" : "recusada"] });
+  await runTransaction(stmts);
+  return { data: { ok: true }, error: null, count: null };
+}
+
 /** Dono remove um parceiro: se ainda não ativou a conta, apaga o pré-cadastro; se já ativou, só tira da sua empresa (a conta dele continua). */
 async function removerParceiro(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
   if (!uid) throw new Error("Informe a empresa");
@@ -1007,10 +1074,11 @@ async function cadastrarMembroEquipe(uid: string | null, args: Record<string, un
   const codigo = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => alfa[b % alfa.length]).join("");
   const fone = args.whatsapp == null || String(args.whatsapp).trim() === "" ? null : String(args.whatsapp).trim();
   const tambemEntregador = args.tambem_entregador === true;
+  const cargo = args.cargo === "supervisor" ? "supervisor" : "funcionario";
   const stmts: { text: string; params: unknown[] }[] = [
     { text: `insert into "user" ("id","name","email","emailVerified","role") values ($1,$2,$3,false,'operador')`, params: [id, nome, email] },
     { text: `insert into "profiles" ("id","full_name","phone") values ($1,$2,$3) on conflict do nothing`, params: [id, nome, fone] },
-    { text: `insert into "equipe_empresa" ("user_id","empresa_id","nome","email","codigo_convite","entregador") values ($1,$2,$3,$4,$5,$6)`, params: [id, uid, nome, email, codigo, tambemEntregador] },
+    { text: `insert into "equipe_empresa" ("user_id","empresa_id","nome","email","codigo_convite","entregador","cargo") values ($1,$2,$3,$4,$5,$6,$7)`, params: [id, uid, nome, email, codigo, tambemEntregador, cargo] },
   ];
   stmts.push({ text: `insert into "aprovacoes_cadastro" ("user_id","status","tipo","motivo","decidido_em") values ($1,'aprovado','funcionario','convidado por empresa',now()) on conflict do nothing`, params: [id] });
   if (tambemEntregador) stmts.push({ text: `insert into "entregadores" ("id","nome_completo","whatsapp","email","status") values ($1,$2,$3,$4,'ativo')`, params: [id, nome, fone, email] });
@@ -1337,7 +1405,7 @@ async function publicarRotas(uid: string | null, args: Record<string, unknown>):
   return { data: { publicadas: rotas.length }, error: null, count: null };
 }
 
-async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
+async function runRpc(req: QueryReq, uid: string | null, autor?: string): Promise<QueryResp> {
   const { fn, args } = req.rpc!;
   if (fn === "publicar_rotas") return await publicarRotas(uid, args);
   if (fn === "ajustar_pacotes_rota") return await ajustarPacotesRota(uid, args);
@@ -1354,6 +1422,8 @@ async function runRpc(req: QueryReq, uid: string | null): Promise<QueryResp> {
   if (fn === "finalizar_rota") return await finalizarRota(uid, args);
   if (fn === "receber_devolucao") return await receberDevolucao(uid, args);
   if (fn === "cadastrar_entregador_gerenciado") return await cadastrarEntregadorGerenciado(uid, args);
+  if (fn === "sugerir_valor") return await sugerirValor(uid, autor ?? null, args);
+  if (fn === "decidir_sugestao_valor") return await decidirSugestaoValor(uid, args);
   if (fn === "remover_parceiro") return await removerParceiro(uid, args);
   if (fn === "remover_membro_equipe") return await removerMembroEquipe(uid, args);
   if (fn === "atualizar_email_convite") return await atualizarEmailConvite(uid, args);
@@ -1402,18 +1472,18 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
     if (req.op === "rpc") {
       if (scope) {
         const fn = req.rpc?.fn;
-        if (scope.operador && fn && OPERADOR_RPC_NEGADAS.has(fn)) forbidden("Somente o dono da empresa pode fazer isso");
+        if (scope.equipe && fn && OPERADOR_RPC_NEGADAS.has(fn) && (scope.operador || fn !== "decidir_sugestao_valor")) forbidden("Somente o dono da empresa pode fazer isso");
         if (fn === "apply_reliability_event") {
           const a = req.rpc?.args ?? {};
           const pontos = Number(a._pontos ?? 0);
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
         } else if (fn === "recusar_rota" || fn === "postular_zona" || fn === "cancelar_postulacao_zona" || fn === "candidatar_oferta" || fn === "cancelar_candidatura" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado" || fn === "remover_parceiro" || fn === "remover_membro_equipe" || fn === "atualizar_email_convite") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado" || fn === "sugerir_valor" || fn === "decidir_sugestao_valor" || fn === "remover_parceiro" || fn === "remover_membro_equipe" || fn === "atualizar_email_convite") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }
-      return await runRpc(req, scope?.uid ?? null);
+      return await runRpc(req, scope?.uid ?? null, scope?.autor);
     }
 
     if (req.table === "ofertas" && req.op === "select") await expirarAtribuicoes();
@@ -1479,8 +1549,9 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
     }
 
     // ----- escritas -----
-    if (scope?.operador) {
-      if (OPERADOR_NEGADAS.has(req.table) || OPERADOR_SEM_ESCRITA.has(req.table) || req.op === "delete") forbidden("Somente o dono da empresa pode fazer isso");
+    if (scope?.equipe) {
+      if (OPERADOR_SEM_ESCRITA.has(req.table) || req.op === "delete") forbidden("Somente o dono da empresa pode fazer isso");
+      if (scope.operador && OPERADOR_NEGADAS.has(req.table)) forbidden("Somente o dono ou o supervisor podem fazer isso");
     }
     let vpOperador = 0;
     if (scope?.operador && ["operacoes", "rotas_operacao", "ofertas", "agenda_previsoes"].includes(req.table) && (req.op === "insert" || req.op === "upsert")) {
@@ -1784,10 +1855,10 @@ export async function resgatarConvite(email: string, codigo: string, senha: stri
 
 
 /** Funcionário ativo → id da empresa onde trabalha (ou null), e se ele também atua como entregador. */
-export async function empresaDoOperador(userId: string): Promise<{ empresaId: string; nome: string | null; entregador: boolean } | null> {
+export async function empresaDoOperador(userId: string): Promise<{ empresaId: string; nome: string | null; entregador: boolean; cargo: string } | null> {
   await garantirTabelas();
-  const r = await query(`select "empresa_id", "nome", "entregador" from "equipe_empresa" where "user_id" = $1 and "ativo"`, [userId]);
-  return r[0] ? { empresaId: String(r[0].empresa_id), nome: r[0].nome ?? null, entregador: !!r[0].entregador } : null;
+  const r = await query(`select "empresa_id", "nome", "entregador", "cargo" from "equipe_empresa" where "user_id" = $1 and "ativo"`, [userId]);
+  return r[0] ? { empresaId: String(r[0].empresa_id), nome: r[0].nome ?? null, entregador: !!r[0].entregador, cargo: r[0].cargo === "supervisor" ? "supervisor" : "funcionario" } : null;
 }
 
 /** Contexto de acesso da sessão. Funcionário com perfil de entregador pode pedir o modo "entregador" (acesso só aos próprios dados). */
@@ -1801,7 +1872,7 @@ export async function contextoDaSessao(user: { id: string; role?: string | null 
   const emp = await empresaDoOperador(user.id);
   if (!emp) return { userId: user.id, role: "operador" };
   if (modo === "entregador" && emp.entregador) return { userId: user.id, role: "entregador" };
-  return { userId: emp.empresaId, role: "empresa", operador: true };
+  return { userId: emp.empresaId, role: "empresa", operador: emp.cargo !== "supervisor", equipe: true, autor: user.id };
 }
 
 

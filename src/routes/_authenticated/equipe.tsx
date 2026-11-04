@@ -19,16 +19,16 @@ import { RegisterEntregadorDialog } from "@/components/RegisterEntregadorDialog"
 
 export const Route = createFileRoute("/_authenticated/equipe")({ component: EquipePage });
 
-type Membro = { user_id: string; nome: string | null; email: string | null; ativo: boolean; codigo_convite: string | null; entregador: boolean };
+type Membro = { user_id: string; nome: string | null; email: string | null; ativo: boolean; codigo_convite: string | null; entregador: boolean; cargo?: string };
 
 function EquipePage() {
-  const { user, role, isOperador, loading } = useAuth();
+  const { user, role, isEquipe: isOperador, loading } = useAuth();
   const sb = supabase as any;
   const [membros, setMembros] = useState<Membro[]>([]);
   const [vp, setVp] = useState("");
   const [salvandoVp, setSalvandoVp] = useState(false);
   const [novo, setNovo] = useState(false);
-  const [f, setF] = useState({ nome: "", email: "", whatsapp: "", entregador: false });
+  const [f, setF] = useState({ nome: "", email: "", whatsapp: "", entregador: false, cargo: "funcionario" });
   const [criando, setCriando] = useState(false);
   const [empresaNome, setEmpresaNome] = useState("");
   const [aprovar, setAprovar] = useState(true);
@@ -38,7 +38,7 @@ function EquipePage() {
   const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string }>(null);
 
   async function load() {
-    const { data } = await sb.from("equipe_empresa").select("user_id, nome, email, ativo, codigo_convite, entregador").order("criado_em", { ascending: false });
+    const { data } = await sb.from("equipe_empresa").select("user_id, nome, email, ativo, codigo_convite, entregador, cargo").order("criado_em", { ascending: false });
     setMembros((data as Membro[]) ?? []);
     const { data: e } = await sb.from("empresas").select("tms_valor_padrao_pacote, nome_fantasia, razao_social, aprovar_candidatos").eq("id", user?.id).maybeSingle();
     if (e?.tms_valor_padrao_pacote != null) setVp(String(e.tms_valor_padrao_pacote));
@@ -79,7 +79,7 @@ function EquipePage() {
   async function criar() {
     if (!f.nome.trim() || !f.email.trim()) return toast.error("Informe nome e e-mail.");
     setCriando(true);
-    const { data, error } = await sb.rpc("cadastrar_membro_equipe", { nome_completo: f.nome, email: f.email, whatsapp: f.whatsapp, tambem_entregador: f.entregador });
+    const { data, error } = await sb.rpc("cadastrar_membro_equipe", { nome_completo: f.nome, email: f.email, whatsapp: f.whatsapp, tambem_entregador: f.entregador, cargo: f.cargo });
     setCriando(false);
     if (error) return toast.error(error.message);
     setFeito({ nome: f.nome.trim(), email: f.email.trim().toLowerCase(), whatsapp: f.whatsapp, codigo: data.codigo });
@@ -119,7 +119,14 @@ function EquipePage() {
     if (error) return toast.error(error.message);
     toast.success("Parceiro removido."); load();
   }
-  function fechar() { setNovo(false); setFeito(null); setF({ nome: "", email: "", whatsapp: "", entregador: false }); }
+  function fechar() { setNovo(false); setFeito(null); setF({ nome: "", email: "", whatsapp: "", entregador: false, cargo: "funcionario" }); }
+
+  async function mudarCargo(m: Membro, cargo: string) {
+    const { error } = await sb.from("equipe_empresa").update({ cargo }).eq("user_id", m.user_id);
+    if (error) return toast.error(error.message);
+    toast.success(cargo === "supervisor" ? `${m.nome} agora é supervisor.` : `${m.nome} agora é funcionário.`);
+    load();
+  }
 
   async function alternarEntregador(m: Membro) {
     const { error } = await sb.rpc("definir_membro_entregador", { _user_id: m.user_id, _ativo: !m.entregador });
@@ -177,7 +184,9 @@ function EquipePage() {
                 {m.codigo_convite
                   ? <Badge className="bg-amber-100 text-amber-800">Convite pendente · {m.codigo_convite}</Badge>
                   : <Badge variant={m.ativo ? "secondary" : "outline"}>{m.ativo ? "Ativo" : "Desativado"}</Badge>}
+                <Badge className={m.cargo === "supervisor" ? "bg-primary/20 text-foreground hover:bg-primary/20" : ""} variant={m.cargo === "supervisor" ? "default" : "outline"}>{m.cargo === "supervisor" ? "Supervisor" : "Funcionário"}</Badge>
                 {m.entregador && <Badge variant="outline"><Bike className="mr-1 h-3 w-3" />Também entregador</Badge>}
+                <Button size="sm" variant="outline" onClick={() => mudarCargo(m, m.cargo === "supervisor" ? "funcionario" : "supervisor")}>{m.cargo === "supervisor" ? "Tornar funcionário" : "Tornar supervisor"}</Button>
                 <Button size="sm" variant="outline" onClick={() => alternarEntregador(m)}>{m.entregador ? "Desligar entregador" : "Habilitar entregador"}</Button>
                 {m.codigo_convite && <Button size="sm" variant="outline" onClick={() => reenviar(m.nome ?? "", m.email, m.codigo_convite, null, "equipe")}><Send className="mr-1 h-3.5 w-3.5" />Reenviar</Button>}
                 {m.codigo_convite && <Button size="sm" variant="outline" onClick={() => setEmailAlvo({ id: m.user_id, nome: m.nome ?? "", email: m.email })}>Editar e-mail</Button>}
@@ -187,7 +196,7 @@ function EquipePage() {
             </div>
           ))}
           <div className="rounded-2xl bg-muted/50 p-3 text-xs text-muted-foreground">
-            <strong>O que o funcionário pode:</strong> criar operações, alocar parceiros, acompanhar rotas, encerrar rotas e conferir devoluções. <strong>O que não pode:</strong> ver valores, pagamentos ou PIX, nem apagar nada.
+            <strong>Funcionário:</strong> cria operações, bipa e conta pacotes, aloca parceiros, acompanha e encerra rotas, confere devoluções. Usa sempre o valor padrão por pacote e não vê valores, pagamentos nem PIX; pode <em>sugerir</em> outro valor. <strong>Supervisor:</strong> faz tudo isso e também define valores, aprova as sugestões e dá baixa nos pagamentos. <strong>Só o dono</strong> mexe nos dados da empresa, na equipe e apaga registros.
           </div>
         </TabsContent>
 
@@ -270,6 +279,16 @@ function EquipePage() {
               <div className="space-y-3">
                 <div className="space-y-1"><Label>Nome</Label><Input value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></div>
                 <div className="space-y-1"><Label>E-mail</Label><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
+                <div className="space-y-1">
+                  <Label>Cargo</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([["funcionario", "Funcionário", "Opera o dia a dia: bipa, aloca, conta e fecha rotas. Usa o valor padrão por pacote."], ["supervisor", "Supervisor", "Tudo do funcionário + define valores, aprova sugestões e dá baixa em pagamentos."]] as const).map(([v, t, d]) => (
+                      <button key={v} type="button" onClick={() => setF({ ...f, cargo: v })} className={`rounded-lg border p-2 text-left text-xs ${f.cargo === v ? "border-primary bg-primary/10" : "border-border"}`}>
+                        <div className="font-semibold">{t}</div><div className="mt-0.5 text-muted-foreground">{d}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="space-y-1"><Label>WhatsApp (opcional)</Label><Input value={f.whatsapp} onChange={(e) => setF({ ...f, whatsapp: e.target.value })} placeholder="(13) 99999-9999" /></div>
                 <label className="flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-xs">
                   <input type="checkbox" className="mt-0.5" checked={f.entregador} onChange={(e) => setF({ ...f, entregador: e.target.checked })} />
