@@ -40,7 +40,7 @@ function useEquipe(userId: string | undefined, enabled: boolean): { info: Equipe
     fetch("/api/db/equipe-me", { credentials: "same-origin" })
       .then((r) => r.json())
       .then((j) => {
-        const v = { empresaId: j?.empresaId ?? null, ativo: !!j?.ativo, entregador: !!j?.entregador };
+        const v = { empresaId: j?.empresaId ?? null, ativo: !!j?.ativo, entregador: !!j?.entregador, cargo: j?.cargo === "supervisor" ? "supervisor" : "funcionario" };
         equipeCache.set(userId, v);
         setInfo(v);
       })
