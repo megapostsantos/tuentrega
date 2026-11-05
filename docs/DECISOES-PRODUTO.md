@@ -122,3 +122,10 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 - Verificar em produção: `/api/db/setup` como admin; Cadastros mostra antigos como Aprovados e novo cadastro como Pendente.
 - Ideias: filtro "quem atende este bairro" ao montar rota; modo admin somente leitura ao "ver como"; dono apagar parceiros também pelo painel de admin; aviso (notificação/WhatsApp) de sugestão de valor; ONBOARDING.md (nome do time, tarefa inicial, dicas); Vite 8/TanStack (npm audit crítico).
 - Regra de layout: celular em cartões agrupados (sem rolagem lateral), computador em tabela.
+
+## Planejador de rotas por CEP — 05/11/2026
+- Inspirado no Spoke (antes Circuit). Empresa importa planilha (colar do Excel ou CSV) com código, CEP, endereço e número ao criar a operação (`entregas_pacotes.cep`). Sem endereço completo, só o CEP já basta.
+- Entregador, na rota em andamento, toca em **Organizar rota**: o app localiza os CEPs (BrasilAPI → AwesomeAPI → ViaCEP+Nominatim, com cache), ordena as pendentes (vizinho mais próximo + 2-opt a partir da posição dele) e salva em lote (`salvar_ordem_rota`, `ordem_otimizada` ≥ 100000, `lat/lng`).
+- Mostra distância e tempo estimados (25 km/h + 3 min por parada) e botões Waze, Google Maps e "próximas 9 no Maps". O destino enviado ao GPS é endereço + CEP (a coordenada do CEP é aproximada).
+- Limites conhecidos: distância em linha reta (não por ruas), sem janelas de horário/prioridade, sem mapa na tela, XLSX direto não lido (usar colar/CSV), CEP não vira ponto exato do número.
+- Ideias seguintes: mapa com a sequência, mover parada para primeira/última, janelas de horário, distância por ruas (OSRM), importação de CEP em operações já criadas.

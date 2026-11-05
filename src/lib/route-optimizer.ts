@@ -60,3 +60,40 @@ export function formatDuration(minutes: number): string {
   if (rem === 0) return `${h}h`;
   return `${h}h ${rem}min`;
 }
+
+const dist = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => haversineDistance(a.lat, a.lng, b.lat, b.lng);
+
+/** Caminho aberto (sem voltar): vizinho mais próximo + 2-opt. Bom para dezenas a poucas centenas de paradas. */
+export function ordenarParadas<T extends { lat: number; lng: number }>(origem: { lat: number; lng: number }, paradas: T[]): { ordem: T[]; km: number } {
+  const n = paradas.length;
+  if (n === 0) return { ordem: [], km: 0 };
+  const restantes = paradas.map((_, i) => i);
+  const rota: number[] = [];
+  let atual: { lat: number; lng: number } = origem;
+  while (restantes.length) {
+    let melhor = 0, md = Infinity;
+    for (let k = 0; k < restantes.length; k++) { const d = dist(atual, paradas[restantes[k]]); if (d < md) { md = d; melhor = k; } }
+    const i = restantes.splice(melhor, 1)[0];
+    rota.push(i); atual = paradas[i];
+  }
+  const pt = (i: number) => (i < 0 ? origem : paradas[rota[i]]);
+  let melhorou = true, voltas = 0;
+  while (melhorou && voltas++ < 60) {
+    melhorou = false;
+    for (let i = 0; i < n - 1; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const antes = dist(pt(i - 1), pt(i)) + (j + 1 < n ? dist(pt(j), pt(j + 1)) : 0);
+        const depois = dist(pt(i - 1), pt(j)) + (j + 1 < n ? dist(pt(i), pt(j + 1)) : 0);
+        if (depois + 1e-9 < antes) { rota.splice(i, j - i + 1, ...rota.slice(i, j + 1).reverse()); melhorou = true; }
+      }
+    }
+  }
+  let km = 0, prev = origem;
+  for (const i of rota) { km += dist(prev, paradas[i]); prev = paradas[i]; }
+  return { ordem: rota.map((i) => paradas[i]), km };
+}
+
+/** Tempo estimado: deslocamento urbano (25 km/h) + minutos parado em cada entrega. */
+export function estimarMinutos(km: number, paradas: number, minPorParada = 3): number {
+  return Math.round((km / 25) * 60 + paradas * minPorParada);
+}

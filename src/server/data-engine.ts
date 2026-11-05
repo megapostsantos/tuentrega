@@ -627,6 +627,7 @@ const DDL_LAZY: string[] = [
 	"criado_em" timestamp DEFAULT now() NOT NULL
 );`,
   `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "entregador" boolean DEFAULT false NOT NULL;`,
+  `ALTER TABLE "entregas_pacotes" ADD COLUMN IF NOT EXISTS "cep" text;`,
   `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "cargo" text DEFAULT 'funcionario' NOT NULL;`,
   `CREATE TABLE IF NOT EXISTS "sugestoes_valor" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -955,6 +956,31 @@ async function cadastrarEntregadorGerenciado(uid: string | null, args: Record<st
 }
 
 
+
+
+/** Salva, de uma vez, a ordem (e a localização) das paradas da rota. Entregador da rota ou a empresa dona. */
+async function salvarOrdemRota(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Não autenticado");
+  const ofertaId = String(args.oferta_id ?? "");
+  const dono = await query(`select 1 from "ofertas" where "id"::text = $1 and ("entregador_id"::text = $2 or "empresa_id"::text = $2)`, [ofertaId, uid]);
+  if (!dono.length) throw Object.assign(new Error("Rota não encontrada"), { code: "403" });
+  const itens = (Array.isArray(args.itens) ? args.itens : []).slice(0, 5000).map((x: any) => ({
+    id: String(x?.id ?? ""),
+    ordem: Math.trunc(Number(x?.ordem)),
+    lat: x?.lat == null || !Number.isFinite(Number(x.lat)) ? null : Number(x.lat),
+    lng: x?.lng == null || !Number.isFinite(Number(x.lng)) ? null : Number(x.lng),
+    dist: x?.dist == null || !Number.isFinite(Number(x.dist)) ? null : Math.round(Number(x.dist)),
+  })).filter((x) => x.id && Number.isFinite(x.ordem));
+  if (!itens.length) return { data: { atualizados: 0 }, error: null, count: null };
+  const r = await query(
+    `with v as (select * from jsonb_to_recordset($2::jsonb) as t("id" text, "ordem" int, "lat" numeric, "lng" numeric, "dist" numeric))
+     update "entregas_pacotes" e set "ordem_otimizada" = v."ordem", "lat" = coalesce(v."lat", e."lat"), "lng" = coalesce(v."lng", e."lng"),
+            "distancia_anterior_metros" = v."dist", "updated_at" = now()
+       from v where e."id"::text = v."id" and e."oferta_id"::text = $1 returning e."id"`,
+    [ofertaId, JSON.stringify(itens)],
+  );
+  return { data: { atualizados: r.length }, error: null, count: null };
+}
 
 /** Funcionário sugere outro valor por pacote para uma vaga/rota; supervisor ou dono aprova. */
 async function sugerirValor(uid: string | null, autor: string | null, args: Record<string, unknown>): Promise<QueryResp> {
@@ -1422,6 +1448,7 @@ async function runRpc(req: QueryReq, uid: string | null, autor?: string): Promis
   if (fn === "finalizar_rota") return await finalizarRota(uid, args);
   if (fn === "receber_devolucao") return await receberDevolucao(uid, args);
   if (fn === "cadastrar_entregador_gerenciado") return await cadastrarEntregadorGerenciado(uid, args);
+  if (fn === "salvar_ordem_rota") return await salvarOrdemRota(uid, args);
   if (fn === "sugerir_valor") return await sugerirValor(uid, autor ?? null, args);
   if (fn === "decidir_sugestao_valor") return await decidirSugestaoValor(uid, args);
   if (fn === "remover_parceiro") return await removerParceiro(uid, args);
@@ -1479,6 +1506,8 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           if (String(a._entregador_id) !== scope.uid || !(pontos >= -30 && pontos <= 10)) forbidden();
         } else if (fn === "recusar_rota" || fn === "postular_zona" || fn === "cancelar_postulacao_zona" || fn === "candidatar_oferta" || fn === "cancelar_candidatura" || fn === "saldo_antecipacao" || fn === "simular_antecipacao" || fn === "solicitar_antecipacao") {
           if (scope.role === "empresa") forbidden();
+        } else if (fn === "salvar_ordem_rota") {
+          if (scope.role !== "empresa" && scope.role !== "entregador") forbidden();
         } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado" || fn === "sugerir_valor" || fn === "decidir_sugestao_valor" || fn === "remover_parceiro" || fn === "remover_membro_equipe" || fn === "atualizar_email_convite") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();

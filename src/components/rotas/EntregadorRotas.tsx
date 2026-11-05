@@ -25,6 +25,8 @@ import {
 import { useLocationTracker, useKeepAwake } from "@/hooks/use-location-tracker";
 import { LocationIndicator } from "@/components/LocationIndicator";
 import { recusarRotaAtribuida } from "@/lib/reofertar";
+import { formataCep } from "@/lib/cep";
+import { PlanejadorRota } from "@/components/rotas/PlanejadorRota";
 import { InsucessoSheet } from "@/components/rotas/InsucessoSheet";
 import { DevolucoesPendentes } from "@/components/rotas/DevolucoesPendentes";
 
@@ -34,6 +36,9 @@ type Pacote = {
   numero_pacote: number;
   ordem_otimizada: number | null;
   endereco_entrega: string | null;
+  cep?: string | null;
+  lat?: number | string | null;
+  lng?: number | string | null;
   status: string;
   codigo_pacote?: string | null;
   motivo_nao_entrega?: string | null;
@@ -139,7 +144,7 @@ export function EntregadorRotas({ actingFor }: { actingFor?: { ofertaId: string;
 
         const { data: pks } = await supabase
           .from("entregas_pacotes")
-          .select("id, oferta_id, numero_pacote, ordem_otimizada, endereco_entrega, status, codigo_pacote, motivo_nao_entrega")
+          .select("id, oferta_id, numero_pacote, ordem_otimizada, endereco_entrega, cep, lat, lng, status, codigo_pacote, motivo_nao_entrega")
           .eq("oferta_id", of.id);
         const list = ((pks as Pacote[]) ?? []).sort(
           (a, b) => (a.ordem_otimizada ?? a.numero_pacote) - (b.ordem_otimizada ?? b.numero_pacote),
@@ -457,6 +462,7 @@ export function EntregadorRotas({ actingFor }: { actingFor?: { ofertaId: string;
       </div>
 
       <div className="px-4 pt-4 space-y-3">
+        {oferta.status === "in_progress" && <PlanejadorRota ofertaId={oferta.id} pacotes={pacotes as any} onSalvo={load} />}
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="p-3 space-y-2">
             <p className="text-xs text-muted-foreground">
@@ -654,7 +660,8 @@ function StopCard({
           <div>
             <div className="text-xs text-muted-foreground">Parada {index} · Pacote #{pacote.numero_pacote}</div>
             <div className="text-sm font-medium leading-tight break-words">
-              {pacote.endereco_entrega ?? "Sem endereço"}
+              {pacote.endereco_entrega ?? (pacote.cep ? `CEP ${formataCep(pacote.cep)}` : "Sem endereço")}
+              {pacote.endereco_entrega && pacote.cep ? <span className="ml-1 text-xs font-normal text-muted-foreground">CEP {formataCep(pacote.cep)}</span> : null}
             </div>
           </div>
           {!isDone && !isProblem && !selecionando && (

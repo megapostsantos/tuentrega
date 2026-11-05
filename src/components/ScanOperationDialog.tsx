@@ -1,3 +1,4 @@
+import { lerPlanilha, formataCep, soDigitos } from "@/lib/cep";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as zxingPkg from "@zxing/library";
@@ -18,7 +19,7 @@ type Props = {
   onCreated: (operacaoId: string) => void;
 };
 
-type PkgRow = { code: string; endereco: string };
+type PkgRow = { code: string; endereco: string; cep?: string };
 
 async function tryGetCamera(): Promise<MediaStream> {
   const attempts: MediaStreamConstraints[] = [
@@ -87,6 +88,23 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
   }
 
   function applyBulkAddresses() {
+    const planilha = lerPlanilha(pasteText);
+    if (planilha.length > 0) {
+      setPkgs((prev) => {
+        const out = [...prev];
+        let novos = 0, atualizados = 0;
+        planilha.forEach((row, i) => {
+          const code = row.codigo || "";
+          const idx = code ? out.findIndex((x) => x.code === code) : (prev.length > 0 && i < prev.length && !out[i].cep ? i : -1);
+          if (idx >= 0) { out[idx] = { ...out[idx], cep: row.cep, endereco: row.endereco || out[idx].endereco }; atualizados++; }
+          else { out.push({ code: code || `S${out.length + 1}`, cep: row.cep, endereco: row.endereco }); novos++; }
+        });
+        toast.success(`${atualizados} pacote(s) atualizados com CEP${novos ? ` e ${novos} novo(s) adicionados` : ""}`);
+        return out;
+      });
+      setPasteOpen(false); setPasteText("");
+      return;
+    }
     const lines = pasteText.split("\n").map((l) => l.trim()).filter(Boolean);
     setPkgs((prev) => prev.map((p, i) => ({ ...p, endereco: lines[i] ?? p.endereco })));
     setPasteOpen(false); setPasteText("");
@@ -156,6 +174,7 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         codigo_pacote: p.code,
         nx_code: tipoServico === "nex" ? p.code : null,
         endereco_entrega: p.endereco || null,
+        cep: p.cep || null,
         status: "pending",
       }));
       const { error: pkgErr } = await supabase.from("entregas_pacotes").insert(rows as any);
@@ -246,16 +265,19 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Colar lista de endereços</DialogTitle>
+              <DialogTitle>Planilha com CEP ou lista de endereços</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              Cole um endereço por linha. Eles serão distribuídos na ordem dos pacotes ({pkgs.length} no total).
+              <strong>Com CEP (recomendado):</strong> cole as colunas da planilha (código, CEP, endereço, número) ou envie um arquivo CSV. Com o CEP, o entregador pode ordenar a rota pelo melhor caminho.
+              Sem CEP: um endereço por linha, distribuídos na ordem dos pacotes ({pkgs.length} no total).
             </p>
+            <input type="file" accept=".csv,.txt,text/csv,text/plain" className="text-sm"
+              onChange={async (e) => { const f = e.target.files?.[0]; if (f) setPasteText(await f.text()); e.target.value = ""; }} />
             <Textarea
               value={pasteText}
               onChange={(e) => setPasteText(e.target.value)}
               rows={10}
-              placeholder={"Rua A, 123, Bairro, Cidade\nRua B, 456, Bairro, Cidade\n..."}
+              placeholder={"Código\tCEP\tEndereço\tNúmero\nBR123\t11060-001\tRua A\t10\n..."}
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setPasteOpen(false)}>Cancelar</Button>
@@ -430,7 +452,7 @@ function Step2Addresses({
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">{pkgs.length} pacotes</span>
         <Button variant="outline" size="sm" onClick={onOpenPaste}>
-          <ClipboardPaste className="mr-1 h-4 w-4" />Colar lista de endereços
+          <ClipboardPaste className="mr-1 h-4 w-4" />Planilha com CEP ou endereços
         </Button>
       </div>
 
@@ -443,15 +465,27 @@ function Step2Addresses({
                 <code className="text-xs text-muted-foreground">{p.code}</code>
               </div>
             </div>
-            <Input
-              placeholder="Ex: Rua X, 123, Bairro, Cidade"
-              value={p.endereco}
-              onChange={(e) => {
-                const next = [...pkgs];
-                next[i] = { ...next[i], endereco: e.target.value };
-                setPkgs(next);
-              }}
-            />
+            <div className="grid grid-cols-[110px_1fr] gap-2">
+              <Input
+                placeholder="CEP"
+                inputMode="numeric"
+                value={p.cep ? formataCep(p.cep) : ""}
+                onChange={(e) => {
+                  const next = [...pkgs];
+                  next[i] = { ...next[i], cep: soDigitos(e.target.value).slice(0, 8) };
+                  setPkgs(next);
+                }}
+              />
+              <Input
+                placeholder="Ex: Rua X, 123"
+                value={p.endereco}
+                onChange={(e) => {
+                  const next = [...pkgs];
+                  next[i] = { ...next[i], endereco: e.target.value };
+                  setPkgs(next);
+                }}
+              />
+            </div>
           </li>
         ))}
       </ul>

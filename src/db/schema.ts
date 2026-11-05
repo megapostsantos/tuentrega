@@ -287,6 +287,7 @@ export const entregasPacotes = pgTable("entregas_pacotes", {
   ofertaId: uuid("oferta_id").notNull(),
   numeroPacote: integer("numero_pacote").notNull(),
   enderecoEntrega: text("endereco_entrega"),
+  cep: text("cep"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

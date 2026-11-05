@@ -253,6 +253,7 @@ export const POLICIES: Record<string, Policy> = {
       entregador: [
         "status", "assinatura_url", "foto_pod_url", "nome_recebedor", "observacao_entrega", "entregue_em",
         "motivo_nao_entrega", "tentativas", "codigo_pacote", "updated_at",
+        "lat", "lng", "ordem_otimizada", "distancia_anterior_metros", "tempo_estimado_minutos",
       ],
     },
     insert: {
