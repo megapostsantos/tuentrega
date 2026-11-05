@@ -107,3 +107,18 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 - Ao publicar uma oferta, rota ou previsão a empresa escolhe: **Público** (todos os entregadores aprovados), **Meu clã** (parceiros do clã da empresa) ou **Equipe interna** (funcionários que também são entregadores).
 - O **clã** = parceiros vinculados (entram sozinhos) + quem a empresa adicionar manualmente (botão "+ Clã" em Entregadores). Sair do clã tira o acesso às vagas dele.
 - A regra vale no servidor: quem está fora da audiência não vê nem consegue se candidatar, mesmo forçando pelo navegador.
+
+## Cargos da equipe (supervisor e funcionário) — 05/11/2026
+- **Funcionário:** opera o dia a dia (bipa, conta, aloca, encerra rotas, confere devoluções). Sempre usa o valor padrão por pacote da empresa. Não vê valores, pagamentos nem PIX. Pode **sugerir** outro valor para uma rota (rascunho/aberta) ou vaga aberta (tabela `sugestoes_valor`, RPC `sugerir_valor`).
+- **Supervisor:** tudo do funcionário + define valores, aprova/recusa sugestões (`decidir_sugestao_valor`) e dá baixa em pagamentos. Não mexe em dados da empresa, equipe nem exclusões.
+- **Dono:** único que altera empresa, equipe/cargos e apaga registros.
+- Implementação: `equipe_empresa.cargo`; contexto da sessão `{operador, equipe, autor}`; `isOperador` (funcionário), `isSupervisor`, `isEquipe` no `useAuth`.
+
+## Pendências e perguntas em aberto (anotado em 05/11/2026)
+- **Conta única entregador + supervisor:** hoje só uma conta NOVA criada em Equipe vira funcionário/supervisor (papel `operador`); uma conta de entregador existente não vira supervisor e o e-mail repetido é recusado. Proposta aguardando decisão do dono: botão para vincular uma conta existente a uma empresa como supervisor, com troca Gestão ⇄ Entregador. Perguntei como o teste foi feito (e-mail do entregador × e-mail novo; modo preso em Entregador por `tu_modo` no celular) e aguardo a resposta.
+- E-mail (Resend): faltam `RESEND_API_KEY` (Secret) e `EMAIL_FROM` no Cloudflare.
+- Trocar 3 segredos: senha do Neon, senha do admin, `BETTER_AUTH_SECRET`; revogar chave antiga da Anthropic.
+- Ambiente de teste (staging): branch `staging`, branch Neon, segundo Worker — ver `docs/AMBIENTES.md`.
+- Verificar em produção: `/api/db/setup` como admin; Cadastros mostra antigos como Aprovados e novo cadastro como Pendente.
+- Ideias: filtro "quem atende este bairro" ao montar rota; modo admin somente leitura ao "ver como"; dono apagar parceiros também pelo painel de admin; aviso (notificação/WhatsApp) de sugestão de valor; ONBOARDING.md (nome do time, tarefa inicial, dicas); Vite 8/TanStack (npm audit crítico).
+- Regra de layout: celular em cartões agrupados (sem rolagem lateral), computador em tabela.
