@@ -97,7 +97,10 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
   if (url.pathname === "/api/db/claim-invite" && req.method === "POST") {
     const body: any = await req.json().catch(() => null);
     if (!body?.email || !body?.codigo || !body?.senha) return Response.json({ error: "Preencha e-mail, código e senha." }, { status: 400 });
-    const { resgatarConvite } = await import("./server/data-engine");
+    const { resgatarConvite, limiteExcedido } = await import("./server/data-engine");
+    const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "?";
+    if ((await limiteExcedido(`convite:ip:${ip}`, 20, 600)) || (await limiteExcedido(`convite:em:${String(body.email).toLowerCase()}`, 8, 600)))
+      return Response.json({ error: "Muitas tentativas. Aguarde alguns minutos." }, { status: 429 });
     const r = await resgatarConvite(String(body.email), String(body.codigo), String(body.senha));
     return r.ok ? Response.json({ ok: true }) : Response.json({ error: r.message }, { status: r.status });
   }
@@ -113,7 +116,8 @@ document.getElementById("e").textContent=errs.join("\\n\\n");})();
     } catch {
       return Response.json({ error: "JSON inválido" }, { status: 400 });
     }
-    const { registerProfile } = await import("./server/data-engine");
+    const { registerProfile, limiteExcedido } = await import("./server/data-engine");
+    if (await limiteExcedido(`registro:${user.id}`, 10, 600)) return Response.json({ error: "Muitas tentativas. Aguarde alguns minutos." }, { status: 429 });
     const r = await registerProfile({ id: user.id, name: user.name, role: user.role ?? null }, body?.role, body?.data ?? {});
     return r.ok ? Response.json({ ok: true }) : Response.json({ error: r.message }, { status: r.status });
   }

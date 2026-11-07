@@ -17,6 +17,8 @@ export default defineConfig({
       "/**": {
         headers: {
           "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "SAMEORIGIN",
+          "Content-Security-Policy": "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'",
           "Referrer-Policy": "strict-origin-when-cross-origin",
           "Permissions-Policy": "geolocation=(self), camera=(self), microphone=()",
           "Strict-Transport-Security": "max-age=31536000; includeSubDomains",

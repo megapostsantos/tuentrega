@@ -129,3 +129,13 @@ Documento vivo. **Decidido** = dito pelo dono do produto. **Proposta** = sugest�
 - Mostra distância e tempo estimados (25 km/h + 3 min por parada) e botões Waze, Google Maps e "próximas 9 no Maps". O destino enviado ao GPS é endereço + CEP (a coordenada do CEP é aproximada).
 - Limites conhecidos: distância em linha reta (não por ruas), sem janelas de horário/prioridade, sem mapa na tela, XLSX direto não lido (usar colar/CSV), CEP não vira ponto exato do número.
 - Ideias seguintes: mapa com a sequência, mover parada para primeira/última, janelas de horário, distância por ruas (OSRM), importação de CEP em operações já criadas.
+
+## Revisão contra os "8 ataques comuns em apps feitos com IA" — 07/11/2026
+1. **XSS:** nenhum `dangerouslySetInnerHTML`/`eval` no código; React escapa o texto. Cabeçalhos: nosniff, HSTS, X-Frame-Options, CSP parcial (object-src, base-uri, frame-ancestors, form-action). **Falta** CSP completo (scripts/estilos) — exige testar em produção (usar Report-Only primeiro).
+2. **Rotas de API expostas:** todas as rotas /api exigem sessão, e admin para /api/admin e /api/db/setup. Link público de vaga (`getOfertaPublic`) só mostra vaga aberta, não privada e agora **só audiência pública** (vagas de equipe/funcionários não vazam).
+3. **Chaves expostas:** segredos só no servidor (Cloudflare). `.env` com chaves antigas do Supabase estava versionado → removido do git e ignorado. **Ação do dono:** conferir/apagar o projeto Supabase antigo e trocar as 3 senhas pendentes.
+4. **Banco aberto:** todo acesso passa por `/api/db/query` com políticas por papel (policies.ts); Neon só aceita a string de conexão do servidor.
+5. **SQL injection:** consultas parametrizadas; nomes de tabela/coluna só do registro do schema; suíte `fuzz` (58 verificações).
+6. **Sem limite de tentativas:** login/cadastro/recuperação com limite do Better Auth (memória por instância). Convite, registro e leitura por IA agora têm limite **no banco** (`limites_uso`), valendo entre instâncias. 
+7. **Prompt injection:** leitura de zonas por imagem só extrai nome (80 caracteres)/paradas/pacotes numéricos, sem ferramentas nem acesso a dados; saída validada.
+8. **Pacotes inventados:** 88 dependências, todas conhecidas, travadas por lockfile com hash; `npm audit` ainda mostra pendências (Vite 8/TanStack, `xlsx`).

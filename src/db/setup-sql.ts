@@ -2286,4 +2286,6 @@ ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "cargo" text DEFAULT 'func
 CREATE TABLE IF NOT EXISTS "sugestoes_valor" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "empresa_id" text NOT NULL, "autor_id" text, "autor_nome" text, "alvo_tipo" text NOT NULL, "alvo_id" text NOT NULL, "titulo" text, "quantidade_pacotes" integer DEFAULT 0 NOT NULL, "valor_por_pacote" numeric NOT NULL, "motivo" text, "status" text DEFAULT 'pendente' NOT NULL, "decidido_por" text, "criado_em" timestamp DEFAULT now() NOT NULL, "decidido_em" timestamp);
 -- @@
 ALTER TABLE "entregas_pacotes" ADD COLUMN IF NOT EXISTS "cep" text;
+-- @@
+CREATE TABLE IF NOT EXISTS "limites_uso" ("chave" text NOT NULL, "janela" bigint NOT NULL, "n" integer DEFAULT 1 NOT NULL, PRIMARY KEY ("chave","janela"));
 `;

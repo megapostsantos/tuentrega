@@ -1,6 +1,5 @@
 import { defineEventHandler } from "h3";
 
-const usos = new Map<string, number[]>();
 
 export default defineEventHandler(async (event) => {
   const req: Request = (event as any).req;
@@ -22,10 +21,8 @@ export default defineEventHandler(async (event) => {
   if (!key) return Response.json({ error: "A leitura por imagem ainda não foi ativada (falta a chave ANTHROPIC_API_KEY)." }, { status: 501 });
 
   // limite simples por usuário: 30 leituras por hora
-  const agora = Date.now();
-  const lista = (usos.get(user.id) ?? []).filter((t) => agora - t < 3_600_000);
-  if (lista.length >= 30) return Response.json({ error: "Muitas leituras seguidas. Tente de novo mais tarde." }, { status: 429 });
-  usos.set(user.id, [...lista, agora]);
+  const { limiteExcedido } = await import("./server/data-engine");
+  if (await limiteExcedido(`ia:${user.id}`, 30, 3600)) return Response.json({ error: "Muitas leituras seguidas. Tente de novo mais tarde." }, { status: 429 });
 
   const body: any = await req.json().catch(() => null);
   const brutas: { image?: string; mediaType?: string }[] = Array.isArray(body?.images) ? body.images : body?.image ? [{ image: body.image, mediaType: body.mediaType }] : [];

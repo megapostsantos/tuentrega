@@ -45,7 +45,7 @@ export function interpretarResposta(resp: any): ResultadoZonas {
   }
   if (!inp || !Array.isArray(inp.zonas)) throw new Error("Não consegui ler a imagem. Tente uma foto mais nítida, mostrando a lista inteira.");
   const zonas: ZonaLida[] = (Array.isArray(inp.zonas) ? inp.zonas : [])
-    .map((z: any) => ({ nome: String(z?.nome ?? "").trim(), paradas: Math.max(0, Math.floor(Number(z?.paradas) || 0)), pacotes: Math.max(0, Math.floor(Number(z?.pacotes) || 0)) }))
+    .map((z: any) => ({ nome: String(z?.nome ?? "").trim().slice(0, 80), paradas: Math.max(0, Math.floor(Number(z?.paradas) || 0)), pacotes: Math.max(0, Math.floor(Number(z?.pacotes) || 0)) }))
     .filter((z: ZonaLida) => z.nome && z.pacotes > 0);
   const n = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : null);
   const vistos = new Set<string>();

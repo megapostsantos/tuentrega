@@ -14,6 +14,8 @@ export const getOfertaPublic = createServerFn({ method: "GET" })
       .limit(1);
     // link público: só ofertas abertas e não privadas (o resto exige login)
     if (!oferta || oferta.status !== "open" || oferta.tipo === "private") return null;
+    // vagas só para a equipe da empresa (ou só funcionários) não aparecem em link público
+    if ((oferta as any).visibilidade && (oferta as any).visibilidade !== "publica") return null;
 
     let empresaNome: string | null = null;
     if (oferta.empresaId) {

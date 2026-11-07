@@ -628,6 +628,7 @@ const DDL_LAZY: string[] = [
 );`,
   `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "entregador" boolean DEFAULT false NOT NULL;`,
   `ALTER TABLE "entregas_pacotes" ADD COLUMN IF NOT EXISTS "cep" text;`,
+  `CREATE TABLE IF NOT EXISTS "limites_uso" ("chave" text NOT NULL, "janela" bigint NOT NULL, "n" integer DEFAULT 1 NOT NULL, PRIMARY KEY ("chave","janela"));`,
   `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "cargo" text DEFAULT 'funcionario' NOT NULL;`,
   `CREATE TABLE IF NOT EXISTS "sugestoes_valor" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -1838,6 +1839,18 @@ export async function registerProfile(
 
 export { query as rawQuery };
 
+
+/** Limite de uso guardado no banco (vale para todas as instâncias do servidor). Devolve true se passou do limite. */
+export async function limiteExcedido(chave: string, max: number, janelaSeg: number): Promise<boolean> {
+  await garantirTabelas();
+  const janela = Math.floor(Date.now() / 1000 / janelaSeg);
+  const r = await query(
+    `insert into "limites_uso" ("chave","janela","n") values ($1,$2,1) on conflict ("chave","janela") do update set "n" = "limites_uso"."n" + 1 returning "n"`,
+    [chave.slice(0, 200), janela],
+  );
+  if (Math.random() < 0.02) await query(`delete from "limites_uso" where "janela" < $1`, [janela - 2]).catch(() => {});
+  return Number(r[0]?.n ?? 1) > max;
+}
 
 const tentativasConvite = new Map<string, { n: number; ate: number }>();
 
