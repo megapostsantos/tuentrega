@@ -97,7 +97,7 @@ export function EmpresaPainel({ userId }: { userId?: string }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Hoje</p>
-          <h1 className="text-xl font-bold capitalize">{dataFmt}</h1>
+          <h1 className="text-xl font-bold">{dataFmt.charAt(0).toUpperCase() + dataFmt.slice(1)}</h1>
         </div>
         <Link to="/pacotes" className="inline-flex h-10 items-center gap-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground elev-1 press-scale">
           <Plus className="h-4 w-4" /> Nova operação

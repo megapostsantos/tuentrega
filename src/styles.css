@@ -145,7 +145,7 @@
   /* Remove 300ms touch delay on mobile */
   button, a, [role="button"] { touch-action: manipulation; }
   /* Min touch target */
-  button, a[role="button"] { min-height: 44px; }
+  button:not([role="checkbox"]):not([role="switch"]):not([role="radio"]):not([role="tab"]), a[role="button"] { min-height: 44px; }
   /* Prevent body scroll when modal/sheet open (radix sets data-state) */
   body[data-scroll-locked] { overflow: hidden !important; }
 }

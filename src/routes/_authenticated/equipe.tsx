@@ -233,7 +233,7 @@ function EquipePage() {
                 : "A rota fica com o primeiro entregador que aceitar, sem passar por você."}
             </p>
           </div>
-          <Switch checked={aprovar} onCheckedChange={mudarAprovacao} />
+          <Switch aria-label="Aprovar candidatos antes de atribuir a vaga" checked={aprovar} onCheckedChange={mudarAprovacao} />
         </CardContent>
       </Card>
 

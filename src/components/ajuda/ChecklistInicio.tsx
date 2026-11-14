@@ -80,19 +80,19 @@ export function ChecklistInicio({ userId, tipo }: { userId?: string; tipo: "empr
           <p className="text-xs font-semibold uppercase tracking-wide text-[#B77F00]">Primeiros passos · {feitos}/{itens.length}</p>
           <p className="mt-0.5 text-sm font-semibold">Próximo: {proximo.titulo}</p>
         </div>
-        <button type="button" aria-label="Dispensar" onClick={dispensar} className="rounded-full p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
+        <button type="button" aria-label="Dispensar" onClick={dispensar} className="rounded-full p-3 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${(feitos / itens.length) * 100}%` }} /></div>
       <ul className="mt-3 space-y-1.5">
         {itens.map((i) => (
           <li key={i.chave}>
-            <Link to={i.to} className={`flex items-center gap-2 text-sm ${i.feito ? "text-muted-foreground line-through" : "font-medium"}`}>
+            <Link to={i.to} className={`flex items-center gap-2 py-2.5 text-sm ${i.feito ? "text-muted-foreground line-through" : "font-medium"}`}>
               {i.feito ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Circle className="h-4 w-4" />}{i.titulo}
             </Link>
           </li>
         ))}
       </ul>
-      <Link to="/ajuda" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary underline underline-offset-4"><BookOpen className="h-3.5 w-3.5" />Ver os guias animados</Link>
+      <Link to="/ajuda" className="mt-1 inline-flex items-center gap-1 py-2.5 text-xs font-semibold text-primary underline underline-offset-4"><BookOpen className="h-3.5 w-3.5" />Ver os guias animados</Link>
     </div>
   );
 }

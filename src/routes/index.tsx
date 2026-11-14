@@ -110,9 +110,9 @@ function Landing() {
             <CTA href="/auth" variant="outline"><Bike className="h-5 w-5" /> Sou entregador — ver ofertas</CTA>
           </div>
           <p className="mt-4 text-sm text-white/80">
-            Já tem conta? <Link to="/auth" className="font-bold underline underline-offset-4" style={{ color: YELLOW }}>Entrar</Link>
+            Já tem conta? <Link to="/auth" className="inline-block px-2 py-2.5 font-bold underline underline-offset-4" style={{ color: YELLOW }}>Entrar</Link>
           </p>
-          <a href={wa("Olá! Quero conhecer a TuEntrega.")} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 text-sm text-white/80 underline-offset-4 hover:underline">
+          <a href={wa("Olá! Quero conhecer a TuEntrega.")} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 py-3 text-sm text-white/80 underline-offset-4 hover:underline">
             <MessageCircle className="h-4 w-4" /> Prefere conversar? Fale pelo WhatsApp
           </a>
           <div className="mt-12 grid max-w-3xl grid-cols-3 gap-3 border-t border-white/10 pt-6 text-center">

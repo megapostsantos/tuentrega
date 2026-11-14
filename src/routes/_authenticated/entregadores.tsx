@@ -199,8 +199,8 @@ function ListaEntregadores() {
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-primary/40 bg-primary/5 p-4 text-sm">
-        <div className="font-semibold">Como convidar os seus parceiros</div>
+      <details key={list.length === 0 ? "novo" : "tem"} open={list.length === 0} className="rounded-2xl border border-primary/40 bg-primary/5 p-4 text-sm">
+        <summary className="cursor-pointer py-1 font-semibold">Como convidar os seus parceiros <span className="text-xs font-normal text-muted-foreground">(toque para abrir/fechar)</span></summary>
         <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
           <li>Toque em <strong>Novo entregador</strong> e cadastre com o <strong>e-mail</strong> da pessoa.</li>
           <li>Envie o <strong>convite pelo WhatsApp</strong> (código + link). Aqui na lista, quem ainda não ativou aparece como <em>Convite pendente</em>, com o botão <strong>Enviar convite</strong>.</li>
@@ -208,7 +208,7 @@ function ListaEntregadores() {
           <li>Quando quiser liberar, use <strong>Desvincular</strong>: ele volta a ver as ofertas de todas as empresas.</li>
           <li><strong>Minha equipe:</strong> os vinculados entram nela sozinhos, e você pode adicionar qualquer parceiro com <strong>+ Equipe</strong>. Ao publicar uma vaga, escolha <em>Público</em>, <em>Minha equipe</em> ou <em>Só funcionários</em>.</li>
         </ol>
-      </div>
+      </details>
       <EntregadoresStats />
 
       <Card>
@@ -262,8 +262,8 @@ function ListaEntregadores() {
                       {gerenciados.has(e.id) && <Button variant="outline" size="sm" onClick={() => setEmailAlvo({ id: e.id, nome: e.nome_completo, email: (e as any).email ?? null, enviar: !convites.has(e.id) })}><Mail className="mr-1 h-3.5 w-3.5" />E-mail</Button>}
                       {vinculados.has(e.id) && <Button variant="outline" size="sm" onClick={() => desvincular(e)}>Desvincular</Button>}
                       {!dispatcherIds.has(e.id) && <Button variant="outline" size="sm" onClick={() => setDispatcherTarget(e)}><UserCog className="mr-1 h-3.5 w-3.5" />Dispatcher</Button>}
-                      <Button variant="ghost" size="sm" title="Suspender" onClick={() => suspendManually(e.id)}><ShieldOff className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="sm" title="Zerar score" onClick={() => resetScore(e.id)}><RotateCcw className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" aria-label="Suspender" title="Suspender" onClick={() => suspendManually(e.id)}><ShieldOff className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" aria-label="Zerar score" title="Zerar score" onClick={() => resetScore(e.id)}><RotateCcw className="h-4 w-4" /></Button>
                       <Button variant="outline" size="sm" className="text-red-600" onClick={() => remover(e)}><Trash2 className="mr-1 h-3.5 w-3.5" />{gerenciados.has(e.id) ? "Apagar" : "Remover"}</Button>
                     </div>
                   </div>
@@ -317,10 +317,10 @@ function ListaEntregadores() {
                               <UserCog className="h-3.5 w-3.5 mr-1" /> Tornar Dispatcher
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm" onClick={() => suspendManually(e.id)}>
+                          <Button variant="ghost" size="sm" aria-label="Suspender" title="Suspender" onClick={() => suspendManually(e.id)}>
                             <ShieldOff className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => resetScore(e.id)}>
+                          <Button variant="ghost" size="sm" aria-label="Zerar score" title="Zerar score" onClick={() => resetScore(e.id)}>
                             <RotateCcw className="h-4 w-4" />
                           </Button>
                           {gerenciados.has(e.id) && <Button variant="ghost" size="sm" title="Editar dados" onClick={() => setEditando(e)}><Pencil className="h-4 w-4" /></Button>}

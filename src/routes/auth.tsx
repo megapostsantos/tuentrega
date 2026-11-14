@@ -205,18 +205,18 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       <p className="mt-1 text-sm text-muted-foreground">Acesse sua conta TuEntrega.</p>
       <form onSubmit={submit} className="mt-6 space-y-4">
         <div className="space-y-2">
-          <Label>E-mail</Label>
-          <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Label htmlFor="login-email">E-mail</Label>
+          <Input id="login-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>Senha</Label>
-          <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Label htmlFor="login-senha">Senha</Label>
+          <Input id="login-senha" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
         <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:opacity-90">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Entrar <ArrowRight className="ml-1 h-4 w-4" /></>}
         </Button>
         <div className="text-center">
-          <Link to="/esqueci-senha" className="text-sm text-primary underline">Esqueci minha senha</Link>
+          <Link to="/esqueci-senha" className="inline-block px-3 py-3 text-sm text-primary underline">Esqueci minha senha</Link>
         </div>
       </form>
     </>

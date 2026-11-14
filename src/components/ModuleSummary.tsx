@@ -19,10 +19,10 @@ export function ModuleSummary({
 }) {
   const gridCls =
     columns === 5
-      ? "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+      ? "grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
       : columns === 3
-        ? "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
-        : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4";
+        ? "grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        : "grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-4";
 
   if (loading) {
     return (
