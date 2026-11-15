@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { fmtBRL } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/time")({
   component: TimePage,
@@ -133,7 +134,7 @@ function TeamView({ userId }: { userId: string }) {
         </div>
         <div className="rounded-2xl border border-border bg-card p-4 elev-1">
           <p className="text-xs text-muted-foreground">Valor padrão recebido</p>
-          <p className="mt-1 text-2xl font-bold">R$ {Number(dispRow.valor_por_pacote || 0).toFixed(2)}</p>
+          <p className="mt-1 text-2xl font-bold">{fmtBRL(Number(dispRow.valor_por_pacote || 0))}</p>
         </div>
       </div>
 

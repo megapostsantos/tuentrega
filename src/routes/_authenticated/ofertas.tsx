@@ -28,6 +28,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CloseRouteDialog } from "@/components/CloseRouteDialog";
 import { ProofsTab } from "@/components/ProofsTab";
 import { LiveTrackingMap } from "@/components/LiveTrackingMap";
+import { fmtBRL } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/ofertas")({
   validateSearch: (s: Record<string, unknown>): { close?: string } => (typeof s.close === "string" ? { close: s.close } : {}),
@@ -106,7 +107,7 @@ const CandidaturasCtx = createContext<Record<string, string>>({});
 
 function fmtMoney(n: number | null | undefined) {
   if (n == null) return "—";
-  return `R$ ${Number(n ?? 0).toFixed(2)}`;
+  return `${fmtBRL(Number(n ?? 0))}`;
 }
 
 function timeLeft(iso: string | null): string {
@@ -763,7 +764,7 @@ function EntregadorView({
             <div className="space-y-5">
               {gruposPorData(available).map(([data, lista]) => (
                 <div key={data} className="space-y-2">
-                  <h3 className="text-sm font-semibold capitalize">{rotuloData(data)} <span className="font-normal text-muted-foreground">· {lista.length} rota(s)</span></h3>
+                  <h3 className="text-sm font-semibold first-letter:uppercase">{rotuloData(data)} <span className="font-normal text-muted-foreground">· {lista.length} rota(s)</span></h3>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {lista.map((o) => (
                       <OfertaCard key={o.id} o={o} onDetails={() => setSelected(o)} role="entregador" reload={reload} />
@@ -1035,7 +1036,7 @@ function DetailsDialog({
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between gap-2">
+          <DialogTitle className="flex items-center justify-between gap-2 pr-10">
             <span>{o.titulo}</span>
             <Badge className={st.cls}>{st.label}</Badge>
           </DialogTitle>
@@ -1183,7 +1184,7 @@ function DetailsDialog({
                     <div className="space-y-2 rounded-lg border p-3">
                       <p className="text-sm font-medium">Quer fazer esta rota? A empresa pode precisar aprovar.</p>
                       <p className="text-xs text-muted-foreground">
-                        {o.bairro} · {fmtMoney(o.valor)} {o.exige_nota_fiscal && "· exige NF"}
+                        {[o.bairro, o.valor != null ? fmtMoney(o.valor) : null].filter(Boolean).join(" · ")}{o.exige_nota_fiscal ? " · exige NF" : ""}
                       </p>
                       <div className="flex gap-2">
                         <Button variant="ghost" className="flex-1" onClick={() => setConfirming(false)}>Cancelar</Button>
@@ -1354,7 +1355,7 @@ function DeliveryReport({ oferta }: { oferta: Oferta }) {
           ))}
         </div>
       )}
-      <p className="pt-1 font-semibold">💰 Valor a pagar: R$ {valor.toFixed(2)}</p>
+      <p className="pt-1 font-semibold">💰 Valor a pagar: {fmtBRL(valor)}</p>
       {lightbox && (
         <Dialog open onOpenChange={() => setLightbox(null)}>
           <DialogContent className="max-w-3xl">

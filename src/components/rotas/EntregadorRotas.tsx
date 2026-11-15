@@ -29,6 +29,7 @@ import { formataCep } from "@/lib/cep";
 import { PlanejadorRota } from "@/components/rotas/PlanejadorRota";
 import { InsucessoSheet } from "@/components/rotas/InsucessoSheet";
 import { DevolucoesPendentes } from "@/components/rotas/DevolucoesPendentes";
+import { fmtBRL } from "@/lib/utils";
 
 type Pacote = {
   id: string;
@@ -345,7 +346,7 @@ export function EntregadorRotas({ actingFor }: { actingFor?: { ofertaId: string;
             <div className="text-lg font-semibold">{oferta.titulo}</div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <span>{oferta.quantidade_pacotes ?? 0} pacotes</span>
-              <span>R$ {Number(oferta.valor ?? 0).toFixed(2)} no total</span>
+              <span>{fmtBRL(Number(oferta.valor ?? 0))} no total</span>
               <span>{oferta.data_trabalho ? new Date(oferta.data_trabalho + "T12:00:00").toLocaleDateString("pt-BR") : "Data a combinar"}</span>
               <span>{oferta.hora_inicio ?? "Horário a combinar"}</span>
             </div>

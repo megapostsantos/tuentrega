@@ -158,7 +158,7 @@ export function AgendaEntregador({ userId }: { userId: string }) {
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <div className="font-semibold capitalize">{fmtData(p.data_prevista)}</div>
+                      <div className="font-semibold first-letter:uppercase">{fmtData(p.data_prevista)}</div>
                       <div className="text-sm text-muted-foreground">{nome}</div>
                     </div>
                     {ativo ? (

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { fmtBRL } from "@/lib/utils";
 
 type Props = {
   open: boolean;
@@ -589,9 +590,9 @@ function Step3Confirm({
           <dt className="text-muted-foreground">Pacotes</dt>
           <dd className="text-right font-medium">{total}</dd>
           <dt className="text-muted-foreground">Valor por pacote</dt>
-          <dd className="text-right font-medium">R$ {valorPorPacote.toFixed(2)}</dd>
+          <dd className="text-right font-medium">{fmtBRL(valorPorPacote)}</dd>
           <dt className="text-muted-foreground">Valor total estimado</dt>
-          <dd className="text-right text-lg font-bold text-primary">R$ {valorTotal.toFixed(2)}</dd>
+          <dd className="text-right text-lg font-bold text-primary">{fmtBRL(valorTotal)}</dd>
         </dl>
       </div>
 

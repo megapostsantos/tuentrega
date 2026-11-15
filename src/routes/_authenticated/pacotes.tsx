@@ -36,6 +36,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { fmtBRL } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/pacotes")({
   component: PacotesPage,
@@ -254,8 +255,8 @@ function OperationCard({ op, onView, showMargem }: { op: Operacao; onView: () =>
         </div>
         <div className="text-sm text-muted-foreground">
           {op.total_pacotes_sistema} pacotes · {stats.rotas} rotas
-          {!isOperador && <> · R$ {stats.pagoEntregadores.toFixed(2)} aos entregadores</>}
-          {!isOperador && showMargem && <> · Margem R$ {margem.toFixed(2)}</>}
+          {!isOperador && <> · {fmtBRL(stats.pagoEntregadores)} aos entregadores</>}
+          {!isOperador && showMargem && <> · Margem {fmtBRL(margem)}</>}
         </div>
       </div>
       <Button variant="outline" size="sm" onClick={onView}>
@@ -788,10 +789,10 @@ function CreateOperation({
                 <div className="rounded bg-muted/40 p-2 text-sm">
                   Compromissos somam <strong>{agenda.membros.reduce((a, m) => a + m.qtd, 0)}</strong> pacotes (já com os seus ajustes);
                   a operação tem <strong>{totalPacotes}</strong>. A divisão é proporcional ao que cada um prometeu.
-                  {agenda.valor > 0 && <> Valor por pacote da previsão: <strong>R$ {agenda.valor.toFixed(2)}</strong>.</>}
+                  {agenda.valor > 0 && <> Valor por pacote da previsão: <strong>{fmtBRL(agenda.valor)}</strong>.</>}
                   <ul className="mt-2 list-disc pl-5">
                     {buildFromAgenda().map((r, i) => (
-                      <li key={i}>{r.entregador_nome}: {r.quantidade_pacotes} pacotes{r.quantidade_paradas > 0 ? ` · ${r.quantidade_paradas} paradas` : ""} · R$ {r.valor_total.toFixed(2)}</li>
+                      <li key={i}>{r.entregador_nome}: {r.quantidade_pacotes} pacotes{r.quantidade_paradas > 0 ? ` · ${r.quantidade_paradas} paradas` : ""} · {fmtBRL(r.valor_total)}</li>
                     ))}
                   </ul>
                 </div>
@@ -807,7 +808,7 @@ function CreateOperation({
                   Prévia:
                   <ul className="mt-1 list-disc pl-5">
                     {buildAuto(numRotas).map((r, i) => (
-                      <li key={i}>{r.nome}: {r.quantidade_pacotes} pacotes{r.quantidade_paradas > 0 ? ` · ${r.quantidade_paradas} paradas` : ""} · R$ {r.valor_total.toFixed(2)}</li>
+                      <li key={i}>{r.nome}: {r.quantidade_pacotes} pacotes{r.quantidade_paradas > 0 ? ` · ${r.quantidade_paradas} paradas` : ""} · {fmtBRL(r.valor_total)}</li>
                     ))}
                   </ul>
                 </div>
@@ -949,7 +950,7 @@ function CreateOperation({
                           onChange={(e) => updateRota(i, { valor_por_pacote: Number(e.target.value) || 0 })} />
                       </Field>
                     )}
-                    {!isOperador && <Field label="Total"><Input disabled value={`R$ ${r.valor_total.toFixed(2)}`} /></Field>}
+                    {!isOperador && <Field label="Total"><Input disabled value={`${fmtBRL(r.valor_total)}`} /></Field>}
                     <Field label="Parceiro (opcional)">
                       <select className="h-10 w-full rounded-md border bg-background px-2 text-sm"
                         value={r.entregador_id ?? ""}
@@ -971,7 +972,7 @@ function CreateOperation({
             </Field>
 
             {!isOperador && (
-              <Field label="ML paga à empresa — R$ (opcional, para cálculo de margem)">
+              <Field label={`${origemFinal || "A origem"} paga à empresa — R$ (opcional, para cálculo de margem)`}>
                 <Input
                   type="number" step="0.01" min={0}
                   value={valorReceitaEmpresa || ""}
@@ -984,16 +985,16 @@ function CreateOperation({
             <div className="space-y-1 rounded-md bg-muted p-3 text-sm">
               <div>Pacotes distribuídos: <strong>{totalPkgRotas}</strong> / {totalPacotes}</div>
               {!isOperador && !personalizarPorRota && (
-                <div>Valor por pacote: <strong>R$ {valorPorPacote.toFixed(2)}</strong></div>
+                <div>Valor por pacote: <strong>{fmtBRL(valorPorPacote)}</strong></div>
               )}
-              {!isOperador && <div>Total a pagar entregadores: <strong>R$ {totalGeral.toFixed(2)}</strong></div>}
+              {!isOperador && <div>Total a pagar entregadores: <strong>{fmtBRL(totalGeral)}</strong></div>}
               {!isOperador && valorReceitaEmpresa > 0 && (
                 <>
-                  <div>ML paga à empresa: <strong>R$ {valorReceitaEmpresa.toFixed(2)}</strong></div>
-                  <div>Margem: <strong className={margem >= 0 ? "text-emerald-700" : "text-red-700"}>R$ {margem.toFixed(2)}</strong></div>
+                  <div>{origemFinal || "A origem"} paga à empresa: <strong>{fmtBRL(valorReceitaEmpresa)}</strong></div>
+                  <div>Margem: <strong className={margem >= 0 ? "text-emerald-700" : "text-red-700"}>{fmtBRL(margem)}</strong></div>
                 </>
               )}
-              {!isOperador && <div className="pt-1">Total geral: <strong className="text-lg">R$ {totalGeral.toFixed(2)}</strong></div>}
+              {!isOperador && <div className="pt-1">Total geral: <strong className="text-lg">{fmtBRL(totalGeral)}</strong></div>}
               {totalPkgRotas !== totalPacotes && (
                 <div className="mt-2 text-amber-700">⚠️ Soma das rotas difere do total declarado.</div>
               )}
@@ -1107,7 +1108,7 @@ function ManualRoutes({ rotas, setRotas, valorPorPacote }: { rotas: Rota[]; setR
             <Input type="number" min={0} value={r.quantidade_paradas || ""} onChange={(e) => update(i, { quantidade_paradas: Number(e.target.value) || 0 })} />
           </Field>
           <Field label="Valor">
-            <Input disabled value={`R$ ${r.valor_total.toFixed(2)}`} />
+            <Input disabled value={`${fmtBRL(r.valor_total)}`} />
           </Field>
           <Button variant="ghost" size="icon" onClick={() => remove(i)}><Trash2 className="h-4 w-4" /></Button>
         </div>
@@ -1192,7 +1193,7 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
             <div>Pacotes (sistema): <strong>{op.total_pacotes_sistema}</strong></div>
             <div>Pacotes (contados): <strong>{op.total_pacotes_contados}</strong></div>
             {Number(op.total_paradas) > 0 && <div>Paradas: <strong>{op.total_paradas}</strong></div>}
-            {!isOperador && <div>Valor por pacote: <strong>R$ {Number(op.valor_por_pacote).toFixed(2)}</strong></div>}
+            {!isOperador && <div>Valor por pacote: <strong>{fmtBRL(Number(op.valor_por_pacote))}</strong></div>}
             {op.pacotes_faltando > 0 && <div className="text-amber-700">Faltando: {op.pacotes_faltando}</div>}
             {op.pacotes_a_mais > 0 && <div className="text-amber-700">A mais: {op.pacotes_a_mais}</div>}
           </div>
@@ -1212,9 +1213,9 @@ function OperationDetail({ operacaoId, onClose, showMargem }: { operacaoId: stri
           <AjusteRotas rotas={ativas as RotaAjuste[]} onChanged={() => setReloadKey((k) => k + 1)} />
           {!isOperador && (
             <div className="rounded bg-muted p-3">
-              <div>Receita ML: <strong>R$ {receita.toFixed(2)}</strong></div>
-              <div>Pago aos entregadores: <strong>R$ {totalPago.toFixed(2)}</strong></div>
-              {showMargem && <div>Margem: <strong>R$ {margem.toFixed(2)}</strong></div>}
+              <div>Receita da origem: <strong>{fmtBRL(receita)}</strong></div>
+              <div>Pago aos entregadores: <strong>{fmtBRL(totalPago)}</strong></div>
+              {showMargem && <div>Margem: <strong>{fmtBRL(margem)}</strong></div>}
             </div>
           )}
           <RouteMapButton ofertaIds={ativas.map((r: any) => r.oferta_id).filter(Boolean)} />
@@ -1460,7 +1461,7 @@ function AuditByRanges({
                 const r = groupRotas[gi];
                 return (
                   <div key={gi} className="rounded border p-3">
-                    <div className="mb-2 font-medium">{r.nome} — {r.quantidade_pacotes} pacotes / {r.quantidade_paradas} paradas = R$ {r.valor_total.toFixed(2)}</div>
+                    <div className="mb-2 font-medium">{r.nome} — {r.quantidade_pacotes} pacotes / {r.quantidade_paradas} paradas = {fmtBRL(r.valor_total)}</div>
                     <div className="flex flex-wrap gap-2">
                       {g.map((fi) => {
                         const f = faixas[fi];

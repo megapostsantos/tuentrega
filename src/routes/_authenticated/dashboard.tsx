@@ -14,6 +14,7 @@ import { PendingAllocationBanner } from "@/components/PendingAllocationBanner";
 import { ChecklistInicio } from "@/components/ajuda/ChecklistInicio";
 import { EmpresaPainel } from "@/components/dashboard/EmpresaPainel";
 import { DashboardOverview } from "@/components/summaries/DashboardOverview";
+import { fmtBRL } from "@/lib/utils";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -166,7 +167,7 @@ function DispatcherDashboard({ userId }: { userId?: string }) {
             📦 {alloc.status === "distributed" ? "Distribuído ao time" : "Você tem pacotes alocados!"}
           </p>
           <p className="mt-2 text-xl font-bold">{alloc.pacotes} pacotes · {alloc.paradas} paradas</p>
-          <p className="text-sm text-muted-foreground">R$ {alloc.valor.toFixed(2)}/pacote</p>
+          <p className="text-sm text-muted-foreground">{fmtBRL(alloc.valor)}/pacote</p>
           <span className="mt-3 inline-flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground">
             {alloc.status === "distributed" ? "Ver distribuição" : "Distribuir pro time"} <ChevronRight className="h-4 w-4" />
           </span>
@@ -208,7 +209,7 @@ function DispatcherDashboard({ userId }: { userId?: string }) {
                     <div className="mt-2">
                       <div className="flex justify-between text-[11px] text-muted-foreground">
                         <span>{p.done}/{p.target} entregues</span>
-                        <span>R$ {p.valor.toFixed(2)}</span>
+                        <span>{fmtBRL(p.valor)}</span>
                       </div>
                       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
                         <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />

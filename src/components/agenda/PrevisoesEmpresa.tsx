@@ -156,7 +156,7 @@ export function PrevisoesEmpresa({ empresaId }: { empresaId: string }) {
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <div className="font-semibold capitalize">{fmtData(p.data_prevista)}{p.hora_abertura ? ` · ${p.hora_abertura}` : ""}</div>
+                      <div className="font-semibold first-letter:uppercase">{fmtData(p.data_prevista)}{p.hora_abertura ? ` · ${p.hora_abertura}` : ""}</div>
                       <div className="text-xs text-muted-foreground">
                         {p.pacotes_estimados} pacotes · {p.rotas_estimadas} rota(s){p.valor_por_pacote != null && ` · ${brl(p.valor_por_pacote)}/pacote`}
                         {p.veiculo_necessario ? ` · ${p.veiculo_necessario}` : ""}

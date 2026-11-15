@@ -149,7 +149,7 @@ export function TopAppBar() {
               </span>
             )}
           </p>
-          <p className="truncate text-[11px] capitalize text-muted-foreground">{todayLong()}</p>
+          <p className="truncate text-[11px] first-letter:uppercase text-muted-foreground">{todayLong()}</p>
         </div>
 
         <Sheet open={open} onOpenChange={setOpen}>

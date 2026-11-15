@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { fmtBRL } from "@/lib/utils";
 
 type Oferta = {
   id: string; empresa_id: string; entregador_id: string | null;
@@ -255,8 +256,8 @@ export function CloseRouteDialog({ oferta, onClose, onClosed }: {
               )}
               <div className="mt-4 border-t pt-3">
                 <p>💰 Você vai receber:</p>
-                <p className="text-2xl font-bold text-primary">R$ {valorAReceber.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">{delivered} × R$ {valorPorPacote.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-primary">{fmtBRL(valorAReceber)}</p>
+                <p className="text-xs text-muted-foreground">{delivered} × {fmtBRL(valorPorPacote)}</p>
               </div>
               <div className="mt-3 border-t pt-3 text-xs">
                 <p>Impacto no score: <strong className={newScore - currentScore < 0 ? "text-destructive" : "text-emerald-700"}>{newScore - currentScore >= 0 ? "+" : ""}{newScore - currentScore} pontos</strong></p>
@@ -279,7 +280,7 @@ export function CloseRouteDialog({ oferta, onClose, onClosed }: {
             <div className="rounded-lg bg-muted/40 p-4 text-sm">
               <p>Entregues: <strong>{delivered} pacotes</strong></p>
               <p>Não entregues: <strong>{notDelivered} pacotes</strong></p>
-              <p className="mt-3 text-2xl font-bold text-primary">💰 R$ {valorAReceber.toFixed(2)} a receber</p>
+              <p className="mt-3 text-2xl font-bold text-primary">💰 {fmtBRL(valorAReceber)} a receber</p>
               <p className="mt-2 text-xs text-muted-foreground">A empresa será notificada para processar seu pagamento.</p>
             </div>
             <Button className="w-full bg-primary text-primary-foreground" onClick={onClosed}>Voltar para o início</Button>

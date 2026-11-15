@@ -128,7 +128,7 @@ export function useAuth(): AuthState {
     podeAlternarModo: false,
     modo: "gestao",
     alternarModo: () => {},
-    realUserId: null,
+    realUserId: user?.id ?? null,
     realRole: role,
   };
 }
