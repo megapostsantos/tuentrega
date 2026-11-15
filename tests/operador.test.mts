@@ -80,4 +80,13 @@ r = await rpc(dono, "limpar_meus_dados", { _confirmar: "APAGAR" });
 const cnt = async (t: string, w = "") => Number(((await pg.query(`select count(*)::int n from "${t}" ${w}`)).rows[0] as any).n);
 ok("dono limpa o histórico da própria empresa", !r.error && (await cnt("operacoes", `where empresa_id='E1'`)) === 0, r);
 ok("histórico de outra empresa e cadastros ficam", (await cnt("operacoes", `where empresa_id='E2'`)) === 1 && (await cnt("entregadores")) === 1 && (await cnt("equipe_empresa")) === 1);
+
+// regressão: select("*") também mascara os valores do funcionário
+await pg.query(`insert into ofertas (empresa_id,titulo,tipo,status,quantidade_pacotes,valor_por_pacote,valor) values ('E1','Rota estrela','distribuicao','open',10,2.5,25)`);
+r = await run(op, { table: "ofertas", op: "select", columns: "*", filters: [eq("titulo", "Rota estrela")] });
+ok('funcionário com select("*") não vê valores', r.data.length === 1 && r.data[0].valor === null && r.data[0].valor_por_pacote === null, r.data?.[0]);
+r = await run(dono, { table: "ofertas", op: "select", columns: "*", filters: [eq("titulo", "Rota estrela")] });
+ok('dono com select("*") vê os valores', Number(r.data[0].valor) === 25, r.data?.[0]);
+r = await run(dono, { table: "pagamentos", op: "select", columns: "ofertas_ids", filters: [{ k: "f", col: "ofertas_ids", op: "ov", val: ["00000000-0000-0000-0000-000000000001"] }] });
+ok("filtro de sobreposição (overlaps) funciona", !r.error, r);
 process.exit(fail ? 1 : 0);

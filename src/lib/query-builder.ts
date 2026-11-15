@@ -85,6 +85,7 @@ export class QueryBuilder implements PromiseLike<QueryResp> {
   ilike(col: string, val: unknown) { return this.f("ilike", col, val); }
   is(col: string, val: unknown) { return this.f("is", col, val); }
   in(col: string, val: unknown[]) { return this.f("in", col, val); }
+  overlaps(col: string, val: unknown[]) { return this.f("ov", col, val); }
   filter(col: string, op: string, val: unknown) { return this.f(op, col, val); }
   match(obj: Record<string, unknown>) {
     for (const [k, v] of Object.entries(obj)) this.f("eq", k, v);

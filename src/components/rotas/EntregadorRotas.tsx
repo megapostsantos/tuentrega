@@ -440,7 +440,7 @@ export function EntregadorRotas({ actingFor }: { actingFor?: { ofertaId: string;
   ];
 
   return (
-    <div className="pb-28">
+    <div className="pb-44 md:pb-28">
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
         <LocationIndicator state={trackerState} />
         <div className="px-4 py-3 space-y-2">
@@ -559,7 +559,7 @@ export function EntregadorRotas({ actingFor }: { actingFor?: { ofertaId: string;
         )}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t bg-background/95 p-3 backdrop-blur md:bottom-0">
         <Button size="lg" className="h-12 w-full text-base" onClick={() => setConfirmFinalizar(true)} disabled={busy}>
           <Flag className="mr-2 h-5 w-5" /> Finalizar rota
         </Button>

@@ -150,7 +150,7 @@ function buildCols(table: string, alias: string, columns: string, extraWhere: st
     const p = raw.trim();
     if (!p) continue;
     if (p === "*") {
-      const hasMask = scope && ruleFor(POLICIES[table]?.mask, scope.role);
+      const hasMask = scope && (scope.operador || ruleFor(POLICIES[table]?.mask, scope.role));
       if (hasMask) {
         for (const c of info.cols.keys()) {
           const m = maskExpr(table, alias, c, scope);
@@ -268,6 +268,12 @@ function cond(colRef: string, op: string, val: unknown, params: unknown[]): stri
       if (!arr.length) return "false";
       params.push(arr.map((x) => String(x)));
       return `${colRef}::text = any($${params.length}::text[])`;
+    }
+    case "ov": {
+      const arr = Array.isArray(val) ? val : String(val).replace(/^[{(]/, "").replace(/[})]$/, "").split(",");
+      if (!arr.length) return "false";
+      params.push(arr.map((x) => String(x).trim()));
+      return `${colRef}::text[] && $${params.length}::text[]`;
     }
     default:
       throw new Error(`Operador não suportado: ${op}`);

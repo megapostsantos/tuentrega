@@ -195,14 +195,14 @@ function ListaEntregadores() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <PageHeader title="Entregadores" description="Score de confiabilidade e gestão" />
         <Button onClick={() => setInviteOpen(true)} className="shrink-0">
-          <UserPlus className="h-4 w-4 mr-2" /> Novo entregador
+          <UserPlus className="h-4 w-4 mr-2" /> Convidar entregador
         </Button>
       </div>
 
       <details key={list.length === 0 ? "novo" : "tem"} open={list.length === 0} className="rounded-2xl border border-primary/40 bg-primary/5 p-4 text-sm">
         <summary className="cursor-pointer py-1 font-semibold">Como convidar os seus parceiros <span className="text-xs font-normal text-muted-foreground">(toque para abrir/fechar)</span></summary>
         <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
-          <li>Toque em <strong>Novo entregador</strong> e cadastre com o <strong>e-mail</strong> da pessoa.</li>
+          <li>Toque em <strong>Convidar entregador</strong> e cadastre com o <strong>e-mail</strong> da pessoa.</li>
           <li>Envie o <strong>convite pelo WhatsApp</strong> (código + link). Aqui na lista, quem ainda não ativou aparece como <em>Convite pendente</em>, com o botão <strong>Enviar convite</strong>.</li>
           <li>Ao ativar a conta, ele fica <strong>Vinculado</strong> à sua empresa: vê só as <strong>suas</strong> ofertas, e as outras empresas nem enxergam o nome dele. Quem se cadastra sozinho não tem vínculo.</li>
           <li>Quando quiser liberar, use <strong>Desvincular</strong>: ele volta a ver as ofertas de todas as empresas.</li>
@@ -212,11 +212,8 @@ function ListaEntregadores() {
       <EntregadoresStats />
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle>Lista de entregadores</CardTitle>
-          <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-2" /> Convidar
-          </Button>
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex flex-col gap-2 sm:flex-row">
