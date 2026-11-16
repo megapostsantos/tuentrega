@@ -2288,4 +2288,10 @@ CREATE TABLE IF NOT EXISTS "sugestoes_valor" ("id" uuid PRIMARY KEY DEFAULT gen_
 ALTER TABLE "entregas_pacotes" ADD COLUMN IF NOT EXISTS "cep" text;
 -- @@
 CREATE TABLE IF NOT EXISTS "limites_uso" ("chave" text NOT NULL, "janela" bigint NOT NULL, "n" integer DEFAULT 1 NOT NULL, PRIMARY KEY ("chave","janela"));
+-- @@
+ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "adicional" numeric DEFAULT 0 NOT NULL;
+-- @@
+ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "adicional_motivo" text;
+-- @@
+ALTER TABLE "operacoes" ADD COLUMN IF NOT EXISTS "recebido_em" timestamp;
 `;

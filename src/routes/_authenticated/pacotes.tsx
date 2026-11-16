@@ -1,3 +1,4 @@
+import { LimparHistoricoDialog } from "@/components/LimparHistoricoDialog";
 import { SITE_URL } from "@/lib/contato";
 import { AudienciaSelect, audienciaSalva, type Audiencia } from "@/components/AudienciaSelect";
 import { RotasOperacao } from "@/components/pacotes/RotasOperacao";
@@ -36,7 +37,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { fmtBRL } from "@/lib/utils";
+import { fmtBRL, rotuloDia } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/pacotes")({
   component: PacotesPage,
@@ -98,6 +99,15 @@ function EmpresaTms({ userId }: { userId: string }) {
   const [empresa, setEmpresa] = useState<EmpresaTms | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
+  const [limparOpen, setLimparOpen] = useState(false);
+  const [verDias, setVerDias] = useState(15);
+  const hojeIso = new Date().toLocaleDateString("en-CA");
+  const dias = useMemo(() => {
+    const m = new Map<string, Operacao[]>();
+    for (const o of operacoes) { const k = String(o.data_operacao).slice(0, 10); (m.get(k) ?? m.set(k, []).get(k)!).push(o); }
+    return [...m.entries()];
+  }, [operacoes]);
+  const { isEquipe } = useAuth();
 
   async function load() {
     setLoadingList(true);
@@ -178,8 +188,9 @@ function EmpresaTms({ userId }: { userId: string }) {
       />
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle>Histórico de operações</CardTitle>
+          {!isEquipe && operacoes.length > 0 && <Button size="sm" variant="outline" onClick={() => setLimparOpen(true)}><Trash2 className="mr-1 h-4 w-4" />Limpar histórico</Button>}
         </CardHeader>
         <CardContent>
           {loadingList ? (
@@ -188,14 +199,26 @@ function EmpresaTms({ userId }: { userId: string }) {
             <p className="text-sm text-muted-foreground">Nenhuma operação ainda.</p>
           ) : (
             <div className="space-y-3">
-              {operacoes.map((op) => (
-                <OperationCard key={op.id} op={op} onView={() => setDetailId(op.id)} showMargem={empresa?.tms_mostrar_margem ?? true} />
+              {dias.slice(0, verDias).map(([dia, ops]) => (
+                <details key={dia} open={dia === hojeIso} className="rounded-xl border p-3">
+                  <summary className="flex cursor-pointer items-center justify-between gap-2 py-1">
+                    <span className="font-semibold first-letter:uppercase">{rotuloDia(dia)} <span className="font-normal text-muted-foreground">· {new Date(dia + "T12:00:00").toLocaleDateString("pt-BR")}</span></span>
+                    <span className="text-xs text-muted-foreground">{ops.length} operaç{ops.length === 1 ? "ão" : "ões"} · {ops.reduce((s, o) => s + Number(o.total_pacotes_sistema || 0), 0)} pacotes</span>
+                  </summary>
+                  <div className="mt-3 space-y-3">
+                    {ops.map((op) => (
+                      <OperationCard key={op.id} op={op} onView={() => setDetailId(op.id)} showMargem={empresa?.tms_mostrar_margem ?? true} />
+                    ))}
+                  </div>
+                </details>
               ))}
+              {dias.length > verDias && <Button variant="outline" className="w-full" onClick={() => setVerDias((v) => v + 15)}>Ver dias mais antigos ({dias.length - verDias})</Button>}
             </div>
           )}
         </CardContent>
       </Card>
 
+      <LimparHistoricoDialog open={limparOpen} onClose={() => setLimparOpen(false)} onDone={load} />
       <OperationDetail operacaoId={detailId} onClose={() => setDetailId(null)} showMargem={empresa?.tms_mostrar_margem ?? true} />
     </div>
   );

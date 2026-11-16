@@ -464,6 +464,18 @@ async function expirarAtribuicoes() {
           where "id" in (select "id" from alvo))
        select count(*)::int as n from alvo`,
     );
+    // vaga aberta de um dia que já passou, sem entregador: sai sozinha da lista (não fica "Sem entregador" para sempre)
+    await query(
+      `with alvo as (
+         select "id" from "ofertas"
+          where "status" = 'open' and "entregador_id" is null and "data_trabalho" is not null
+            and "data_trabalho" < (now() at time zone 'America/Sao_Paulo')::date),
+       r as (
+         update "rotas_operacao" set "status" = 'cancelada', "updated_at" = now()
+          where "oferta_id"::text in (select "id"::text from alvo))
+       update "ofertas" set "status" = 'cancelled', "closing_notes" = 'Expirada: o dia passou sem entregador', "updated_at" = now()
+        where "id" in (select "id" from alvo)`,
+    );
   } catch (e) {
     console.error("[expirar] erro:", (e as Error)?.message);
   }
@@ -634,6 +646,9 @@ const DDL_LAZY: string[] = [
 );`,
   `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "entregador" boolean DEFAULT false NOT NULL;`,
   `ALTER TABLE "entregas_pacotes" ADD COLUMN IF NOT EXISTS "cep" text;`,
+  `ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "adicional" numeric DEFAULT 0 NOT NULL;`,
+  `ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "adicional_motivo" text;`,
+  `ALTER TABLE "operacoes" ADD COLUMN IF NOT EXISTS "recebido_em" timestamp;`,
   `CREATE TABLE IF NOT EXISTS "limites_uso" ("chave" text NOT NULL, "janela" bigint NOT NULL, "n" integer DEFAULT 1 NOT NULL, PRIMARY KEY ("chave","janela"));`,
   `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "cargo" text DEFAULT 'funcionario' NOT NULL;`,
   `CREATE TABLE IF NOT EXISTS "sugestoes_valor" (
@@ -1264,6 +1279,16 @@ async function limparMeusDados(uid: string | null, args: Record<string, unknown>
   return { data: r, error: null, count: null };
 }
 
+/** Limpa só o histórico de rotas (operações, rotas, ofertas e pacotes). Mantém pagamentos, financeiro, parceiros e equipe. */
+async function limparHistoricoRotas(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Informe a empresa");
+  const simular = args._simular === true;
+  if (!simular && args._confirmar !== "LIMPAR") throw new Error("Confirmação inválida");
+  const { limparHistoricoRotas: limpar } = await import("./limpeza");
+  const r = await limpar(uid, { ate: args._ate === "tudo" ? "tudo" : "antes_de_hoje", incluirNaoPagas: args._incluir_nao_pagas === true, simular });
+  return { data: r, error: null, count: null };
+}
+
 /** Zona de uma previsão: atribui de forma atômica a um entregador (e registra o compromisso na agenda). */
 async function atribuirZona(zonaId: string, entregadorId: string): Promise<{ empresa_id: string; nome: string }> {
   const r = await query(
@@ -1444,6 +1469,7 @@ async function runRpc(req: QueryReq, uid: string | null, autor?: string): Promis
   if (fn === "ajustar_pacotes_rota") return await ajustarPacotesRota(uid, args);
   if (fn === "cadastrar_membro_equipe") return await cadastrarMembroEquipe(uid, args);
   if (fn === "limpar_meus_dados") return await limparMeusDados(uid, args);
+  if (fn === "limpar_historico_rotas") return await limparHistoricoRotas(uid, args);
   if (fn === "candidatar_oferta") return await candidatarOferta(uid, args);
   if (fn === "postular_zona") return await postularZona(uid, args);
   if (fn === "cancelar_postulacao_zona") return await cancelarPostulacaoZona(uid, args);
@@ -1515,7 +1541,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           if (scope.role === "empresa") forbidden();
         } else if (fn === "salvar_ordem_rota") {
           if (scope.role !== "empresa" && scope.role !== "entregador") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado" || fn === "sugerir_valor" || fn === "decidir_sugestao_valor" || fn === "remover_parceiro" || fn === "remover_membro_equipe" || fn === "atualizar_email_convite") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "limpar_historico_rotas" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado" || fn === "sugerir_valor" || fn === "decidir_sugestao_valor" || fn === "remover_parceiro" || fn === "remover_membro_equipe" || fn === "atualizar_email_convite") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }

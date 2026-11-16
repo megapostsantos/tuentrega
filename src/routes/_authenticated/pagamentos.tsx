@@ -483,12 +483,17 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
   const [obs, setObs] = useState("");
   const [nfNumero, setNfNumero] = useState("");
   const [nfFile, setNfFile] = useState<File | null>(null);
+  const [adicional, setAdicional] = useState("");
+  const [adicionalMotivo, setAdicionalMotivo] = useState("");
   const [saving, setSaving] = useState(false);
   const isPj = grupo.tipo_pessoa === "pj";
   const pendingOfertas = grupo.ofertas.filter(o => o.payment_status === "pending");
-  const total = pendingOfertas.reduce((s,o) => s + Number(o.valor||0), 0);
+  const base = pendingOfertas.reduce((s,o) => s + Number(o.valor||0), 0);
+  const adic = Math.max(0, Number(String(adicional).replace(",", ".")) || 0);
+  const total = base + adic;
 
   async function confirm() {
+    if (adic > 0 && !adicionalMotivo.trim()) return toast.error("Informe o motivo do adicional (ex.: bônus, ajuda de combustível).");
     if (isPj && (!nfNumero.trim() || !nfFile)) {
       return toast.error("Para entregadores PJ, informe o número da NF e anexe o arquivo.");
     }
@@ -520,6 +525,7 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
     await sb.from("pagamentos").insert({
       empresa_id: user.id, entregador_id: grupo.entregador_id, ofertas_ids: ids,
       valor_total: total, data_pagamento: ts, observacao: obs || null, created_by: user.id,
+      adicional: adic, adicional_motivo: adic > 0 ? adicionalMotivo.trim() : null,
       nf_numero: nfNumero.trim() || null, nf_url: nfUrl,
     });
     await sb.from("entregas").update({ status: "pago", data_pagamento: ts })
@@ -553,8 +559,21 @@ function MarkPaidDialog({ grupo, empresaName, onClose, onDone }: {
             </div>
             <div className="flex justify-between"><span className="text-muted-foreground">PIX</span><span className="font-mono text-xs">{grupo.pix_chave || "—"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Banco</span><span>{grupo.banco || "—"}</span></div>
-            <div className="flex justify-between border-t pt-1 mt-1"><span className="text-muted-foreground">Valor</span>
+            <div className="flex justify-between border-t pt-1 mt-1"><span className="text-muted-foreground">Valor das rotas</span>
+              <span className="font-medium">{brl(base)}</span></div>
+            {adic > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Adicional / bônus</span><span className="font-medium">+ {brl(adic)}</span></div>}
+            <div className="flex justify-between"><span className="text-muted-foreground">Total a pagar</span>
               <span className="font-bold text-primary">{brl(total)}</span></div>
+          </div>
+          <div className="grid grid-cols-[120px_1fr] gap-2">
+            <div>
+              <label className="text-xs text-muted-foreground">Adicional (R$)</label>
+              <Input inputMode="decimal" value={adicional} onChange={e => setAdicional(e.target.value)} placeholder="0,00" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Motivo do adicional</label>
+              <Input value={adicionalMotivo} onChange={e => setAdicionalMotivo(e.target.value)} placeholder="Ex: bônus de meta, combustível" disabled={adic <= 0} />
+            </div>
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Data do pagamento</label>

@@ -1,0 +1,53 @@
+import { PGlite } from "@electric-sql/pglite";
+import fs from "fs";
+import { __setQueryImpl, runSetupBatch, executeQuery } from "../src/server/data-engine.ts";
+const pg = new PGlite(); __setQueryImpl(async (q, p) => (await pg.query(q, p as any[])).rows as any[]);
+const sql = fs.readFileSync(new URL("../src/db/setup.sql", import.meta.url), "utf8");
+let off: number | null = 0; while (off !== null) { const r = await runSetupBatch(sql, off, 40); off = r.next; }
+const base = { filters: [], order: [] } as any; const run = (c: any, r: any) => executeQuery({ ...base, ...r }, c);
+const rpc = (c: any, fn: string, args: any) => run(c, { table: "", op: "rpc", rpc: { fn, args } });
+let fail = 0; const ok = (n: string, c: boolean, x?: any) => { if (!c) fail++; console.log(c ? "PASS" : "FAIL", n, c ? "" : JSON.stringify(x)); };
+const eq = (col: string, val: any) => ({ k: "f", col, op: "eq", val });
+const n = async (sql: string) => Number(((await pg.query(sql)).rows[0] as any).n);
+for (const [i, r] of [["E1","empresa"],["E2","empresa"],["D1","entregador"]]) await pg.query(`insert into "user" (id,name,email,role) values ($1,$1,$1||'@x.com',$2)`, [i, r]);
+await pg.query(`insert into empresas (id,razao_social) values ('E1','A'),('E2','B')`);
+await pg.query(`insert into entregadores (id,nome_completo,status) values ('D1','Ana','ativo')`);
+const op = async (emp: string, dia: string) => ((await pg.query(`insert into operacoes (empresa_id,data_operacao,total_pacotes_sistema,total_pacotes_contados,total_paradas,valor_por_pacote,status,origem) values ($1,$2,10,10,0,1.8,'draft','manual') returning id`, [emp, dia])).rows[0] as any).id;
+const of = async (emp: string, opId: string, dia: string, status: string, pay: string | null, drv: string | null) => ((await pg.query(`insert into ofertas (empresa_id,operacao_id,titulo,tipo,status,data_trabalho,payment_status,entregador_id,quantidade_pacotes) values ($1,$2,'t','distribuicao',$3,$4,$5,$6,5) returning id`, [emp, opId, status, dia, pay, drv])).rows[0] as any).id;
+const velha = await op("E1", "2020-01-01"), hoje = await op("E1", new Date().toISOString().slice(0, 10)), alheia = await op("E2", "2020-01-01");
+const o1 = await of("E1", velha, "2020-01-01", "open", null, null);
+const o2 = await of("E1", velha, "2020-01-01", "completed", "paid", "D1");
+const o3 = await of("E1", velha, "2020-01-01", "completed", "pending", "D1");
+const o4 = await of("E1", velha, "2020-01-01", "in_progress", null, "D1");
+const o5 = await of("E1", hoje, new Date().toISOString().slice(0, 10), "open", null, null);
+await of("E2", alheia, "2020-01-01", "open", null, null);
+for (const o of [o1, o2, o3]) await pg.query(`insert into entregas_pacotes (oferta_id,operacao_id,numero_pacote,status) values ($1,$2,1,'pending')`, [o, velha]);
+await pg.query(`insert into pagamentos (empresa_id,entregador_id,valor_total) values ('E1','D1',50)`);
+const dono = { userId: "E1", role: "empresa" }, func = { userId: "E1", role: "empresa", operador: true };
+
+let r: any = await rpc(dono, "limpar_historico_rotas", { _simular: true, _ate: "antes_de_hoje" });
+ok("simulação conta sem apagar", r.data?.rotas_publicadas === 2 && r.data?.mantidas_nao_pagas === 1 && (await n(`select count(*)::int n from ofertas`)) === 6, r);
+r = await rpc(dono, "limpar_historico_rotas", { _ate: "antes_de_hoje" });
+ok("exige confirmação", !!r.error, r);
+r = await rpc(func, "limpar_historico_rotas", { _confirmar: "LIMPAR" });
+ok("funcionário não limpa", !!r.error, r);
+r = await rpc(dono, "limpar_historico_rotas", { _ate: "antes_de_hoje", _confirmar: "LIMPAR" });
+ok("limpa dias anteriores (aberta e paga)", !r.error && !(await n(`select count(*)::int n from ofertas where id='${o1}' or id='${o2}'`)), r);
+ok("mantém concluída não paga, em andamento e a de hoje", (await n(`select count(*)::int n from ofertas where id in ('${o3}','${o4}','${o5}')`)) === 3);
+ok("mantém a operação que ainda tem rota viva", (await n(`select count(*)::int n from operacoes where id='${velha}'`)) === 1);
+ok("pacotes das rotas apagadas saem, os das mantidas ficam", (await n(`select count(*)::int n from entregas_pacotes where oferta_id in ('${o1}','${o2}')`)) === 0 && (await n(`select count(*)::int n from entregas_pacotes where oferta_id='${o3}'`)) === 1);
+ok("pagamentos e financeiro não são tocados", (await n(`select count(*)::int n from pagamentos`)) === 1);
+ok("outra empresa intacta", (await n(`select count(*)::int n from ofertas where empresa_id='E2'`)) === 1 && (await n(`select count(*)::int n from operacoes where empresa_id='E2'`)) === 1);
+r = await rpc(dono, "limpar_historico_rotas", { _ate: "tudo", _incluir_nao_pagas: true, _confirmar: "LIMPAR" });
+ok("'tudo' + não pagas apaga o resto, menos em andamento", !r.error && (await n(`select count(*)::int n from ofertas where empresa_id='E1'`)) === 1 && (await n(`select count(*)::int n from ofertas where id='${o4}'`)) === 1, r);
+
+// expiração automática: vaga aberta de dia passado sai sozinha
+const velha2 = await op("E1", "2020-02-02"); const o6 = await of("E1", velha2, "2020-02-02", "open", null, null);
+const futura = await of("E1", velha2, new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 10), "open", null, null);
+await run(dono, { table: "ofertas", op: "select", columns: "id,status", filters: [eq("empresa_id", "E1")] });
+const st = async (id: string) => ((await pg.query(`select status from ofertas where id=$1`, [id])).rows[0] as any).status;
+ok("vaga aberta de dia passado vira cancelada sozinha", (await st(o6)) === "cancelled", await st(o6));
+ok("vaga futura continua aberta", (await st(futura)) === "open");
+ok("rota em andamento não é mexida", (await st(o4)) === "in_progress");
+console.log(fail ? `${fail} FALHAS` : "✔ historico.test.mts");
+process.exit(fail ? 1 : 0);

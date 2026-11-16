@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, startOfMonth, endOfMonth, subMonths, startOfDay, eachDayOfInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2, Upload, Loader2,
@@ -58,11 +58,16 @@ type Lancamento = {
 };
 
 const CAT_PAGAMENTO_ENTREGADOR = "Pagamento a entregadores";
+const CAT_RECEBIMENTO = "Recebimento da origem";
+
+/** Linha do extrato: lançamento manual ou lançamento automático (pagamento feito / recebimento marcado). */
+type Linha = Lancamento & { auto?: boolean };
 
 const CATEGORIAS: Record<Tipo, string[]> = {
-  entrada: ["Receita de cliente", "Adiantamento", "Outros recebimentos"],
+  entrada: [CAT_RECEBIMENTO, "Receita de cliente", "Adiantamento", "Outros recebimentos"],
   saida: [
     CAT_PAGAMENTO_ENTREGADOR,
+    "Pagamento a funcionários",
     "Combustível", "Aluguel", "Salário", "Fornecedor",
     "Manutenção", "Impostos", "Marketing", "Outros",
   ],
@@ -104,6 +109,80 @@ function FinanceiroPage() {
   return <FinanceiroEmpresa empresaId={user.id} />;
 }
 
+/** Quanto a origem (Mercado Livre, Shopee…) ainda vai pagar à empresa pelas operações do período; ao receber, entra sozinho nas entradas. */
+function ReceberDaOrigem({ empresaId, range }: { empresaId: string; range: { from: Date; to: Date } }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [valores, setValores] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const key = ["financeiro-previsto", empresaId, range.from.toISOString(), range.to.toISOString()];
+  const { data: ops = [] } = useQuery({
+    queryKey: key,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("operacoes")
+        .select("id, data_operacao, origem, total_pacotes_sistema, valor_ml_por_pacote")
+        .eq("empresa_id", empresaId).is("recebido_em", null)
+        .gte("data_operacao", format(range.from, "yyyy-MM-dd")).lte("data_operacao", format(range.to, "yyyy-MM-dd"))
+        .order("data_operacao", { ascending: false });
+      return (data ?? []) as { id: string; data_operacao: string; origem: string | null; total_pacotes_sistema: number; valor_ml_por_pacote: number }[];
+    },
+  });
+  const vp = (o: { id: string; valor_ml_por_pacote: number }) => Number(String(valores[o.id] ?? o.valor_ml_por_pacote).replace(",", ".")) || 0;
+  const previsto = ops.reduce((s, o) => s + o.total_pacotes_sistema * Number(o.valor_ml_por_pacote || 0), 0);
+
+  async function receber(o: (typeof ops)[number]) {
+    setBusy(o.id);
+    const { error } = await (supabase as any).from("operacoes").update({ valor_ml_por_pacote: vp(o), recebido_em: new Date().toISOString() }).eq("id", o.id);
+    setBusy(null);
+    if (error) return toast.error(error.message);
+    toast.success("Recebimento registrado. Já entrou nas entradas.");
+    qc.invalidateQueries({ queryKey: ["financeiro-previsto", empresaId] });
+    qc.invalidateQueries({ queryKey: ["financeiro-recebimentos", empresaId] });
+  }
+
+  return (
+    <>
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">A receber da origem (previsto)</p>
+            <p className="text-2xl font-bold tabular-nums text-primary">{brl(previsto)}</p>
+            <p className="text-xs text-muted-foreground">{ops.length} operaç{ops.length === 1 ? "ão" : "ões"} do período ainda sem recebimento marcado</p>
+          </div>
+          <Button variant="outline" disabled={ops.length === 0} onClick={() => setOpen(true)}>Marcar recebido…</Button>
+        </CardContent>
+      </Card>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Marcar recebido</DialogTitle>
+            <DialogDescription>Confira o valor por pacote que a origem pagou e toque em Receber. O valor entra nas entradas do Financeiro.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {ops.map((o) => (
+              <div key={o.id} className="rounded-lg border p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{o.origem ?? "Origem"} · {format(new Date(o.data_operacao + "T00:00"), "dd/MM/yyyy")}</span>
+                  <span className="text-xs text-muted-foreground">{o.total_pacotes_sistema} pacotes</span>
+                </div>
+                <div className="mt-2 flex items-end gap-2">
+                  <div className="w-28">
+                    <Label className="text-xs">R$ por pacote</Label>
+                    <Input inputMode="decimal" value={valores[o.id] ?? String(o.valor_ml_por_pacote).replace(".", ",")} onChange={(e) => setValores((v) => ({ ...v, [o.id]: e.target.value }))} />
+                  </div>
+                  <div className="flex-1 text-right font-semibold tabular-nums">{brl(o.total_pacotes_sistema * vp(o))}</div>
+                  <Button size="sm" disabled={busy === o.id} onClick={() => receber(o)}>{busy === o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Receber"}</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Fechar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
   const qc = useQueryClient();
   const [periodo, setPeriodo] = useState<Periodo>("este_mes");
@@ -139,10 +218,66 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
   });
 
 
+  // Pagamentos feitos aos entregadores entram sozinhos como saída (com adicional/bônus, se houver)
+  const { data: pagamentosLinhas = [] } = useQuery({
+    queryKey: ["financeiro-pagamentos", empresaId, range.from.toISOString(), range.to.toISOString()],
+    queryFn: async () => {
+      const sb = supabase as any;
+      const { data } = await sb.from("pagamentos")
+        .select("id, entregador_id, valor_total, adicional, adicional_motivo, data_pagamento, ofertas_ids")
+        .eq("empresa_id", empresaId)
+        .gte("data_pagamento", startOfDay(range.from).toISOString())
+        .lte("data_pagamento", endOfDay(range.to).toISOString());
+      const pg = (data ?? []) as any[];
+      const ids = Array.from(new Set(pg.map((p) => p.entregador_id).filter(Boolean)));
+      const nomes = new Map<string, string>();
+      if (ids.length) {
+        const { data: ents } = await sb.from("entregadores").select("id, nome_completo").in("id", ids);
+        (ents ?? []).forEach((e: any) => nomes.set(e.id, e.nome_completo));
+      }
+      return pg.map((p): Linha => {
+        const n = (p.ofertas_ids ?? []).length;
+        const adic = Number(p.adicional || 0);
+        return {
+          id: `pg:${p.id}`, empresa_id: empresaId, tipo: "saida", categoria: CAT_PAGAMENTO_ENTREGADOR,
+          descricao: `${nomes.get(p.entregador_id) ?? "Entregador"} · ${n} rota${n === 1 ? "" : "s"}${adic > 0 ? ` · inclui adicional de ${brl(adic)}${p.adicional_motivo ? ` (${p.adicional_motivo})` : ""}` : ""}`,
+          valor: Number(p.valor_total || 0), data_lancamento: format(new Date(p.data_pagamento), "yyyy-MM-dd"),
+          comprovante_url: null, entregador_id: p.entregador_id, created_at: p.data_pagamento, auto: true,
+        };
+      });
+    },
+  });
+
+  // Recebimentos já marcados como recebidos entram sozinhos como entrada
+  const { data: recebimentosLinhas = [] } = useQuery({
+    queryKey: ["financeiro-recebimentos", empresaId, range.from.toISOString(), range.to.toISOString()],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("operacoes")
+        .select("id, data_operacao, origem, total_pacotes_sistema, valor_ml_por_pacote, recebido_em")
+        .eq("empresa_id", empresaId)
+        .gte("recebido_em", startOfDay(range.from).toISOString())
+        .lte("recebido_em", endOfDay(range.to).toISOString());
+      return ((data ?? []) as any[]).map((o): Linha => ({
+        id: `rc:${o.id}`, empresa_id: empresaId, tipo: "entrada", categoria: CAT_RECEBIMENTO,
+        descricao: `${o.origem ?? "Origem"} · operação de ${format(new Date(o.data_operacao + "T00:00"), "dd/MM")} · ${o.total_pacotes_sistema} pacotes × ${brl(Number(o.valor_ml_por_pacote || 0))}`,
+        valor: Number(o.total_pacotes_sistema || 0) * Number(o.valor_ml_por_pacote || 0), data_lancamento: format(new Date(o.recebido_em), "yyyy-MM-dd"),
+        comprovante_url: null, entregador_id: null, created_at: o.recebido_em, auto: true,
+      }));
+    },
+  });
+
+  // Tudo junto: lançamentos manuais + automáticos (respeitando os filtros de tipo e categoria)
+  const linhasAll = useMemo<Linha[]>(() => {
+    const auto = [...pagamentosLinhas, ...recebimentosLinhas].filter((l) =>
+      (tipoFilter === "todos" || l.tipo === tipoFilter) && (catFilter === "todas" || l.categoria === catFilter));
+    return [...lancamentos, ...auto].sort((a, b) =>
+      b.data_lancamento.localeCompare(a.data_lancamento) || String(b.created_at).localeCompare(String(a.created_at)));
+  }, [lancamentos, pagamentosLinhas, recebimentosLinhas, tipoFilter, catFilter]);
+
   // Lançamentos filtrados pelo dia (se selecionado no gráfico)
   const lancamentosFiltrados = useMemo(
-    () => dayFilter ? lancamentos.filter(l => l.data_lancamento === dayFilter) : lancamentos,
-    [lancamentos, dayFilter],
+    () => dayFilter ? linhasAll.filter(l => l.data_lancamento === dayFilter) : linhasAll,
+    [linhasAll, dayFilter],
   );
 
   const { totalEntradas, totalSaidas, saldo } = useMemo(() => {
@@ -162,7 +297,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
       const key = format(d, "yyyy-MM-dd");
       map.set(key, { date: key, entradas: 0, saidas: 0 });
     });
-    lancamentos.forEach(l => {
+    linhasAll.forEach(l => {
       const row = map.get(l.data_lancamento);
       if (!row) return;
       if (l.tipo === "entrada") row.entradas += Number(l.valor);
@@ -172,7 +307,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
       ...r,
       label: format(new Date(r.date + "T00:00"), "dd/MM"),
     }));
-  }, [lancamentos, range]);
+  }, [linhasAll, range]);
 
   // Alerta fiscal: entregadores PJ com pendente > R$500 no mês atual
   const now = new Date();
@@ -280,7 +415,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
         description="Controle suas entradas e saídas"
         action={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExport} disabled={lancamentos.length === 0}>
+            <Button variant="outline" onClick={handleExport} disabled={linhasAll.length === 0}>
               <Download className="h-4 w-4 mr-2" /> Exportar
             </Button>
             <Button onClick={() => { setEditing(null); setOpenDialog(true); }}>
@@ -291,6 +426,8 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
       />
 
       <FinanceiroStats empresaId={empresaId} />
+
+      <ReceberDaOrigem empresaId={empresaId} range={range} />
 
 
 
@@ -468,6 +605,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(l.data_lancamento + "T00:00"), "dd MMM yyyy", { locale: ptBR })}
                       </span>
+                      {l.auto && <Badge variant="secondary" className="text-[10px]">automático</Badge>}
                       {l.comprovante_url && (
                         <a
                           href={l.comprovante_url}
@@ -489,14 +627,16 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
                   )}>
                     {l.tipo === "entrada" ? "+" : "−"} {brl(Number(l.valor))}
                   </div>
-                  <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => { setEditing(l); setOpenDialog(true); }}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => setToDelete(l)}>
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </div>
+                  {!l.auto && (
+                    <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" aria-label="Editar lançamento" onClick={() => { setEditing(l); setOpenDialog(true); }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" aria-label="Excluir lançamento" onClick={() => setToDelete(l)}>
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

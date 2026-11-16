@@ -92,6 +92,39 @@ export async function limparEmpresa(empresaId: string) {
   return { ok: true };
 }
 
+/** Limpa só o histórico de rotas de UMA empresa. Nunca apaga rota em andamento nem aguardando devolução; concluídas ainda não pagas ficam (a menos que se peça). */
+export async function limparHistoricoRotas(empresaId: string, op: { ate: "antes_de_hoje" | "tudo"; incluirNaoPagas: boolean; simular: boolean }) {
+  const cols = await existentes();
+  const tem = (t: string, c?: string) => (c ? cols.has(`${t}.${c}`) : [...cols].some((k) => k.startsWith(`${t}.`)));
+  const hoje = `(now() at time zone 'America/Sao_Paulo')::date`;
+  const dia = op.ate === "tudo" ? "true" : `coalesce(o."data_trabalho", (o."created_at" at time zone 'America/Sao_Paulo')::date) < ${hoje}`;
+  const alvo = await rawQuery(
+    `select o."id"::text as id, o."status", o."payment_status" from "ofertas" o
+      where o."empresa_id"::text = $1 and o."status" not in ('in_progress','awaiting_return') and ${dia}`, [empresaId]);
+  const naoPagas = alvo.filter((o: any) => o.status === "completed" && o.payment_status !== "paid");
+  const ofertasIds = alvo.filter((o: any) => op.incluirNaoPagas || !(o.status === "completed" && o.payment_status !== "paid")).map((o: any) => String(o.id));
+  const diaOp = op.ate === "tudo" ? "true" : `x."data_operacao" < ${hoje}`;
+  const ops = await rawQuery(
+    `select x."id"::text as id from "operacoes" x where x."empresa_id"::text = $1 and ${diaOp}
+        and not exists (select 1 from "ofertas" o where o."operacao_id"::text = x."id"::text and not (o."id"::text = any($2::text[])))`, [empresaId, ofertasIds]);
+  const opsIds = ops.map((x: any) => String(x.id));
+  // rascunhos (rotas ainda não publicadas) das operações que serão apagadas também saem
+  const resumo = { operacoes: opsIds.length, rotas_publicadas: ofertasIds.length, mantidas_nao_pagas: op.incluirNaoPagas ? 0 : naoPagas.length };
+  if (op.simular) return { ok: true, simulado: true, ...resumo };
+  const stmts: { text: string; params: unknown[] }[] = [];
+  const del = (t: string, where: string, params: unknown[]) => { if (tem(t)) stmts.push({ text: `delete from "${t}" where ${where}`, params }); };
+  const A = "$1::text[]", B = "$2::text[]";
+  del("entregas_pacotes", `"oferta_id"::text = any(${A}) or "operacao_id"::text = any(${B})`, [ofertasIds, opsIds]);
+  del("entregador_localizacao", `"oferta_id"::text = any(${A})`, [ofertasIds]);
+  for (const t of ["entregas_ocorrencias", "ofertas_recusas", "entregas", "candidaturas", "alocacoes"])
+    if (tem(t, "oferta_id")) del(t, `"oferta_id"::text = any(${A})`, [ofertasIds]);
+  del("rotas_operacao", `"oferta_id"::text = any(${A}) or "operacao_id"::text = any(${B})`, [ofertasIds, opsIds]);
+  del("ofertas", `"id"::text = any(${A})`, [ofertasIds]);
+  del("operacoes", `"id"::text = any(${A})`, [opsIds]);
+  if (stmts.length) await runTransaction(stmts);
+  return { ok: true, simulado: false, ...resumo };
+}
+
 /** Apaga de vez UMA conta (entregador, empresa ou funcionário) e o que depende dela. Empresa leva junto histórico e equipe. Admins nunca. */
 export async function excluirConta(userId: string, adminId: string) {
   if (userId === adminId) throw new Error("Você não pode apagar a sua própria conta");

@@ -1,3 +1,4 @@
+import { rotuloDia } from "@/lib/utils";
 import { SugestoesValorPainel } from "@/components/SugestoesValorPainel";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -82,6 +83,12 @@ export function EmpresaPainel({ userId }: { userId?: string }) {
   const conta = (st: string) => ofertas.filter((o) => o.status === st).length;
   const pct = tot.total ? Math.round(((tot.entregues + tot.problemas) / tot.total) * 100) : 0;
   const ordenadas = [...ofertas].sort((a, b) => (STATUS[a.status]?.ordem ?? 9) - (STATUS[b.status]?.ordem ?? 9) || a.titulo.localeCompare(b.titulo));
+  const hoje = hojeISO();
+  const dias = useMemo(() => {
+    const m = new Map<string, Oferta[]>();
+    for (const o of ordenadas) { const k = (o.data_trabalho ?? hoje).slice(0, 10); (m.get(k) ?? m.set(k, []).get(k)!).push(o); }
+    return [...m.entries()].sort(([a], [b]) => (a === hoje ? -1 : b === hoje ? 1 : b.localeCompare(a)));
+  }, [ordenadas, hoje]);
   const dataFmt = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
 
   const tiles = [
@@ -144,7 +151,7 @@ export function EmpresaPainel({ userId }: { userId?: string }) {
 
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Rotas / zonas de hoje ({ofertas.length})</h2>
+          <h2 className="text-sm font-semibold">Rotas / zonas ({ofertas.length})</h2>
           <Link to="/ofertas" className="text-xs font-semibold text-primary">Ver todas →</Link>
         </div>
         {loading ? (
@@ -158,30 +165,51 @@ export function EmpresaPainel({ userId }: { userId?: string }) {
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </Link>
         ) : (
-          <div className="space-y-2">
-            {ordenadas.map((o) => {
-              const c = porOferta.get(o.id)!;
-              const feitos = c.entregues + c.problemas;
-              const st = STATUS[o.status] ?? { label: o.status, cls: "bg-muted", ordem: 9 };
-              const nome = o.titulo.includes("·") ? o.titulo.split("·").slice(1).join("·").trim() : o.titulo;
+          <div className="space-y-3">
+            {dias.map(([dia, lista]) => {
+              const tot = lista.reduce((n, o) => n + Number(o.quantidade_pacotes || 0), 0);
+              const grupos = [...new Set(lista.map((o) => o.status))].sort((a, b) => (STATUS[a]?.ordem ?? 9) - (STATUS[b]?.ordem ?? 9));
               return (
-                <Link key={o.id} to={o.status === "open" ? "/pacotes" : "/rotas"} className="block rounded-xl border border-border bg-card p-3 elev-1 press-scale">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{nome}</p>
-                      <p className="truncate text-xs text-muted-foreground">{o.entregadores?.nome_completo ?? "Sem entregador"} · {c.total} pacotes</p>
-                    </div>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}>{st.label}</span>
+                <details key={dia} open={dia === hoje} className="rounded-2xl border border-border bg-card p-3">
+                  <summary className="flex cursor-pointer items-center justify-between gap-2 py-1">
+                    <span className="text-sm font-bold first-letter:uppercase">{rotuloDia(dia)} <span className="font-normal text-muted-foreground">· {new Date(dia + "T12:00:00").toLocaleDateString("pt-BR")}</span></span>
+                    <span className="text-xs text-muted-foreground">{lista.length} rota{lista.length === 1 ? "" : "s"} · {tot} pacotes</span>
+                  </summary>
+                  <div className="mt-2 space-y-2">
+                    {grupos.map((g) => {
+                      const doGrupo = lista.filter((o) => o.status === g).sort((a, b) => a.titulo.localeCompare(b.titulo));
+                      const st = STATUS[g] ?? { label: g, cls: "bg-muted", ordem: 9 };
+                      return (
+                        <details key={g} open={doGrupo.length <= 4} className="rounded-xl bg-muted/40 p-2">
+                          <summary className="flex cursor-pointer items-center gap-2 py-1 text-xs font-semibold">
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] ${st.cls}`}>{st.label}</span><span className="text-muted-foreground">{doGrupo.length} rota{doGrupo.length === 1 ? "" : "s"} · {doGrupo.reduce((n, o) => n + Number(o.quantidade_pacotes || 0), 0)} pacotes</span>
+                          </summary>
+                          <div className="mt-2 space-y-2">
+                            {doGrupo.map((o) => {
+                              const c = porOferta.get(o.id)!;
+                              const feitos = c.entregues + c.problemas;
+                              const nome = o.titulo.includes("·") ? o.titulo.split("·").slice(1).join("·").trim() : o.titulo;
+                              return (
+                                <Link key={o.id} to={o.status === "open" ? "/pacotes" : "/rotas"} className="block rounded-xl border border-border bg-card p-3 press-scale">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-semibold">{nome}</p>
+                                      <p className="truncate text-xs text-muted-foreground">{o.entregadores?.nome_completo ?? "Sem entregador"} · {c.total} pacotes</p>
+                                    </div>
+                                    {o.status !== "open" && c.total > 0 && <span className="shrink-0 text-[11px] text-muted-foreground">{feitos}/{c.total}</span>}
+                                  </div>
+                                  {o.status !== "open" && c.total > 0 && (
+                                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-green-500" style={{ width: `${(feitos / c.total) * 100}%` }} /></div>
+                                  )}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      );
+                    })}
                   </div>
-                  {o.status !== "open" && c.total > 0 && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full bg-green-500" style={{ width: `${(feitos / c.total) * 100}%` }} />
-                      </div>
-                      <span className="text-[11px] text-muted-foreground">{feitos}/{c.total}</span>
-                    </div>
-                  )}
-                </Link>
+                </details>
               );
             })}
           </div>

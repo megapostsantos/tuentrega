@@ -15,36 +15,24 @@ export function FinanceiroStats({ empresaId }: { empresaId?: string }) {
     queryFn: async () => {
       const sb = supabase as any;
       const monthIso = startOfMonthISO();
+      const filtra = (q: any) => (empresaId ? q.eq("empresa_id", empresaId) : q);
 
-      const lancQ = sb
-        .from("financeiro_lancamentos")
-        .select("tipo, valor, entregador_id, data_lancamento")
-        .gte("data_lancamento", monthIso.slice(0, 10));
-      if (empresaId) lancQ.eq("empresa_id", empresaId);
-
-      const pagQ = sb
-        .from("ofertas")
-        .select("valor, payment_status, entregador_id, created_at")
-        .gte("created_at", monthIso);
-      if (empresaId) pagQ.eq("empresa_id", empresaId);
-
-      const [lanc, pag] = await Promise.all([lancQ, pagQ]);
-      const receita = (lanc.data ?? [])
-        .filter((r: any) => r.tipo === "entrada")
-        .reduce((s: number, r: any) => s + Number(r.valor ?? 0), 0);
-
-      const pagos = (pag.data ?? []).filter((r: any) => r.payment_status === "paid");
-      const pendentes = (pag.data ?? []).filter((r: any) => r.payment_status === "pending");
-      const totalPagos = pagos.reduce((s: number, r: any) => s + Number(r.valor ?? 0), 0);
-      const totalPendentes = pendentes.reduce((s: number, r: any) => s + Number(r.valor ?? 0), 0);
-
-      const porEntregador = new Map<string, number>();
-      for (const p of pagos) {
-        if (!p.entregador_id) continue;
-        porEntregador.set(p.entregador_id, (porEntregador.get(p.entregador_id) ?? 0) + Number(p.valor ?? 0));
-      }
-      const media = porEntregador.size ? totalPagos / porEntregador.size : 0;
-
+      const [lanc, pag, ops, devidas] = await Promise.all([
+        filtra(sb.from("financeiro_lancamentos").select("tipo, valor").gte("data_lancamento", monthIso.slice(0, 10))),
+        filtra(sb.from("pagamentos").select("entregador_id, valor_total").gte("data_pagamento", monthIso)),
+        filtra(sb.from("operacoes").select("total_pacotes_sistema, valor_ml_por_pacote").gte("recebido_em", monthIso)),
+        // devido = rota concluída que ainda não foi paga (rota cancelada ou aberta não conta)
+        filtra(sb.from("ofertas").select("valor, payment_status").in("status", ["completed", "closed"])),
+      ]);
+      const soma = (l: any[], f: (r: any) => number) => (l ?? []).reduce((s: number, r: any) => s + f(r), 0);
+      // receita = entradas lançadas + recebimentos da origem já marcados como recebidos
+      const receita = soma((lanc.data ?? []).filter((r: any) => r.tipo === "entrada"), (r) => Number(r.valor ?? 0))
+        + soma(ops.data ?? [], (r) => Number(r.total_pacotes_sistema ?? 0) * Number(r.valor_ml_por_pacote ?? 0));
+      // pagamentos feitos de verdade (inclui adicional/bônus)
+      const totalPagos = soma(pag.data ?? [], (r) => Number(r.valor_total ?? 0));
+      const totalPendentes = soma((devidas.data ?? []).filter((r: any) => r.payment_status !== "paid"), (r) => Number(r.valor ?? 0));
+      const pessoas = new Set((pag.data ?? []).map((r: any) => r.entregador_id).filter(Boolean));
+      const media = pessoas.size ? totalPagos / pessoas.size : 0;
       return { receita, totalPagos, totalPendentes, media };
     },
   });

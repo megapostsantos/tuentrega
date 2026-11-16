@@ -329,6 +329,7 @@ export const operacoes = pgTable(
     pacotesAMais: integer("pacotes_a_mais").notNull().default(0),
     valorPorPacote: numeric("valor_por_pacote").notNull().default("0"),
     valorMlPorPacote: numeric("valor_ml_por_pacote").notNull().default("2.60"),
+    recebidoEm: timestamp("recebido_em"),
     metodoDivisao: text("metodo_divisao").notNull().default("packages"),
     status: text("status").notNull().default("draft"),
     observacoes: text("observacoes"),
@@ -430,6 +431,8 @@ export const pagamentos = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     nfNumero: text("nf_numero"),
     nfUrl: text("nf_url"),
+    adicional: numeric("adicional").notNull().default("0"),
+    adicionalMotivo: text("adicional_motivo"),
   },
   (t) => [
     index("idx_pagamentos_empresa").on(t.empresaId, t.dataPagamento),
