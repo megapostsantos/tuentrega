@@ -6,7 +6,8 @@ export default defineEventHandler(async (event) => {
   const url = new URL(req.url);
   const { origemInvalida } = await import("./server/csrf");
   if (origemInvalida(req)) return Response.json({ error: "Origem não permitida" }, { status: 403 });
-  if (url.pathname !== "/api/ai/ler-zonas" || req.method !== "POST") return Response.json({ error: "not found" }, { status: 404 });
+  const rota = url.pathname;
+  if ((rota !== "/api/ai/ler-zonas" && rota !== "/api/ai/ler-etiqueta") || req.method !== "POST") return Response.json({ error: "not found" }, { status: 404 });
 
   const { auth } = await import("./lib/auth");
   const session = await auth.api.getSession({ headers: req.headers });
@@ -19,6 +20,25 @@ export default defineEventHandler(async (event) => {
   }
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return Response.json({ error: "A leitura por imagem ainda não foi ativada (falta a chave ANTHROPIC_API_KEY)." }, { status: 501 });
+
+  if (rota === "/api/ai/ler-etiqueta") {
+    // etiqueta: modelo barato, 1 foto por vez, com teto por usuário (hora) e por empresa (dia) para não haver surpresa na conta
+    const { limiteExcedido, empresaDoOperador } = await import("./server/data-engine");
+    let empresaId = user.id as string;
+    if (user.role === "operador") { const emp = await empresaDoOperador(user.id); if (!emp) return Response.json({ error: "Sem permissão" }, { status: 403 }); empresaId = emp.empresaId; }
+    if (await limiteExcedido(`etiqueta:h:${user.id}`, 600, 3600) || await limiteExcedido(`etiqueta:d:${empresaId}`, 2500, 86400))
+      return Response.json({ error: "Limite diário de fotos de etiqueta atingido. Use a planilha com CEP ou tente amanhã." }, { status: 429 });
+    const corpo: any = await req.json().catch(() => null);
+    const img = { data: String(corpo?.image ?? ""), mediaType: String(corpo?.mediaType ?? "image/jpeg") };
+    if (!img.data || img.data.length > 1_500_000 || !/^image\/(jpeg|png|webp)$/.test(img.mediaType))
+      return Response.json({ error: "Imagem inválida ou grande demais." }, { status: 400 });
+    try {
+      const { lerEtiquetaDaImagem } = await import("./server/ler-etiqueta");
+      return Response.json(await lerEtiquetaDaImagem(img, key));
+    } catch (e: any) {
+      return Response.json({ error: e?.message ?? "Falha na leitura" }, { status: 502 });
+    }
+  }
 
   // limite simples por usuário: 30 leituras por hora
   const { limiteExcedido } = await import("./server/data-engine");

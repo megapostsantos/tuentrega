@@ -1,3 +1,4 @@
+import { FotoEtiquetaDialog } from "@/components/FotoEtiquetaDialog";
 import { lerPlanilha, formataCep, soDigitos } from "@/lib/cep";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -58,6 +59,7 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
   const [valorPorPacote, setValorPorPacote] = useState<number>(1.8);
   const [dataOperacao, setDataOperacao] = useState<string>(new Date().toISOString().slice(0, 10));
   const [pasteOpen, setPasteOpen] = useState(false);
+  const [fotoOpen, setFotoOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -203,7 +205,7 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
           <DialogTitle className="flex items-center gap-2">
             <ScanLine className="h-5 w-5 text-primary" />
             {tipoServico === "nex" ? "Nova Operação Nex" : "Nova Operação por Scanner"}
-            <span className="ml-auto text-xs font-normal text-muted-foreground">Etapa {step + 1} de 4</span>
+            <span className="ml-auto mr-8 text-xs font-normal text-muted-foreground">Etapa {step + 1} de 4</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -225,6 +227,7 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
             <Step1Scanner
               pkgs={pkgs}
               onScan={addCode}
+              onFoto={() => setFotoOpen(true)}
               onRemove={removeCode}
               onNext={() => setStep(2)}
               onCancel={() => setStep(0)}
@@ -262,6 +265,13 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
         </div>
 
 
+        <FotoEtiquetaDialog
+          open={fotoOpen}
+          onClose={() => setFotoOpen(false)}
+          jaTem={(c) => pkgs.some((p) => p.code === c)}
+          onAdd={(p) => { beep(); setPkgs((prev) => (prev.some((x) => x.code === p.code) ? prev : [...prev, { code: p.code, endereco: p.endereco, cep: p.cep }])); }}
+        />
+
         {/* Paste bulk addresses sub-dialog */}
         <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
           <DialogContent className="max-w-lg">
@@ -293,9 +303,9 @@ export function ScanOperationDialog({ open, empresaId, onClose, onCreated }: Pro
 
 /* -------- Step 1 -------- */
 function Step1Scanner({
-  pkgs, onScan, onRemove, onNext, onCancel,
+  pkgs, onScan, onFoto, onRemove, onNext, onCancel,
 }: {
-  pkgs: PkgRow[]; onScan: (code: string) => void; onRemove: (code: string) => void;
+  pkgs: PkgRow[]; onScan: (code: string) => void; onFoto: () => void; onRemove: (code: string) => void;
   onNext: () => void; onCancel: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -375,6 +385,8 @@ function Step1Scanner({
           </div>
         )}
       </div>
+
+      <Button variant="outline" onClick={onFoto} className="w-full"><Camera className="mr-2 h-4 w-4" />Foto da etiqueta (lê código e CEP)</Button>
 
       <div className="flex gap-2">
         <Input
