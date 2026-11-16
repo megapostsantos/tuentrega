@@ -1,3 +1,4 @@
+import { RemuneracaoDialog, PagamentoFuncionarioDialog, PagamentosEquipeLista, descricaoRemuneracao } from "@/components/RemuneracaoEquipe";
 import { EmailConviteDialog } from "@/components/EmailConviteDialog";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -19,7 +20,7 @@ import { RegisterEntregadorDialog } from "@/components/RegisterEntregadorDialog"
 
 export const Route = createFileRoute("/_authenticated/equipe")({ component: EquipePage });
 
-type Membro = { user_id: string; nome: string | null; email: string | null; ativo: boolean; codigo_convite: string | null; entregador: boolean; cargo?: string };
+type Membro = { user_id: string; nome: string | null; email: string | null; ativo: boolean; codigo_convite: string | null; entregador: boolean; cargo?: string; salario_fixo?: number | null; valor_por_entrega?: number | null };
 
 function EquipePage() {
   const { user, role, isEquipe: isOperador, loading } = useAuth();
@@ -34,11 +35,14 @@ function EquipePage() {
   const [aprovar, setAprovar] = useState(true);
   const [parceiros, setParceiros] = useState<{ id: string; nome: string; email: string | null; whatsapp: string | null; codigo: string | null }[]>([]);
   const [novoParceiro, setNovoParceiro] = useState(false);
+  const [remAlvo, setRemAlvo] = useState<Membro | null>(null);
+  const [pagAlvo, setPagAlvo] = useState<Membro | null>(null);
+  const [versaoPag, setVersaoPag] = useState(0);
   const [emailAlvo, setEmailAlvo] = useState<null | { id: string; nome: string; email: string | null }>(null);
   const [feito, setFeito] = useState<null | { nome: string; email: string; whatsapp: string; codigo: string }>(null);
 
   async function load() {
-    const { data } = await sb.from("equipe_empresa").select("user_id, nome, email, ativo, codigo_convite, entregador, cargo").order("criado_em", { ascending: false });
+    const { data } = await sb.from("equipe_empresa").select("user_id, nome, email, ativo, codigo_convite, entregador, cargo, salario_fixo, valor_por_entrega").order("criado_em", { ascending: false });
     setMembros((data as Membro[]) ?? []);
     const { data: e } = await sb.from("empresas").select("tms_valor_padrao_pacote, nome_fantasia, razao_social, aprovar_candidatos").eq("id", user?.id).maybeSingle();
     if (e?.tms_valor_padrao_pacote != null) setVp(String(e.tms_valor_padrao_pacote));
@@ -179,8 +183,11 @@ function EquipePage() {
               <div className="min-w-0">
                 <div className="truncate font-semibold">{m.nome}</div>
                 <div className="truncate text-xs text-muted-foreground">{m.email}</div>
+                <div className="truncate text-xs">💰 {descricaoRemuneracao(m)}</div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={() => setPagAlvo(m)}>Pagar</Button>
+                <Button size="sm" variant="outline" onClick={() => setRemAlvo(m)}>Remuneração</Button>
                 {m.codigo_convite
                   ? <Badge className="bg-amber-100 text-amber-800">Convite pendente · {m.codigo_convite}</Badge>
                   : <Badge variant={m.ativo ? "secondary" : "outline"}>{m.ativo ? "Ativo" : "Desativado"}</Badge>}
@@ -195,6 +202,7 @@ function EquipePage() {
               </div>
             </div>
           ))}
+          {user?.id && <PagamentosEquipeLista empresaId={user.id} membros={membros} versao={versaoPag} />}
           <div className="rounded-2xl bg-muted/50 p-3 text-xs text-muted-foreground">
             <strong>Funcionário:</strong> cria operações, bipa e conta pacotes, aloca parceiros, acompanha e encerra rotas, confere devoluções. Usa sempre o valor padrão por pacote e não vê valores, pagamentos nem PIX; pode <em>sugerir</em> outro valor. <strong>Supervisor:</strong> faz tudo isso e também define valores, aprova as sugestões e dá baixa nos pagamentos. <strong>Só o dono</strong> mexe nos dados da empresa, na equipe e apaga registros.
           </div>
@@ -220,6 +228,8 @@ function EquipePage() {
         </TabsContent>
       </Tabs>
 
+      <RemuneracaoDialog membro={remAlvo} onClose={() => setRemAlvo(null)} onSaved={load} />
+      {user?.id && <PagamentoFuncionarioDialog membro={pagAlvo} empresaId={user.id} onClose={() => setPagAlvo(null)} onSaved={() => setVersaoPag((v) => v + 1)} />}
       <EmailConviteDialog alvo={emailAlvo} onClose={() => setEmailAlvo(null)} onSaved={() => { setEmailAlvo(null); load(); }} />
 
       <Card>

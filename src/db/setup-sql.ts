@@ -2294,4 +2294,10 @@ ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "adicional" numeric DEFAULT 0 
 ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "adicional_motivo" text;
 -- @@
 ALTER TABLE "operacoes" ADD COLUMN IF NOT EXISTS "recebido_em" timestamp;
+-- @@
+ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "salario_fixo" numeric DEFAULT 0 NOT NULL;
+-- @@
+ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "valor_por_entrega" numeric DEFAULT 0 NOT NULL;
+-- @@
+CREATE TABLE IF NOT EXISTS "pagamentos_equipe" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "empresa_id" text NOT NULL, "membro_id" text NOT NULL, "tipo" text DEFAULT 'salario' NOT NULL, "referencia" text, "quantidade" integer, "valor" numeric NOT NULL, "data_pagamento" date DEFAULT current_date NOT NULL, "observacao" text, "created_at" timestamp DEFAULT now() NOT NULL);
 `;

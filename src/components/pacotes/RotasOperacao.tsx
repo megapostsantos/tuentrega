@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, DollarSign, Loader2, Megaphone, Minus, MoreHorizontal, Plus, Trash2, UserPlus, Users, Wand2, Play } from "lucide-react";
+import { CheckCircle2, DollarSign, Pencil, Loader2, Megaphone, Minus, MoreHorizontal, Plus, Trash2, UserPlus, Users, Wand2, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AudienciaSelect, audienciaSalva, ROTULO_AUDIENCIA, type Audiencia } from "@/components/AudienciaSelect";
 import { SugerirValorDialog, type AlvoSugestao } from "@/components/SugerirValorDialog";
@@ -38,7 +41,15 @@ export function RotasOperacao({
   const [novoOpen, setNovoOpen] = useState(false);
   const [audiencia, setAudiencia] = useState<Audiencia>(audienciaSalva());
   const [aceitos, setAceitos] = useState<any[]>([]);
-  const [ativos, setAtivos] = useState<{ id: string; nome_completo: string }[]>([]);
+  const [ativos, setAtivos] = useState<{ id: string; nome_completo: string; whatsapp?: string | null; tipo_veiculo?: string | null }[]>([]);
+  const [editando, setEditando] = useState<RotaOp | null>(null);
+  const [novoNome, setNovoNome] = useState("");
+  const [novoParceiro, setNovoParceiro] = useState("");
+  /** Nome + final do telefone + veículo, para não confundir parceiros com nomes parecidos */
+  const rotulo = (en: { nome_completo: string; whatsapp?: string | null; tipo_veiculo?: string | null }) => {
+    const f = String(en.whatsapp ?? "").replace(/\D/g, "").slice(-4);
+    return [en.nome_completo, en.tipo_veiculo, f ? `fone …${f}` : null].filter(Boolean).join(" · ");
+  };
   const [alocacoes, setAlocacoes] = useState<any[]>([]);
 
   async function load() {
@@ -51,7 +62,7 @@ export function RotasOperacao({
     } else setAceitos([]);
     const { data: alc } = await sb.from("alocacoes").select("*, entregadores(nome_completo)").eq("operacao_id", operacaoId);
     setAlocacoes((alc ?? []).filter((a: any) => !["recusada", "removida"].includes(a.status)));
-    const { data: ents } = await sb.from("entregadores").select("id, nome_completo").eq("status", "ativo").order("nome_completo");
+    const { data: ents } = await sb.from("entregadores").select("id, nome_completo, whatsapp, tipo_veiculo").eq("status", "ativo").order("nome_completo");
     setAtivos(ents ?? []);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [operacaoId, empresaId, dataOperacao, rotas.length]);
@@ -116,6 +127,26 @@ export function RotasOperacao({
     catch (e: any) { toast.error(e.message); } finally { setBusy(null); }
   }
 
+  function abrirEdicao(r: RotaOp) {
+    setEditando(r); setNovoNome(r.nome);
+    setNovoParceiro(alocDe(r.id)?.entregador_id ?? "");
+  }
+
+  async function salvarEdicao() {
+    if (!editando) return;
+    const atual = alocDe(editando.id)?.entregador_id ?? "";
+    const args: Record<string, unknown> = { _rota_id: editando.id };
+    if (novoNome.trim() && novoNome.trim() !== editando.nome) args._nome = novoNome.trim();
+    if (novoParceiro !== atual) args._entregador_id = novoParceiro || null;
+    if (Object.keys(args).length === 1) { setEditando(null); return; }
+    setBusy(editando.id);
+    const { error } = await rpc("editar_rota", args);
+    setBusy(null);
+    if (error) return toast.error(error.message);
+    toast.success(args._entregador_id === null ? "Parceiro removido: a rota voltou para o mercado." : "Rota atualizada.");
+    setEditando(null); await load(); onChanged();
+  }
+
   async function distribuir() {
     setBusy("dist");
     try {
@@ -176,6 +207,7 @@ export function RotasOperacao({
                   <DropdownMenuContent align="end">
                     {!r.oferta_id && <DropdownMenuItem onClick={() => publicarIds([r.id])}><Megaphone className="mr-2 h-4 w-4" />Publicar só esta ({ROTULO_AUDIENCIA[audiencia]})</DropdownMenuItem>}
                     {eFuncionario && !travada && <DropdownMenuItem onClick={() => setSugerir({ tipo: "rota", id: r.id, titulo: r.nome })}><DollarSign className="mr-2 h-4 w-4" />Sugerir outro valor…</DropdownMenuItem>}
+                    {!travada && <DropdownMenuItem onClick={() => abrirEdicao(r)}><Pencil className="mr-2 h-4 w-4" />Editar rota (nome e parceiro)…</DropdownMenuItem>}
                     {!isOperador && !travada && <DropdownMenuItem className="text-red-600" onClick={() => onEliminar(r)}><Trash2 className="mr-2 h-4 w-4" />Eliminar rota…</DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -207,12 +239,15 @@ export function RotasOperacao({
 
               <div className="mt-2 flex flex-wrap items-center gap-2 border-t pt-2">
                 {aloc ? (
-                  <span className="text-sm text-emerald-700">✅ {(aloc.entregadores as any)?.nome_completo ?? "Parceiro"}</span>
+                  <>
+                    <span className="text-sm text-emerald-700">✅ {(aloc.entregadores as any)?.nome_completo ?? "Parceiro"}</span>
+                    {!travada && <Button size="sm" variant="ghost" className="h-8 px-2 text-xs underline" onClick={() => abrirEdicao(r)}>Trocar</Button>}
+                  </>
                 ) : (
                   <>
                     <select className="h-9 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm" value={escolha[r.id] ?? ""} onChange={(ev) => setEscolha((p) => ({ ...p, [r.id]: ev.target.value }))}>
                       <option value="">Escolher parceiro…</option>
-                      {opcoes.map((en) => <option key={en.id} value={en.id}>{confirmados.has(en.id) ? "★ " : ""}{en.nome_completo}</option>)}
+                      {opcoes.map((en) => <option key={en.id} value={en.id}>{confirmados.has(en.id) ? "★ " : ""}{rotulo(en)}</option>)}
                     </select>
                     <Button size="sm" variant="outline" disabled={busy === r.id || !escolha[r.id]} onClick={() => atribuirUma(r)}>Atribuir</Button>
                   </>
@@ -247,6 +282,29 @@ export function RotasOperacao({
         )}
         <Button size="sm" variant="outline" disabled={itens.length - semParceiro.length === 0} onClick={iniciar}><Play className="mr-1 h-4 w-4" />Iniciar operação</Button>
       </div>
+      <Dialog open={!!editando} onOpenChange={(o) => !o && setEditando(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar rota</DialogTitle>
+            <DialogDescription>Troque o nome ou o parceiro. Só dá enquanto a rota não saiu para entrega.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><Label htmlFor="er-nome">Nome da rota</Label><Input id="er-nome" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} /></div>
+            <div className="space-y-1">
+              <Label htmlFor="er-parc">Parceiro</Label>
+              <select id="er-parc" className="h-10 w-full rounded-md border bg-background px-2 text-sm" value={novoParceiro} onChange={(e) => setNovoParceiro(e.target.value)}>
+                <option value="">Sem parceiro (volta para o mercado)</option>
+                {opcoes.map((en) => <option key={en.id} value={en.id}>{confirmados.has(en.id) ? "★ " : ""}{rotulo(en)}</option>)}
+              </select>
+              <p className="text-xs text-muted-foreground">O parceiro anterior e o novo recebem um aviso.</p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditando(null)}>Cancelar</Button>
+            <Button onClick={salvarEdicao} disabled={busy === editando?.id}>{busy === editando?.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <SugerirValorDialog alvo={sugerir} onClose={() => setSugerir(null)} />
       <RegisterEntregadorDialog open={novoOpen} onClose={() => setNovoOpen(false)} onCreated={load} />
     </div>

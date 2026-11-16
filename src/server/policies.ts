@@ -369,7 +369,7 @@ export const POLICIES: Record<string, Policy> = {
   equipe_empresa: {
     read: { empresa: eq("empresa_id") },
     update: { empresa: eq("empresa_id") },
-    updateCols: { empresa: ["ativo", "nome", "cargo"] },
+    updateCols: { empresa: ["ativo", "nome", "cargo", "salario_fixo", "valor_por_entrega"] },
     delete: { empresa: eq("empresa_id") },
   },
 
@@ -428,6 +428,7 @@ export const POLICIES: Record<string, Policy> = {
   },
 
   config_pagamento: apenasEmpresa(),
+  pagamentos_equipe: apenasEmpresa(),
 
   antecipacoes: {
     read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },

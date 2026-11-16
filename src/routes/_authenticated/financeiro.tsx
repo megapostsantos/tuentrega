@@ -59,6 +59,7 @@ type Lancamento = {
 
 const CAT_PAGAMENTO_ENTREGADOR = "Pagamento a entregadores";
 const CAT_RECEBIMENTO = "Recebimento da origem";
+const CAT_FUNCIONARIOS = "Pagamento a funcionários";
 
 /** Linha do extrato: lançamento manual ou lançamento automático (pagamento feito / recebimento marcado). */
 type Linha = Lancamento & { auto?: boolean };
@@ -248,6 +249,26 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
     },
   });
 
+  // Pagamentos à equipe (salário, por entregas, bônus) entram sozinhos como saída
+  const { data: equipeLinhas = [] } = useQuery({
+    queryKey: ["financeiro-equipe", empresaId, range.from.toISOString(), range.to.toISOString()],
+    queryFn: async () => {
+      const sb = supabase as any;
+      const { data } = await sb.from("pagamentos_equipe").select("*").eq("empresa_id", empresaId)
+        .gte("data_pagamento", format(range.from, "yyyy-MM-dd")).lte("data_pagamento", format(range.to, "yyyy-MM-dd"));
+      const pg = (data ?? []) as any[];
+      const ids = Array.from(new Set(pg.map((p) => p.membro_id)));
+      const nomes = new Map<string, string>();
+      if (ids.length) { const { data: eq } = await sb.from("equipe_empresa").select("user_id, nome").in("user_id", ids); (eq ?? []).forEach((e: any) => nomes.set(e.user_id, e.nome)); }
+      const tipo: Record<string, string> = { salario: "Salário", entregas: "Por entregas", bonus: "Bônus / adicional", outro: "Outro" };
+      return pg.map((p): Linha => ({
+        id: `eq:${p.id}`, empresa_id: empresaId, tipo: "saida", categoria: CAT_FUNCIONARIOS,
+        descricao: `${nomes.get(p.membro_id) ?? "Funcionário"} · ${tipo[p.tipo] ?? p.tipo}${p.referencia ? ` · ${p.referencia}` : ""}${p.quantidade ? ` · ${p.quantidade} entregas` : ""}${p.observacao ? ` · ${p.observacao}` : ""}`,
+        valor: Number(p.valor || 0), data_lancamento: String(p.data_pagamento).slice(0, 10), comprovante_url: null, entregador_id: null, created_at: p.created_at, auto: true,
+      }));
+    },
+  });
+
   // Recebimentos já marcados como recebidos entram sozinhos como entrada
   const { data: recebimentosLinhas = [] } = useQuery({
     queryKey: ["financeiro-recebimentos", empresaId, range.from.toISOString(), range.to.toISOString()],
@@ -268,11 +289,11 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
 
   // Tudo junto: lançamentos manuais + automáticos (respeitando os filtros de tipo e categoria)
   const linhasAll = useMemo<Linha[]>(() => {
-    const auto = [...pagamentosLinhas, ...recebimentosLinhas].filter((l) =>
+    const auto = [...pagamentosLinhas, ...equipeLinhas, ...recebimentosLinhas].filter((l) =>
       (tipoFilter === "todos" || l.tipo === tipoFilter) && (catFilter === "todas" || l.categoria === catFilter));
     return [...lancamentos, ...auto].sort((a, b) =>
       b.data_lancamento.localeCompare(a.data_lancamento) || String(b.created_at).localeCompare(String(a.created_at)));
-  }, [lancamentos, pagamentosLinhas, recebimentosLinhas, tipoFilter, catFilter]);
+  }, [lancamentos, pagamentosLinhas, equipeLinhas, recebimentosLinhas, tipoFilter, catFilter]);
 
   // Lançamentos filtrados pelo dia (se selecionado no gráfico)
   const lancamentosFiltrados = useMemo(

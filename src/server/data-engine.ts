@@ -646,6 +646,20 @@ const DDL_LAZY: string[] = [
 );`,
   `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "entregador" boolean DEFAULT false NOT NULL;`,
   `ALTER TABLE "entregas_pacotes" ADD COLUMN IF NOT EXISTS "cep" text;`,
+  `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "salario_fixo" numeric DEFAULT 0 NOT NULL;`,
+  `ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "valor_por_entrega" numeric DEFAULT 0 NOT NULL;`,
+  `CREATE TABLE IF NOT EXISTS "pagamentos_equipe" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"empresa_id" text NOT NULL,
+	"membro_id" text NOT NULL,
+	"tipo" text DEFAULT 'salario' NOT NULL,
+	"referencia" text,
+	"quantidade" integer,
+	"valor" numeric NOT NULL,
+	"data_pagamento" date DEFAULT current_date NOT NULL,
+	"observacao" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);`,
   `ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "adicional" numeric DEFAULT 0 NOT NULL;`,
   `ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "adicional_motivo" text;`,
   `ALTER TABLE "operacoes" ADD COLUMN IF NOT EXISTS "recebido_em" timestamp;`,
@@ -1279,6 +1293,57 @@ async function limparMeusDados(uid: string | null, args: Record<string, unknown>
   return { data: r, error: null, count: null };
 }
 
+
+/** Edita uma rota que ainda não saiu: troca o nome e/ou o parceiro (ou devolve ao mercado). */
+async function editarRota(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
+  if (!uid) throw new Error("Informe a empresa");
+  const rotaId = String(args._rota_id ?? "");
+  const rows = await query(
+    `select r."id", r."nome", r."operacao_id", r."status", r."oferta_id", o."status" as ostatus, o."entregador_id" as oent
+       from "rotas_operacao" r left join "ofertas" o on o."id"::text = r."oferta_id"::text
+      where r."id"::text = $1 and r."empresa_id" = $2`, [rotaId, uid]);
+  const r = rows[0] as any;
+  if (!r) throw Object.assign(new Error("Rota não encontrada"), { code: "403" });
+  if (r.status === "cancelada") throw new Error("Esta rota foi eliminada");
+  if (["in_progress", "awaiting_return", "completed"].includes(String(r.ostatus ?? ""))) throw new Error("A rota já saiu para entrega e não pode mais ser editada");
+  const stmts: { text: string; params: unknown[] }[] = [];
+  const nome = args._nome == null ? null : String(args._nome).replace(/\s+/g, " ").trim().slice(0, 80);
+  if (nome && nome !== r.nome) {
+    stmts.push({ text: `update "rotas_operacao" set "nome" = $2, "updated_at" = now() where "id"::text = $1`, params: [rotaId, nome] });
+    if (r.oferta_id) stmts.push({ text: `update "ofertas" set "titulo" = replace("titulo", $2, $3), "updated_at" = now() where "id"::text = $1`, params: [String(r.oferta_id), String(r.nome), nome] });
+  }
+  if ("_entregador_id" in args) {
+    const novo = args._entregador_id == null || String(args._entregador_id) === "" ? null : String(args._entregador_id);
+    if (novo) {
+      const e = await query(`select 1 from "entregadores" where "id" = $1 and "status" = 'ativo'`, [novo]);
+      if (!e.length) throw new Error("Parceiro não encontrado ou inativo");
+      const outra = await query(
+        `select 1 where exists (select 1 from "vinculos_empresa" where "entregador_id" = $1 and "empresa_id" <> $2)
+            or exists (select 1 from "entregadores_gerenciados" where "entregador_id" = $1 and "empresa_id" <> $2)`, [novo, uid]);
+      if (outra.length) throw new Error("Este parceiro é exclusivo de outra empresa");
+    }
+    const velho = r.oent ? String(r.oent) : null;
+    if (novo !== velho || (novo && !velho)) {
+      stmts.push({ text: `update "alocacoes" set "status" = 'removida' where "rota_id"::text = $1 and "status" not in ('recusada','removida')`, params: [rotaId] });
+      if (novo) {
+        stmts.push({ text: `insert into "alocacoes" ("operacao_id","rota_id","entregador_id","oferta_id","empresa_id","status") values ($1::uuid,$2::uuid,$3,$4::uuid,$5,'allocated')`,
+          params: [String(r.operacao_id), rotaId, novo, r.oferta_id ? String(r.oferta_id) : null, uid] });
+        if (r.oferta_id) {
+          stmts.push({ text: `update "ofertas" set "entregador_id" = $2, "status" = 'accepted', "atribuida_em" = now(), "updated_at" = now() where "id"::text = $1 and "status" in ('open','accepted')`, params: [String(r.oferta_id), novo] });
+          stmts.push({ text: `update "candidaturas" set "status" = 'recusada', "decidida_em" = now() where "oferta_id"::text = $1 and "status" = 'pendente'`, params: [String(r.oferta_id)] });
+        }
+        stmts.push({ text: `insert into "user_notifications" ("user_id","titulo","corpo","link") values ($1,'Nova rota para você',$2,'/rotas')`, params: [novo, `A empresa atribuiu a rota ${nome ?? r.nome} a você.`] });
+      } else if (r.oferta_id) {
+        stmts.push({ text: `update "ofertas" set "entregador_id" = null, "status" = 'open', "atribuida_em" = null, "updated_at" = now() where "id"::text = $1 and "status" in ('open','accepted')`, params: [String(r.oferta_id)] });
+      }
+      if (velho && velho !== novo)
+        stmts.push({ text: `insert into "user_notifications" ("user_id","titulo","corpo","link") values ($1,'Rota removida',$2,'/rotas')`, params: [velho, `A rota ${nome ?? r.nome} foi passada para outro parceiro.`] });
+    }
+  }
+  if (stmts.length) await runTransaction(stmts);
+  return { data: { ok: true, alterado: stmts.length > 0 }, error: null, count: null };
+}
+
 /** Limpa só o histórico de rotas (operações, rotas, ofertas e pacotes). Mantém pagamentos, financeiro, parceiros e equipe. */
 async function limparHistoricoRotas(uid: string | null, args: Record<string, unknown>): Promise<QueryResp> {
   if (!uid) throw new Error("Informe a empresa");
@@ -1470,6 +1535,7 @@ async function runRpc(req: QueryReq, uid: string | null, autor?: string): Promis
   if (fn === "cadastrar_membro_equipe") return await cadastrarMembroEquipe(uid, args);
   if (fn === "limpar_meus_dados") return await limparMeusDados(uid, args);
   if (fn === "limpar_historico_rotas") return await limparHistoricoRotas(uid, args);
+  if (fn === "editar_rota") return await editarRota(uid, args);
   if (fn === "candidatar_oferta") return await candidatarOferta(uid, args);
   if (fn === "postular_zona") return await postularZona(uid, args);
   if (fn === "cancelar_postulacao_zona") return await cancelarPostulacaoZona(uid, args);
@@ -1541,7 +1607,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           if (scope.role === "empresa") forbidden();
         } else if (fn === "salvar_ordem_rota") {
           if (scope.role !== "empresa" && scope.role !== "entregador") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "limpar_historico_rotas" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado" || fn === "sugerir_valor" || fn === "decidir_sugestao_valor" || fn === "remover_parceiro" || fn === "remover_membro_equipe" || fn === "atualizar_email_convite") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "limpar_historico_rotas" || fn === "editar_rota" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado" || fn === "sugerir_valor" || fn === "decidir_sugestao_valor" || fn === "remover_parceiro" || fn === "remover_membro_equipe" || fn === "atualizar_email_convite") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }

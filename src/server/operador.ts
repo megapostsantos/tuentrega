@@ -4,7 +4,7 @@
 /** Tabelas financeiras: o operador não lê nem escreve. */
 export const OPERADOR_NEGADAS = new Set([
   "pagamentos", "extratos_mensais", "financeiro_lancamentos", "antecipacoes", "config_pagamento",
-  "dispatcher_commissions", "dispatcher_team", "dispatcher_alocacoes", "ofertas_privadas_config",
+  "pagamentos_equipe", "dispatcher_commissions", "dispatcher_team", "dispatcher_alocacoes", "ofertas_privadas_config",
 ]);
 
 /** Tabelas que só o dono altera. */
@@ -21,6 +21,7 @@ export const OPERADOR_MASCARAS: Record<string, string[]> = {
   eventos_agenda: ["valor"],
   empresas: ["tms_valor_padrao_pacote"],
   entregadores: ["pix_tipo", "pix_chave", "banco"],
+  equipe_empresa: ["salario_fixo", "valor_por_entrega"],
 };
 
 /** RPCs que só o dono executa. */
