@@ -523,6 +523,28 @@ export const pagamentosEquipe = pgTable("pagamentos_equipe", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const recorrencias = pgTable("recorrencias", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  empresaId: text("empresa_id").notNull(),
+  /** lancamento = despesa/receita fixa (aluguel…); salario = salário mensal de um membro; entregas = pagamento mensal por entregas do mês anterior */
+  alvo: text("alvo").notNull().default("lancamento"),
+  tipo: text("tipo").notNull().default("saida"),
+  categoria: text("categoria"),
+  descricao: text("descricao"),
+  valor: numeric("valor").notNull().default("0"),
+  dia: integer("dia").notNull().default(1),
+  membroId: text("membro_id"),
+  inicio: date("inicio").notNull().defaultNow(),
+  ativa: boolean("ativa").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const recorrenciasPuladas = pgTable("recorrencias_puladas", {
+  empresaId: text("empresa_id").notNull(),
+  recorrenciaId: uuid("recorrencia_id").notNull(),
+  mesRef: text("mes_ref").notNull(),
+});
+
 export const sugestoesValor = pgTable("sugestoes_valor", {
   id: uuid("id").primaryKey().defaultRandom(),
   empresaId: text("empresa_id").notNull(),

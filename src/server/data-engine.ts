@@ -476,6 +476,9 @@ async function expirarAtribuicoes() {
        update "ofertas" set "status" = 'cancelled', "closing_notes" = 'Expirada: o dia passou sem entregador', "updated_at" = now()
         where "id" in (select "id" from alvo)`,
     );
+    // despesas fixas, salários e pagamentos por entregas que venceram viram lançamentos sozinhos
+    try { const { gerarRecorrencias } = await import("./recorrencias"); await gerarRecorrencias(); }
+    catch (e) { console.error("[recorrencias] erro:", (e as Error)?.message); }
   } catch (e) {
     console.error("[expirar] erro:", (e as Error)?.message);
   }
@@ -660,6 +663,27 @@ const DDL_LAZY: string[] = [
 	"observacao" text,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );`,
+  `ALTER TABLE "financeiro_lancamentos" ADD COLUMN IF NOT EXISTS "recorrencia_id" uuid;`,
+  `ALTER TABLE "financeiro_lancamentos" ADD COLUMN IF NOT EXISTS "mes_ref" text;`,
+  `ALTER TABLE "pagamentos_equipe" ADD COLUMN IF NOT EXISTS "recorrencia_id" uuid;`,
+  `ALTER TABLE "pagamentos_equipe" ADD COLUMN IF NOT EXISTS "mes_ref" text;`,
+  `CREATE TABLE IF NOT EXISTS "recorrencias" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"empresa_id" text NOT NULL,
+	"alvo" text DEFAULT 'lancamento' NOT NULL,
+	"tipo" text DEFAULT 'saida' NOT NULL,
+	"categoria" text,
+	"descricao" text,
+	"valor" numeric DEFAULT 0 NOT NULL,
+	"dia" integer DEFAULT 1 NOT NULL,
+	"membro_id" text,
+	"inicio" date DEFAULT current_date NOT NULL,
+	"ativa" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);`,
+  `CREATE TABLE IF NOT EXISTS "recorrencias_puladas" ("empresa_id" text NOT NULL, "recorrencia_id" uuid NOT NULL, "mes_ref" text NOT NULL, PRIMARY KEY ("recorrencia_id","mes_ref"));`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "fin_lanc_recorrencia_unique" ON "financeiro_lancamentos" ("recorrencia_id","mes_ref") WHERE "recorrencia_id" IS NOT NULL;`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "pag_equipe_recorrencia_unique" ON "pagamentos_equipe" ("recorrencia_id","mes_ref") WHERE "recorrencia_id" IS NOT NULL;`,
   `ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "adicional" numeric DEFAULT 0 NOT NULL;`,
   `ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "adicional_motivo" text;`,
   `ALTER TABLE "operacoes" ADD COLUMN IF NOT EXISTS "recebido_em" timestamp;`,
@@ -1536,6 +1560,8 @@ async function runRpc(req: QueryReq, uid: string | null, autor?: string): Promis
   if (fn === "limpar_meus_dados") return await limparMeusDados(uid, args);
   if (fn === "limpar_historico_rotas") return await limparHistoricoRotas(uid, args);
   if (fn === "editar_rota") return await editarRota(uid, args);
+  if (fn === "gerar_recorrencias") { if (!uid) throw new Error("Informe a empresa"); const { gerarRecorrencias } = await import("./recorrencias"); return { data: { criados: await gerarRecorrencias(uid) }, error: null, count: null }; }
+  if (fn === "entregas_do_membro") { if (!uid) throw new Error("Informe a empresa"); const { entregasDoMembro } = await import("./recorrencias"); return { data: await entregasDoMembro(uid, String(args._membro_id ?? ""), String(args._mes ?? "")), error: null, count: null }; }
   if (fn === "candidatar_oferta") return await candidatarOferta(uid, args);
   if (fn === "postular_zona") return await postularZona(uid, args);
   if (fn === "cancelar_postulacao_zona") return await cancelarPostulacaoZona(uid, args);
@@ -1607,7 +1633,7 @@ export async function executeQuery(req: QueryReq, ctx: EngineCtx): Promise<Query
           if (scope.role === "empresa") forbidden();
         } else if (fn === "salvar_ordem_rota") {
           if (scope.role !== "empresa" && scope.role !== "entregador") forbidden();
-        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "limpar_historico_rotas" || fn === "editar_rota" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado" || fn === "sugerir_valor" || fn === "decidir_sugestao_valor" || fn === "remover_parceiro" || fn === "remover_membro_equipe" || fn === "atualizar_email_convite") {
+        } else if (fn === "mover_pacotes" || fn === "publicar_rotas" || fn === "ajustar_pacotes_rota" || fn === "fechar_rota_gestor" || fn === "cadastrar_membro_equipe" || fn === "decidir_zona" || fn === "decidir_candidatura" || fn === "limpar_meus_dados" || fn === "limpar_historico_rotas" || fn === "editar_rota" || fn === "gerar_recorrencias" || fn === "entregas_do_membro" || fn === "definir_membro_entregador" || fn === "eliminar_rota" || fn === "receber_devolucao" || fn === "cadastrar_entregador_gerenciado" || fn === "sugerir_valor" || fn === "decidir_sugestao_valor" || fn === "remover_parceiro" || fn === "remover_membro_equipe" || fn === "atualizar_email_convite") {
           if (scope.role !== "empresa") forbidden();
         } else if (fn !== "finalizar_rota") forbidden();
       }

@@ -4,7 +4,7 @@
 /** Tabelas financeiras: o operador não lê nem escreve. */
 export const OPERADOR_NEGADAS = new Set([
   "pagamentos", "extratos_mensais", "financeiro_lancamentos", "antecipacoes", "config_pagamento",
-  "pagamentos_equipe", "dispatcher_commissions", "dispatcher_team", "dispatcher_alocacoes", "ofertas_privadas_config",
+  "pagamentos_equipe", "recorrencias", "recorrencias_puladas", "dispatcher_commissions", "dispatcher_team", "dispatcher_alocacoes", "ofertas_privadas_config",
 ]);
 
 /** Tabelas que só o dono altera. */
@@ -25,7 +25,7 @@ export const OPERADOR_MASCARAS: Record<string, string[]> = {
 };
 
 /** RPCs que só o dono executa. */
-export const OPERADOR_RPC_NEGADAS = new Set(["eliminar_rota", "limpar_meus_dados", "limpar_historico_rotas", "cadastrar_membro_equipe", "definir_membro_entregador", "remover_parceiro", "remover_membro_equipe", "atualizar_email_convite", "decidir_sugestao_valor"]);
+export const OPERADOR_RPC_NEGADAS = new Set(["eliminar_rota", "limpar_meus_dados", "limpar_historico_rotas", "gerar_recorrencias", "entregas_do_membro", "cadastrar_membro_equipe", "definir_membro_entregador", "remover_parceiro", "remover_membro_equipe", "atualizar_email_convite", "decidir_sugestao_valor"]);
 
 export function mascarado(table: string, col: string): boolean {
   return !!OPERADOR_MASCARAS[table]?.includes(col);

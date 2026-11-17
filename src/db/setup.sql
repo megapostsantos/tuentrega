@@ -2299,3 +2299,19 @@ ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "salario_fixo" numeric DEF
 ALTER TABLE "equipe_empresa" ADD COLUMN IF NOT EXISTS "valor_por_entrega" numeric DEFAULT 0 NOT NULL;
 -- @@
 CREATE TABLE IF NOT EXISTS "pagamentos_equipe" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "empresa_id" text NOT NULL, "membro_id" text NOT NULL, "tipo" text DEFAULT 'salario' NOT NULL, "referencia" text, "quantidade" integer, "valor" numeric NOT NULL, "data_pagamento" date DEFAULT current_date NOT NULL, "observacao" text, "created_at" timestamp DEFAULT now() NOT NULL);
+-- @@
+ALTER TABLE "financeiro_lancamentos" ADD COLUMN IF NOT EXISTS "recorrencia_id" uuid;
+-- @@
+ALTER TABLE "financeiro_lancamentos" ADD COLUMN IF NOT EXISTS "mes_ref" text;
+-- @@
+ALTER TABLE "pagamentos_equipe" ADD COLUMN IF NOT EXISTS "recorrencia_id" uuid;
+-- @@
+ALTER TABLE "pagamentos_equipe" ADD COLUMN IF NOT EXISTS "mes_ref" text;
+-- @@
+CREATE TABLE IF NOT EXISTS "recorrencias" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL, "empresa_id" text NOT NULL, "alvo" text DEFAULT 'lancamento' NOT NULL, "tipo" text DEFAULT 'saida' NOT NULL, "categoria" text, "descricao" text, "valor" numeric DEFAULT 0 NOT NULL, "dia" integer DEFAULT 1 NOT NULL, "membro_id" text, "inicio" date DEFAULT current_date NOT NULL, "ativa" boolean DEFAULT true NOT NULL, "created_at" timestamp DEFAULT now() NOT NULL);
+-- @@
+CREATE UNIQUE INDEX IF NOT EXISTS "fin_lanc_recorrencia_unique" ON "financeiro_lancamentos" ("recorrencia_id","mes_ref") WHERE "recorrencia_id" IS NOT NULL;
+-- @@
+CREATE UNIQUE INDEX IF NOT EXISTS "pag_equipe_recorrencia_unique" ON "pagamentos_equipe" ("recorrencia_id","mes_ref") WHERE "recorrencia_id" IS NOT NULL;
+-- @@
+CREATE TABLE IF NOT EXISTS "recorrencias_puladas" ("empresa_id" text NOT NULL, "recorrencia_id" uuid NOT NULL, "mes_ref" text NOT NULL, PRIMARY KEY ("recorrencia_id","mes_ref"));

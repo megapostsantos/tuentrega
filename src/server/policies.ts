@@ -429,6 +429,8 @@ export const POLICIES: Record<string, Policy> = {
 
   config_pagamento: apenasEmpresa(),
   pagamentos_equipe: apenasEmpresa(),
+  recorrencias: apenasEmpresa(),
+  recorrencias_puladas: apenasEmpresa(),
 
   antecipacoes: {
     read: { empresa: eq("empresa_id"), entregador: eq("entregador_id") },

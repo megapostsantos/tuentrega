@@ -55,6 +55,7 @@ type Lancamento = {
   comprovante_url: string | null;
   entregador_id: string | null;
   created_at: string;
+  recorrencia_id?: string | null;
 };
 
 const CAT_PAGAMENTO_ENTREGADOR = "Pagamento a entregadores";
@@ -181,6 +182,63 @@ function ReceberDaOrigem({ empresaId, range }: { empresaId: string; range: { fro
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/** Despesas e receitas fixas que se repetem sozinhas todo mês. */
+function RecorrenciasCard({ empresaId }: { empresaId: string }) {
+  const qc = useQueryClient();
+  const { data: regras = [] } = useQuery({
+    queryKey: ["financeiro-recorrencias", empresaId],
+    queryFn: async () => {
+      const sb = supabase as any;
+      // gera na hora o que já venceu, para a tela refletir o dia de hoje
+      const g = await sb.rpc("gerar_recorrencias", {});
+      if ((g.data?.criados ?? 0) > 0) qc.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith("financeiro") && q.queryKey[0] !== "financeiro-recorrencias" });
+      const { data } = await sb.from("recorrencias").select("*").eq("empresa_id", empresaId).order("created_at", { ascending: false });
+      const rs = (data ?? []) as any[];
+      const ids = Array.from(new Set(rs.map((r) => r.membro_id).filter(Boolean)));
+      const nomes = new Map<string, string>();
+      if (ids.length) { const { data: eq } = await sb.from("equipe_empresa").select("user_id, nome").in("user_id", ids); (eq ?? []).forEach((e: any) => nomes.set(e.user_id, e.nome)); }
+      return rs.map((r) => ({ ...r, nome: nomes.get(r.membro_id) }));
+    },
+  });
+  const refresh = () => qc.invalidateQueries({ queryKey: ["financeiro-recorrencias", empresaId] });
+  async function alternar(r: any) {
+    const { error } = await (supabase as any).from("recorrencias").update({ ativa: !r.ativa }).eq("id", r.id);
+    if (error) return toast.error(error.message);
+    toast.success(r.ativa ? "Pausada: não lança mais até você retomar." : "Retomada."); refresh();
+  }
+  async function excluir(r: any) {
+    if (!confirm("Excluir esta recorrência? O que já foi lançado continua no extrato.")) return;
+    const { error } = await (supabase as any).from("recorrencias").delete().eq("id", r.id);
+    if (error) return toast.error(error.message);
+    toast.success("Recorrência excluída."); refresh();
+  }
+  if (regras.length === 0) return null;
+  const rotulo = (r: any) => r.alvo === "salario" ? `Salário — ${r.nome ?? "funcionário"}` : r.alvo === "entregas" ? `Pagamento por entregas — ${r.nome ?? "funcionário"}` : (r.descricao || r.categoria);
+  const detalhe = (r: any) => r.alvo === "entregas" ? `todo dia ${r.dia}, as entregas do mês anterior` : `${brl(Number(r.valor))} · todo dia ${r.dia}`;
+  return (
+    <Card>
+      <CardContent className="space-y-2 p-4">
+        <div className="text-sm font-semibold">Lançamentos recorrentes</div>
+        <ul className="divide-y">
+          {regras.map((r: any) => (
+            <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2"><span className="truncate font-medium">{rotulo(r)}</span>{!r.ativa && <Badge variant="outline">pausada</Badge>}<Badge variant="secondary" className="text-[10px]">{r.tipo === "entrada" ? "entrada" : "saída"}</Badge></div>
+                <div className="text-xs text-muted-foreground">{detalhe(r)}</div>
+              </div>
+              <div className="flex gap-1">
+                <Button size="sm" variant="outline" onClick={() => alternar(r)}>{r.ativa ? "Pausar" : "Retomar"}</Button>
+                <Button size="icon" variant="ghost" aria-label="Excluir recorrência" onClick={() => excluir(r)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs text-muted-foreground">Cada mês, no dia marcado, o valor entra sozinho no extrato como lançamento automático.</p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -402,6 +460,12 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
           await supabase.storage.from("financeiro-comprovantes").remove([path]);
         }
       }
+      if (l.recorrencia_id) {
+        // lançamento que veio de uma recorrência: lembra que este mês foi excluído para não gerar de novo
+        const mes = String(l.data_lancamento).slice(0, 7);
+        const { error: e0 } = await (supabase as any).from("recorrencias_puladas").insert({ empresa_id: empresaId, recorrencia_id: l.recorrencia_id, mes_ref: mes });
+        if (e0 && !/duplicate|unique/i.test(e0.message)) throw e0;
+      }
       const { error } = await supabase.from("financeiro_lancamentos").delete().eq("id", l.id);
       if (error) throw error;
     },
@@ -449,6 +513,8 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
       <FinanceiroStats empresaId={empresaId} />
 
       <ReceberDaOrigem empresaId={empresaId} range={range} />
+
+      <RecorrenciasCard empresaId={empresaId} />
 
 
 
@@ -627,6 +693,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
                         {format(new Date(l.data_lancamento + "T00:00"), "dd MMM yyyy", { locale: ptBR })}
                       </span>
                       {l.auto && <Badge variant="secondary" className="text-[10px]">automático</Badge>}
+                      {l.recorrencia_id && <Badge variant="secondary" className="text-[10px]">recorrente</Badge>}
                       {l.comprovante_url && (
                         <a
                           href={l.comprovante_url}
@@ -670,7 +737,7 @@ function FinanceiroEmpresa({ empresaId }: { empresaId: string }) {
         onOpenChange={setOpenDialog}
         empresaId={empresaId}
         editing={editing}
-        onSaved={() => qc.invalidateQueries({ queryKey: ["financeiro", empresaId] })}
+        onSaved={() => { qc.invalidateQueries({ queryKey: ["financeiro", empresaId] }); qc.invalidateQueries({ queryKey: ["financeiro-recorrencias", empresaId] }); }}
       />
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
@@ -778,6 +845,8 @@ function LancamentoDialog({
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [entSearch, setEntSearch] = useState("");
+  const [repetir, setRepetir] = useState(false);
+  const [diaRep, setDiaRep] = useState("");
 
   const {
     register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting },
@@ -846,6 +915,8 @@ function LancamentoDialog({
     }
     setFile(null);
     setEntSearch("");
+    setRepetir(false);
+    setDiaRep("");
   }, [open, editing, reset]);
 
   const onSubmit = async (values: FormValues) => {
@@ -887,7 +958,17 @@ function LancamentoDialog({
       } else {
         const { error } = await (supabase as any).from("financeiro_lancamentos").insert(payload);
         if (error) throw error;
-        toast.success("Lançamento criado");
+        if (repetir) {
+          // próximos meses saem sozinhos, no mesmo dia (o lançamento de agora já foi feito)
+          const dia = Math.min(28, Math.max(1, Math.round(Number(diaRep) || values.data_lancamento.getDate())));
+          const proximo = new Date(values.data_lancamento.getFullYear(), values.data_lancamento.getMonth() + 1, 1);
+          const { error: e2 } = await (supabase as any).from("recorrencias").insert({
+            empresa_id: empresaId, alvo: "lancamento", tipo: values.tipo, categoria: values.categoria,
+            descricao: values.descricao || null, valor: values.valor, dia, inicio: format(proximo, "yyyy-MM-dd"),
+          });
+          if (e2) throw e2;
+          toast.success(`Lançamento criado. Vai se repetir todo mês, no dia ${dia}.`);
+        } else toast.success("Lançamento criado");
       }
 
       onSaved();
@@ -1047,6 +1128,19 @@ function LancamentoDialog({
               </a>
             )}
           </div>
+
+          {!editing && (
+            <div className="rounded-lg border p-3 text-sm">
+              <label className="flex items-center gap-2"><input type="checkbox" checked={repetir} onChange={(e) => setRepetir(e.target.checked)} />Repetir todo mês (aluguel, assinatura, salário fixo…)</label>
+              {repetir && (
+                <div className="mt-2 flex items-center gap-2">
+                  <Label htmlFor="rep-dia" className="text-xs">No dia</Label>
+                  <Input id="rep-dia" className="h-9 w-20" inputMode="numeric" placeholder={String(data.getDate())} value={diaRep} onChange={(e) => setDiaRep(e.target.value)} />
+                  <span className="text-xs text-muted-foreground">do mês (1 a 28). Pode pausar ou excluir depois.</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
